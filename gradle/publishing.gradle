@@ -228,8 +228,9 @@ and progress through process manually -> Close -> Publish ... under staging repo
 
         try {
             for(r in fetch("https://api.github.com/repos/micronaut-projects/micronaut-core/releases")) {
-                if (r.'tag_name') {
-                    versions.add(r.'tag_name')
+                String tagName = r?.'tag_name'?.toString()
+                if (tagName?.startsWith("v")) {
+                    versions.add(tagName.substring(1))
                 }
             }
 
