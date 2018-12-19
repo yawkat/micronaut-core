@@ -219,11 +219,7 @@ bintray {
 task synchronizeWithMavenCentral() {
     description = "Syncs with Maven Central/Sonatype"
     doLast {
-        println """
-Synchronizing with Maven central. This may take a few minutes ...
-If this fails, log on to http://oss.sonatype.org/ using the centralUser credentials
-and progress through process manually -> Close -> Publish ... under staging repositories
-"""
+
         List<String> versions = []
 
         try {
@@ -242,6 +238,11 @@ and progress through process manually -> Close -> Publish ... under staging repo
         }
 
         for(v in versions) {
+            println """
+Synchronizing ${project.name}-${v} with Maven central. This may take a few minutes ...
+If this fails, log on to http://oss.sonatype.org/ using the centralUser credentials
+and progress through process manually -> Close -> Publish ... under staging repositories
+"""
             try {
                 try {
                     def mavenClent = new RESTClient("https://repo.maven.apache.org/maven2/")
