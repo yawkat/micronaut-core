@@ -238,17 +238,19 @@ task synchronizeWithMavenCentral() {
         }
 
         for(v in versions) {
-            println """
-Synchronizing ${project.name}-${v} with Maven central. This may take a few minutes ...
-If this fails, log on to http://oss.sonatype.org/ using the centralUser credentials
-and progress through process manually -> Close -> Publish ... under staging repositories
-"""
             try {
                 try {
                     def mavenClent = new RESTClient("https://repo.maven.apache.org/maven2/")
                     mavenClent.get(path:"${project.group.replace('.','/')}/micronaut-$project.name/$v/micronaut-$project.name-${v}.jar")
+                    println "Module ${project.name}-${v} already synchronized with Maven central. Skipping."
                 } catch(groovyx.net.http.HttpResponseException e) {
                     // doesn't exist.. try sync
+                    println """
+Synchronizing ${project.name}-${v} with Maven central. This may take a few minutes ...
+If this fails, log on to http://oss.sonatype.org/ using the centralUser credentials
+and progress through process manually -> Close -> Publish ... under staging repositories
+"""
+
                     def client = new RESTClient('https://api.bintray.com/maven_central_sync/micronaut/core-releases-local/')
                     client.headers['Authorization'] = 'Basic ' + "$bintrayUser:$bintrayKey".getBytes('iso-8859-1').encodeBase64()
                     def body = /{}/
