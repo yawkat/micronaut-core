@@ -264,10 +264,13 @@ and progress through process manually -> Close -> Publish ... under staging repo
                     println resp.data.messages.join('\n')
                 }
             } catch (groovyx.net.http.HttpResponseException e) {
-                println "Error: $e"
-                println "Message: $e.message"
-                println "Body: $e.response.data"
-                throw e
+                // ignore 404s, just means there is no version for that dependency or the module has been moved
+                if (e.response.status != 404) {
+                    println "Error: $e"
+                    println "Message: $e.message"
+                    println "Body: $e.response.data"
+                    throw e
+                }
             }
         }
 
