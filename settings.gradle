@@ -37,6 +37,7 @@ include "websocket"
 include "test-suite"
 include "test-suite-kotlin"
 include "test-suite-groovy"
+include "test-suite-android"
 include "test-utils"
 
 // benchmarks

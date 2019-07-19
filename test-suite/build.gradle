@@ -31,6 +31,7 @@ dependencies {
     testCompile "org.testcontainers:spock:1.10.1"
     // end::testcontainers-dependencies[]
     testCompile 'org.awaitility:awaitility:3.1.6'
+    testCompile "com.github.stefanbirkner:system-rules:$systemRulesVersion"
 
     testRuntime dependencyVersion("tomcatJdbc")
     testRuntime dependencyVersion("h2")

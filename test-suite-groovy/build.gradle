@@ -5,4 +5,5 @@ dependencies {
     testCompile project(":runtime")
     testCompile project(":inject")
     testCompile dependencyVersion("jcache")
+    testCompile "com.github.stefanbirkner:system-rules:$systemRulesVersion"
 }
