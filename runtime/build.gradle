@@ -9,26 +9,13 @@ dependencies {
     api project(':aop')
     api project(':context')
     api project(":core-reactive")
+    api project(":serialization-jackson")
     api dependencyVersion("validation")
-    api "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
 
     implementation dependencyVersion("reactor")
 
-    api "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jacksonVersion"
-    api "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion"
-
     compileOnly "org.graalvm.nativeimage:svm:$graalVersion"
     compileOnly dependencyVersion("jcache")
-
-    compileOnly("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion") {
-        transitive = false
-    }
-    compileOnly("com.fasterxml.jackson.module:jackson-module-afterburner:$jacksonVersion") {
-        transitive = false
-    }
-    compileOnly("com.fasterxml.jackson.module:jackson-module-parameter-names:$jacksonVersion") {
-        transitive = false
-    }
 
     compileOnly "org.apache.logging.log4j:log4j-core:2.14.1"
     compileOnly 'org.glassfish:javax.el:3.0.1-b12'

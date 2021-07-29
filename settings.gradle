@@ -42,6 +42,7 @@ include "messaging"
 include "router"
 include "runtime"
 include "runtime-osx"
+include 'serialization-jackson'
 include "session"
 include "tracing"
 include "validation"
@@ -58,3 +59,4 @@ include "test-utils"
 
 // benchmarks
 include "benchmarks"
+
