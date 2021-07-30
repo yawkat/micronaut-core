@@ -15,8 +15,14 @@
  */
 package io.micronaut.discovery.cloud;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.TreeCodec;
+import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jr.stree.JrsString;
+import com.fasterxml.jackson.jr.stree.JrsValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.http.HttpMethod;
 
@@ -49,13 +55,31 @@ public class ComputeInstanceMetadataResolverUtils {
      * @return a {@link JsonNode} instance
      * @throws IOException if any I/O error occurs
      */
+    @Deprecated // todo: this class is internal, can we remove these?
     public static JsonNode readMetadataUrl(URL url, int connectionTimeoutMs, int readTimeoutMs, ObjectMapper objectMapper, Map<String, String> requestProperties) throws IOException {
+        return (JsonNode) readMetadataUrl(url, connectionTimeoutMs, readTimeoutMs, objectMapper, objectMapper.getFactory(), requestProperties);
+    }
+
+    /**
+     * Reads the result of a URL and parses it using the given {@link ObjectMapper}.
+     *
+     * @param url                 the URL to read
+     * @param connectionTimeoutMs connection timeout, in milliseconds
+     * @param readTimeoutMs       read timeout, in milliseconds
+     * @param treeCodec           Jackson's {@link TreeCodec}
+     * @param jsonFactory         Jackson's {@link JsonFactory}
+     * @param requestProperties   any request properties to pass
+     * @return a {@link JsonNode} instance
+     * @throws IOException if any I/O error occurs
+     */
+    public static TreeNode readMetadataUrl(URL url, int connectionTimeoutMs, int readTimeoutMs, TreeCodec treeCodec, JsonFactory jsonFactory, Map<String, String> requestProperties) throws IOException {
         URLConnection urlConnection = url.openConnection();
 
         if (url.getProtocol().equalsIgnoreCase("file")) {
             urlConnection.connect();
-            try (InputStream in = urlConnection.getInputStream()) {
-                return objectMapper.readTree(in);
+            try (InputStream in = urlConnection.getInputStream();
+                 JsonParser parser = jsonFactory.createParser(in)) {
+                return treeCodec.readTree(parser);
             }
         } else {
             HttpURLConnection uc = (HttpURLConnection) urlConnection;
@@ -64,20 +88,33 @@ public class ComputeInstanceMetadataResolverUtils {
             uc.setReadTimeout(readTimeoutMs);
             uc.setRequestMethod(HttpMethod.GET.name());
             uc.setDoOutput(true);
-            try (InputStream in = uc.getInputStream()) {
-                return objectMapper.readTree(in);
+            try (InputStream in = uc.getInputStream();
+                 JsonParser parser = jsonFactory.createParser(in)) {
+                return treeCodec.readTree(parser);
             }
         }
     }
 
     /**
      * Resolve a value as a string from the metadata json.
+     *
      * @param json The json
-     * @param key The key
+     * @param key  The key
      * @return An optional value
      */
-    public static Optional<String> stringValue(JsonNode json, String key) {
-        return Optional.ofNullable(json.findValue(key)).map(JsonNode::asText);
+    @Deprecated
+    public static Optional<String> stringValue(TreeNode json, String key) {
+        TreeNode value = json.get(key);
+        if (value != null) {
+            // TODO
+            if (value instanceof JsonNode) {
+                return Optional.of(((JsonNode) value).textValue());
+            } else {
+                return Optional.of(((JrsValue) value).asText());
+            }
+        } else {
+            return Optional.empty();
+        }
     }
 
     /**
@@ -95,6 +132,25 @@ public class ComputeInstanceMetadataResolverUtils {
                     finalMetadata.put(key.toString(), value.toString());
                 }
             }
+            instanceMetadata.setMetadata(finalMetadata);
+        }
+    }
+
+    /**
+     * Populates the instance instance metadata's {@link AbstractComputeInstanceMetadata#setMetadata(Map)} property.
+     *
+     * @param instanceMetadata The instance metadata
+     * @param metadata         A json object of metadata
+     */
+    public static void populateMetadata(AbstractComputeInstanceMetadata instanceMetadata, JrsValue metadata) {
+        if (metadata != null) {
+            Map<String, String> finalMetadata = new HashMap<>(metadata.size());
+            metadata.fieldNames().forEachRemaining(key -> {
+                JrsValue value = metadata.get(key);
+                if (value instanceof JrsString) {
+                    finalMetadata.put(key, ((JrsString) value).getValue());
+                }
+            });
             instanceMetadata.setMetadata(finalMetadata);
         }
     }

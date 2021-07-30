@@ -15,8 +15,7 @@
  */
 package io.micronaut.jackson.convert;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.core.TreeNode;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.convert.ArgumentConversionContext;
 import io.micronaut.core.convert.ConversionService;
@@ -32,7 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Simple facade over a Jackson {@link ObjectNode} to make it a {@link ConvertibleValues}.
+ * Simple facade over a Jackson {@link TreeNode} to make it a {@link ConvertibleValues}.
  *
  * @param <V> The generic type for values
  *
@@ -42,14 +41,17 @@ import java.util.Set;
 @Internal
 public class ObjectNodeConvertibleValues<V> implements ConvertibleValues<V> {
 
-    private final ObjectNode objectNode;
+    private final TreeNode objectNode;
     private final ConversionService<?> conversionService;
 
     /**
      * @param objectNode        The node that maps to JSON object structure
      * @param conversionService To convert the JSON node into given type
      */
-    public ObjectNodeConvertibleValues(ObjectNode objectNode, ConversionService<?> conversionService) {
+    public ObjectNodeConvertibleValues(TreeNode objectNode, ConversionService<?> conversionService) {
+        if (!objectNode.isObject()) {
+            throw new IllegalArgumentException("Expected object node");
+        }
         this.objectNode = objectNode;
         this.conversionService = conversionService;
     }
@@ -63,8 +65,8 @@ public class ObjectNodeConvertibleValues<V> implements ConvertibleValues<V> {
     @Override
     public Collection<V> values() {
         List<V> values = new ArrayList<>();
-        for (JsonNode jsonNode : objectNode) {
-            values.add((V) jsonNode);
+        for (String fieldName : (Iterable<? extends String>) objectNode::fieldNames) {
+            values.add((V) objectNode.get(fieldName));
         }
         return Collections.unmodifiableCollection(values);
     }
@@ -72,7 +74,7 @@ public class ObjectNodeConvertibleValues<V> implements ConvertibleValues<V> {
     @Override
     public <T> Optional<T> get(CharSequence name, ArgumentConversionContext<T> conversionContext) {
         String fieldName = name.toString();
-        JsonNode jsonNode = objectNode.get(fieldName);
+        TreeNode jsonNode = objectNode.get(fieldName);
         if (jsonNode == null) {
             return Optional.empty();
         } else {

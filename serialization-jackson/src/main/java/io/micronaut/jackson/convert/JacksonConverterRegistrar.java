@@ -17,15 +17,15 @@ package io.micronaut.jackson.convert;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ContainerNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.jr.stree.JrsArray;
 import io.micronaut.context.BeanProvider;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
@@ -84,8 +84,14 @@ public class JacksonConverterRegistrar implements TypeConverterRegistrar {
 
     @Override
     public void register(ConversionService<?> conversionService) {
+        // there's no common supertype for array nodes, so we need two converter registrations here
         conversionService.addConverter(
                 ArrayNode.class,
+                Object[].class,
+                arrayNodeToObjectConverter()
+        );
+        conversionService.addConverter(
+                JrsArray.class,
                 Object[].class,
                 arrayNodeToObjectConverter()
         );
@@ -95,12 +101,17 @@ public class JacksonConverterRegistrar implements TypeConverterRegistrar {
                 arrayNodeToIterableConverter()
         );
         conversionService.addConverter(
-                JsonNode.class,
+                JrsArray.class,
+                Iterable.class,
+                arrayNodeToIterableConverter()
+        );
+        conversionService.addConverter(
+                TreeNode.class,
                 Object.class,
                 jsonNodeToObjectConverter()
         );
         conversionService.addConverter(
-                ObjectNode.class,
+                TreeNode.class,
                 ConvertibleValues.class,
                 objectNodeToConvertibleValuesConverter()
         );
@@ -191,32 +202,32 @@ public class JacksonConverterRegistrar implements TypeConverterRegistrar {
     /**
      * @return A converter that converts object nodes to convertible values
      */
-    protected TypeConverter<ObjectNode, ConvertibleValues> objectNodeToConvertibleValuesConverter() {
+    protected TypeConverter<TreeNode, ConvertibleValues> objectNodeToConvertibleValuesConverter() {
         return (object, targetType, context) -> Optional.of(new ObjectNodeConvertibleValues<>(object, conversionService));
     }
 
     /**
      * @return The JSON node to object converter
      */
-    protected TypeConverter<JsonNode, Object> jsonNodeToObjectConverter() {
+    protected TypeConverter<TreeNode, Object> jsonNodeToObjectConverter() {
         return (node, targetType, context) -> {
             try {
-                if (CharSequence.class.isAssignableFrom(targetType) && node instanceof ObjectNode) {
+                if (CharSequence.class.isAssignableFrom(targetType) && node.isObject()) {
                     return Optional.of(node.toString());
                 } else {
                     Argument<Object> argument = null;
-                    if (node instanceof ContainerNode && context instanceof ArgumentConversionContext && targetType.getTypeParameters().length != 0) {
+                    if (node.isContainerNode() && context instanceof ArgumentConversionContext && targetType.getTypeParameters().length != 0) {
                         argument = ((ArgumentConversionContext<Object>) context).getArgument();
                     }
+                    ObjectMapper om = this.objectMapper.get();
                     Object result;
                     if (argument != null) {
-                        ObjectMapper om = this.objectMapper.get();
-                        JsonParser jsonParser = om.treeAsTokens(node);
+                        JsonParser jsonParser = node.traverse(om);
                         TypeFactory typeFactory = om.getTypeFactory();
                         JavaType javaType = JacksonConfiguration.constructType(argument, typeFactory);
                         result = om.readValue(jsonParser, javaType);
                     } else {
-                        result = this.objectMapper.get().treeToValue(node, targetType);
+                        result = om.readValue(node.traverse(om), targetType);
                     }
                     return Optional.ofNullable(result);
                 }
@@ -230,17 +241,17 @@ public class JacksonConverterRegistrar implements TypeConverterRegistrar {
     /**
      * @return Converts array nodes to iterables.
      */
-    protected TypeConverter<ArrayNode, Iterable> arrayNodeToIterableConverter() {
+    protected <ARR extends TreeNode> TypeConverter<ARR, Iterable> arrayNodeToIterableConverter() {
         return (node, targetType, context) -> {
             Map<String, Argument<?>> typeVariables = context.getTypeVariables();
             Class elementType = typeVariables.isEmpty() ? Map.class : typeVariables.values().iterator().next().getType();
             List results = new ArrayList();
-            node.elements().forEachRemaining(jsonNode -> {
-                Optional converted = conversionService.convert(jsonNode, elementType, context);
+            for (int i = 0; i < node.size(); i++) {
+                Optional converted = conversionService.convert(node.get(i), elementType, context);
                 if (converted.isPresent()) {
                     results.add(converted.get());
                 }
-            });
+            }
             return Optional.of(results);
         };
     }
@@ -248,12 +259,13 @@ public class JacksonConverterRegistrar implements TypeConverterRegistrar {
     /**
      * @return Converts array nodes to objects.
      */
-    protected TypeConverter<ArrayNode, Object[]> arrayNodeToObjectConverter() {
+    protected <ARR extends TreeNode> TypeConverter<ARR, Object[]> arrayNodeToObjectConverter() {
         return (node, targetType, context) -> {
             try {
-                Object[] result = objectMapper.get().treeToValue(node, targetType);
+                ObjectMapper om = this.objectMapper.get();
+                Object[] result = om.readValue(node.traverse(om), targetType);
                 return Optional.of(result);
-            } catch (JsonProcessingException e) {
+            } catch (IOException e) {
                 context.reject(e);
                 return Optional.empty();
             }

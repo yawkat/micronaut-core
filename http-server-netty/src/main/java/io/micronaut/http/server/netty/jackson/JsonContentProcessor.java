@@ -15,11 +15,8 @@
  */
 package io.micronaut.http.server.netty.jackson;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.DeserializationConfig;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.core.TreeNode;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.async.publisher.Publishers;
 import io.micronaut.core.async.subscriber.CompletionAwareSubscriber;
 import io.micronaut.core.async.subscriber.TypedSubscriber;
@@ -28,11 +25,13 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.server.HttpServerConfiguration;
 import io.micronaut.http.server.netty.AbstractHttpContentProcessor;
 import io.micronaut.http.server.netty.NettyHttpRequest;
-import io.micronaut.jackson.parser.JacksonProcessor;
+import io.micronaut.json.GenericDeserializationConfig;
+import io.micronaut.json.parser.JacksonJrProcessor;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.ReferenceCountUtil;
+import org.reactivestreams.Processor;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -46,30 +45,26 @@ import java.util.Optional;
  * @since 1.0
  */
 @Internal
-public class JsonContentProcessor extends AbstractHttpContentProcessor<JsonNode> {
+public class JsonContentProcessor extends AbstractHttpContentProcessor<TreeNode> {
 
-    private final JsonFactory jsonFactory;
-    private final DeserializationConfig deserializationConfig;
-    private JacksonProcessor jacksonProcessor;
+    private final GenericDeserializationConfig deserializationConfig;
+    private Processor<byte[], ? extends TreeNode> jacksonProcessor;
 
     /**
      * @param nettyHttpRequest The Netty Http request
      * @param configuration    The Http server configuration
-     * @param jsonFactory      The json factory
      * @param deserializationConfig The jackson deserialization configuration
      */
     public JsonContentProcessor(
             NettyHttpRequest<?> nettyHttpRequest,
             HttpServerConfiguration configuration,
-            @Nullable JsonFactory jsonFactory,
-            DeserializationConfig deserializationConfig) {
+            GenericDeserializationConfig deserializationConfig) {
         super(nettyHttpRequest, configuration);
-        this.jsonFactory = jsonFactory != null ? jsonFactory : new JsonFactory();
         this.deserializationConfig = deserializationConfig;
     }
 
     @Override
-    protected void doOnSubscribe(Subscription subscription, Subscriber<? super JsonNode> subscriber) {
+    protected void doOnSubscribe(Subscription subscription, Subscriber<? super TreeNode> subscriber) {
         if (parentSubscription == null) {
             return;
         }
@@ -94,8 +89,8 @@ public class JsonContentProcessor extends AbstractHttpContentProcessor<JsonNode>
             }
         }
 
-        this.jacksonProcessor = new JacksonProcessor(jsonFactory, streamArray, deserializationConfig);
-        this.jacksonProcessor.subscribe(new CompletionAwareSubscriber<JsonNode>() {
+        this.jacksonProcessor = new JacksonJrProcessor(streamArray, deserializationConfig);
+        this.jacksonProcessor.subscribe(new CompletionAwareSubscriber<TreeNode>() {
 
             @Override
             protected void doOnSubscribe(Subscription jsonSubscription) {
@@ -126,7 +121,7 @@ public class JsonContentProcessor extends AbstractHttpContentProcessor<JsonNode>
             }
 
             @Override
-            protected void doOnNext(JsonNode message) {
+            protected void doOnNext(TreeNode message) {
                 subscriber.onNext(message);
             }
 

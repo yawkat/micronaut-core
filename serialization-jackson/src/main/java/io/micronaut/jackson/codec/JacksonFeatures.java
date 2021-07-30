@@ -17,10 +17,13 @@ package io.micronaut.jackson.codec;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.json.JsonFeatures;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Stores features to later configure an {@link com.fasterxml.jackson.databind.ObjectMapper}.
@@ -30,7 +33,7 @@ import java.util.Map;
  * @since 1.3.0
  */
 @Internal
-public final class JacksonFeatures {
+public final class JacksonFeatures implements JsonFeatures {
 
     private final Map<SerializationFeature, Boolean> serializationFeatures;
     private final Map<DeserializationFeature, Boolean> deserializationFeatures;
@@ -41,6 +44,43 @@ public final class JacksonFeatures {
     public JacksonFeatures() {
         this.serializationFeatures = new EnumMap<>(SerializationFeature.class);
         this.deserializationFeatures = new EnumMap<>(DeserializationFeature.class);
+    }
+
+    public static JacksonFeatures fromAnnotation(AnnotationValue<io.micronaut.jackson.annotation.JacksonFeatures> jacksonFeaturesAnn) {
+        io.micronaut.jackson.codec.JacksonFeatures jacksonFeatures = new io.micronaut.jackson.codec.JacksonFeatures();
+
+
+        SerializationFeature[] enabledSerializationFeatures = jacksonFeaturesAnn.get("enabledSerializationFeatures", SerializationFeature[].class).orElse(null);
+        if (enabledSerializationFeatures != null) {
+            for (SerializationFeature serializationFeature : enabledSerializationFeatures) {
+                jacksonFeatures.addFeature(serializationFeature, true);
+            }
+        }
+
+        DeserializationFeature[] enabledDeserializationFeatures = jacksonFeaturesAnn.get("enabledDeserializationFeatures", DeserializationFeature[].class).orElse(null);
+
+        if (enabledDeserializationFeatures != null) {
+            for (DeserializationFeature deserializationFeature : enabledDeserializationFeatures) {
+                jacksonFeatures.addFeature(deserializationFeature, true);
+            }
+        }
+
+        SerializationFeature[] disabledSerializationFeatures = jacksonFeaturesAnn.get("disabledSerializationFeatures", SerializationFeature[].class).orElse(null);
+        if (disabledSerializationFeatures != null) {
+            for (SerializationFeature serializationFeature : disabledSerializationFeatures) {
+                jacksonFeatures.addFeature(serializationFeature, false);
+            }
+        }
+
+        DeserializationFeature[] disabledDeserializationFeatures = jacksonFeaturesAnn.get("disabledDeserializationFeatures", DeserializationFeature[].class).orElse(null);
+
+        if (disabledDeserializationFeatures != null) {
+            for (DeserializationFeature feature : disabledDeserializationFeatures) {
+                jacksonFeatures.addFeature(feature, false);
+            }
+        }
+
+        return jacksonFeatures;
     }
 
     /**
@@ -83,5 +123,22 @@ public final class JacksonFeatures {
      */
     public Map<DeserializationFeature, Boolean> getDeserializationFeatures() {
         return this.deserializationFeatures;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        JacksonFeatures that = (JacksonFeatures) o;
+        return Objects.equals(serializationFeatures, that.serializationFeatures) && Objects.equals(deserializationFeatures, that.deserializationFeatures);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(serializationFeatures, deserializationFeatures);
     }
 }

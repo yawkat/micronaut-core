@@ -63,11 +63,7 @@ public class JsonMediaTypeCodec extends JacksonMediaTypeCodec {
     }
 
     @Override
-    public JacksonMediaTypeCodec cloneWithFeatures(JacksonFeatures jacksonFeatures) {
-        ObjectMapper objectMapper = getObjectMapper().copy();
-        jacksonFeatures.getDeserializationFeatures().forEach(objectMapper::configure);
-        jacksonFeatures.getSerializationFeatures().forEach(objectMapper::configure);
-
-        return new JsonMediaTypeCodec(objectMapper, applicationConfiguration, codecConfiguration);
+    protected JacksonMediaTypeCodec cloneWithMapper(ObjectMapper mapper) {
+        return new JsonMediaTypeCodec(mapper, applicationConfiguration, codecConfiguration);
     }
 }

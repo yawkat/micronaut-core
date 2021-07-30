@@ -1,0 +1,18 @@
+dependencies {
+    annotationProcessor project(":inject-java")
+
+    api project(':context')
+    api project(":http")
+
+    api("com.fasterxml.jackson.jr:jackson-jr-stree:2.13.0-rc2-SNAPSHOT") { // todo: use $jacksonVersion
+        exclude group: 'com.fasterxml.jackson.jr', module: 'jackson-jr-objects'
+    }
+
+    testAnnotationProcessor project(":inject-java")
+    testImplementation project(":inject-java")
+    testImplementation project(":inject-java-test")
+    testImplementation project(":inject-groovy")
+    if (!JavaVersion.current().isJava9Compatible()) {
+        testImplementation files(org.gradle.internal.jvm.Jvm.current().toolsJar)
+    }
+}

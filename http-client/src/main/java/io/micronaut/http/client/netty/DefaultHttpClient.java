@@ -15,8 +15,7 @@
  */
 package io.micronaut.http.client.netty;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jr.stree.JrsValue;
 import io.micronaut.buffer.netty.NettyByteBufferFactory;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.AnnotationMetadataResolver;
@@ -94,11 +93,9 @@ import io.micronaut.http.netty.stream.StreamingInboundHttp2ToHttpAdapter;
 import io.micronaut.http.sse.Event;
 import io.micronaut.http.uri.UriBuilder;
 import io.micronaut.http.uri.UriTemplate;
-import io.micronaut.jackson.ObjectMapperFactory;
-import io.micronaut.jackson.codec.JsonMediaTypeCodec;
-import io.micronaut.jackson.codec.JsonStreamMediaTypeCodec;
-import io.micronaut.jackson.parser.JacksonProcessor;
-import io.micronaut.runtime.ApplicationConfiguration;
+import io.micronaut.json.GenericJsonAdapter;
+import io.micronaut.json.GenericJsonMediaTypeCodec;
+import io.micronaut.json.parser.JacksonJrProcessor;
 import io.micronaut.scheduling.instrument.Instrumentation;
 import io.micronaut.scheduling.instrument.InvocationInstrumenter;
 import io.micronaut.scheduling.instrument.InvocationInstrumenterFactory;
@@ -959,7 +956,7 @@ public class DefaultHttpClient implements
                     throw new IllegalStateException("Response has been wrapped in non streaming type. Do not wrap the response in client filters for stream requests");
                 }
 
-                JsonMediaTypeCodec mediaTypeCodec = (JsonMediaTypeCodec) mediaTypeCodecRegistry.findCodec(MediaType.APPLICATION_JSON_TYPE)
+                GenericJsonMediaTypeCodec mediaTypeCodec = (GenericJsonMediaTypeCodec) mediaTypeCodecRegistry.findCodec(MediaType.APPLICATION_JSON_TYPE)
                         .orElseThrow(() -> new IllegalStateException("No JSON codec found"));
 
                 StreamedHttpResponse streamResponse = NettyHttpResponseBuilder.toStreamResponse(response);
@@ -967,9 +964,9 @@ public class DefaultHttpClient implements
 
                 boolean isJsonStream = response.getContentType().map(mediaType -> mediaType.equals(MediaType.APPLICATION_JSON_STREAM_TYPE)).orElse(false);
                 boolean streamArray = !Iterable.class.isAssignableFrom(type.getType()) && !isJsonStream;
-                JacksonProcessor jacksonProcessor = new JacksonProcessor(mediaTypeCodec.getObjectMapper().getFactory(), streamArray, mediaTypeCodec.getObjectMapper().getDeserializationConfig()) {
+                JacksonJrProcessor jacksonProcessor = new JacksonJrProcessor(streamArray, mediaTypeCodec.getDeserializationConfig()) {
                     @Override
-                    public void subscribe(Subscriber<? super JsonNode> downstreamSubscriber) {
+                    public void subscribe(Subscriber<? super JrsValue> downstreamSubscriber) {
                         httpContentReactiveSequence.map(content -> {
                             ByteBuf chunk = content.content();
                             if (log.isTraceEnabled()) {
@@ -2553,10 +2550,9 @@ public class DefaultHttpClient implements
     }
 
     private static MediaTypeCodecRegistry createDefaultMediaTypeRegistry() {
-        ObjectMapper objectMapper = new ObjectMapperFactory().objectMapper(null, null);
-        ApplicationConfiguration applicationConfiguration = new ApplicationConfiguration();
         return MediaTypeCodecRegistry.of(
-                new JsonMediaTypeCodec(objectMapper, applicationConfiguration, null), new JsonStreamMediaTypeCodec(objectMapper, applicationConfiguration, null)
+                GenericJsonAdapter.getUnboundInstance().createNewJsonCodec(),
+                GenericJsonAdapter.getUnboundInstance().createNewStreamingJsonCodec()
         );
     }
 

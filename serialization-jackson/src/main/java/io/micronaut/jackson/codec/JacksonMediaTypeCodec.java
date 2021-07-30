@@ -15,11 +15,9 @@
  */
 package io.micronaut.jackson.codec;
 
-
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.micronaut.context.BeanProvider;
@@ -31,7 +29,11 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
 import io.micronaut.http.codec.CodecException;
 import io.micronaut.http.codec.MediaTypeCodec;
+import io.micronaut.jackson.DatabindUtil;
+import io.micronaut.json.GenericDeserializationConfig;
+import io.micronaut.json.GenericJsonMediaTypeCodec;
 import io.micronaut.jackson.JacksonConfiguration;
+import io.micronaut.json.JsonFeatures;
 import io.micronaut.runtime.ApplicationConfiguration;
 
 import java.io.IOException;
@@ -49,7 +51,7 @@ import java.util.List;
  * @author svishnyakov
  * @since 1.3.0
  */
-public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
+public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJsonMediaTypeCodec {
 
     protected final ApplicationConfiguration applicationConfiguration;
     protected final List<MediaType> additionalTypes;
@@ -111,13 +113,28 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
         return objectMapper;
     }
 
-    /**
-     * Create a new codec with the provided features.
-     *
-     * @param jacksonFeatures The jackson features
-     * @return The new codec
-     */
-    public abstract JacksonMediaTypeCodec cloneWithFeatures(JacksonFeatures jacksonFeatures);
+    @Override
+    public GenericJsonMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
+        JacksonFeatures jacksonFeatures = (JacksonFeatures) features;
+
+        ObjectMapper objectMapper = getObjectMapper().copy();
+        jacksonFeatures.getDeserializationFeatures().forEach(objectMapper::configure);
+        jacksonFeatures.getSerializationFeatures().forEach(objectMapper::configure);
+
+        return cloneWithMapper(objectMapper);
+    }
+
+    @Override
+    public GenericJsonMediaTypeCodec cloneWithViewClass(Class<?> viewClass) {
+        ObjectMapper objectMapper = getObjectMapper().copy();
+        objectMapper.setConfig(objectMapper.getSerializationConfig().withView(viewClass));
+        // todo: JsonViewMediaTypeCodecFactory doesn't set the deser config, is doing this an issue?
+        objectMapper.setConfig(objectMapper.getDeserializationConfig().withView(viewClass));
+
+        return cloneWithMapper(objectMapper);
+    }
+
+    protected abstract JacksonMediaTypeCodec cloneWithMapper(ObjectMapper mapper);
 
     @Override
     public Collection<MediaType> getMediaTypes() {
@@ -156,7 +173,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
      * @return The decoded object
      * @throws CodecException When object cannot be decoded
      */
-    public <T> T decode(Argument<T> type, JsonNode node) throws CodecException {
+    @Override
+    public <T> T decode(Argument<T> type, TreeNode node) throws CodecException {
         try {
             ObjectMapper objectMapper = getObjectMapper();
             if (type.hasTypeVariables()) {
@@ -248,6 +266,11 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
         OutputStream outputStream = buffer.toOutputStream();
         encode(object, outputStream);
         return buffer;
+    }
+
+    @Override
+    public GenericDeserializationConfig getDeserializationConfig() {
+        return DatabindUtil.toGenericConfig(getObjectMapper());
     }
 
     private <T> JavaType constructJavaType(Argument<T> type) {

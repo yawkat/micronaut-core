@@ -15,23 +15,17 @@
  */
 package io.micronaut.http.server.netty.jackson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.ArgumentUtils;
-import io.micronaut.http.codec.CodecConfiguration;
 import io.micronaut.jackson.JacksonConfiguration;
-import io.micronaut.jackson.codec.JsonMediaTypeCodec;
-import io.micronaut.runtime.ApplicationConfiguration;
-import jakarta.inject.Named;
+import io.micronaut.json.GenericJsonAdapter;
+import io.micronaut.json.GenericJsonMediaTypeCodec;
 import jakarta.inject.Singleton;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static io.micronaut.jackson.codec.JsonMediaTypeCodec.CONFIGURATION_QUALIFIER;
 
 /**
  * A factory to produce {@link io.micronaut.http.codec.MediaTypeCodec} for JSON and Jackson using a specified
@@ -47,38 +41,24 @@ import static io.micronaut.jackson.codec.JsonMediaTypeCodec.CONFIGURATION_QUALIF
 @Primary
 class JsonViewMediaTypeCodecFactory implements JsonViewCodecResolver {
 
-    private final ObjectMapper objectMapper;
-    private final ApplicationConfiguration applicationConfiguration;
-    private final CodecConfiguration codecConfiguration;
-    private final Map<Class<?>, JsonMediaTypeCodec> jsonViewCodecs = new ConcurrentHashMap<>(5);
+    private final GenericJsonAdapter jsonAdapter;
+    private final Map<Class<?>, GenericJsonMediaTypeCodec> jsonViewCodecs = new ConcurrentHashMap<>(5);
 
-    /**
-     * @param objectMapper             To read/write JSON
-     * @param applicationConfiguration The common application configurations
-     * @param codecConfiguration       The configuration for the codec
-     */
-    JsonViewMediaTypeCodecFactory(ObjectMapper objectMapper,
-                          ApplicationConfiguration applicationConfiguration,
-                          @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
-        this.objectMapper = objectMapper;
-        this.applicationConfiguration = applicationConfiguration;
-        this.codecConfiguration = codecConfiguration;
+    JsonViewMediaTypeCodecFactory(GenericJsonAdapter jsonAdapter) {
+        this.jsonAdapter = jsonAdapter;
     }
 
     /**
-     * Creates a {@link JsonMediaTypeCodec} for the view class (specified as the JsonView annotation value).
+     * Creates a {@link GenericJsonMediaTypeCodec} for the view class (specified as the JsonView annotation value).
      * @param viewClass The view class
      * @return The codec
      */
     @Override
-    public @NonNull JsonMediaTypeCodec resolveJsonViewCodec(@NonNull Class<?> viewClass) {
+    public @NonNull GenericJsonMediaTypeCodec resolveJsonViewCodec(@NonNull Class<?> viewClass) {
         ArgumentUtils.requireNonNull("viewClass", viewClass);
-        JsonMediaTypeCodec codec = jsonViewCodecs.get(viewClass);
+        GenericJsonMediaTypeCodec codec = jsonViewCodecs.get(viewClass);
         if (codec == null) {
-
-            ObjectMapper viewMapper = objectMapper.copy();
-            viewMapper.setConfig(viewMapper.getSerializationConfig().withView(viewClass));
-            codec = new JsonMediaTypeCodec(viewMapper, applicationConfiguration, codecConfiguration);
+            codec = jsonAdapter.createNewJsonCodec().cloneWithViewClass(viewClass);
             jsonViewCodecs.put(viewClass, codec);
         }
         return codec;

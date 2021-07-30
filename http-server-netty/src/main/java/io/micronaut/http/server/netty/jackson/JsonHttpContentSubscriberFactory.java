@@ -15,18 +15,14 @@
  */
 package io.micronaut.http.server.netty.jackson;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.DeserializationConfig;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.util.ArgumentUtils;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Consumes;
 import io.micronaut.http.server.HttpServerConfiguration;
 import io.micronaut.http.server.netty.HttpContentProcessor;
 import io.micronaut.http.server.netty.HttpContentSubscriberFactory;
 import io.micronaut.http.server.netty.NettyHttpRequest;
+import io.micronaut.json.GenericDeserializationConfig;
 import jakarta.inject.Singleton;
 
 /**
@@ -41,26 +37,21 @@ import jakarta.inject.Singleton;
 public class JsonHttpContentSubscriberFactory implements HttpContentSubscriberFactory {
 
     private final HttpServerConfiguration httpServerConfiguration;
-    private final @Nullable JsonFactory jsonFactory;
-    private final DeserializationConfig deserializationConfig;
+    private final GenericDeserializationConfig deserializationConfig;
 
     /**
-     * @param objectMapper The jackson object mapper.
+     * @param deserializationConfig   The deserialization config
      * @param httpServerConfiguration The Http server configuration
-     * @param jsonFactory             The json factory
      */
     public JsonHttpContentSubscriberFactory(
-            ObjectMapper objectMapper,
-            HttpServerConfiguration httpServerConfiguration,
-            @Nullable JsonFactory jsonFactory) {
-        ArgumentUtils.requireNonNull("objectMapper", objectMapper);
+            GenericDeserializationConfig deserializationConfig,
+            HttpServerConfiguration httpServerConfiguration) {
         this.httpServerConfiguration = httpServerConfiguration;
-        this.jsonFactory = jsonFactory;
-        this.deserializationConfig = objectMapper.getDeserializationConfig();
+        this.deserializationConfig = deserializationConfig;
     }
 
     @Override
     public HttpContentProcessor build(NettyHttpRequest request) {
-        return new JsonContentProcessor(request, httpServerConfiguration, jsonFactory, deserializationConfig);
+        return new JsonContentProcessor(request, httpServerConfiguration, deserializationConfig);
     }
 }
