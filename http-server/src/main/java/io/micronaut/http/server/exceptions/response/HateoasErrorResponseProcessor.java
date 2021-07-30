@@ -22,7 +22,7 @@ import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.hateoas.JsonError;
 import io.micronaut.http.hateoas.Link;
 import io.micronaut.http.hateoas.Resource;
-import io.micronaut.jackson.JacksonConfiguration;
+import io.micronaut.json.JsonConfiguration;
 import jakarta.inject.Singleton;
 
 import java.util.ArrayList;
@@ -40,7 +40,7 @@ public class HateoasErrorResponseProcessor implements ErrorResponseProcessor<Jso
 
     private final boolean alwaysSerializeErrorsAsList;
 
-    public HateoasErrorResponseProcessor(JacksonConfiguration jacksonConfiguration) {
+    public HateoasErrorResponseProcessor(JsonConfiguration jacksonConfiguration) {
         this.alwaysSerializeErrorsAsList = jacksonConfiguration.isAlwaysSerializeErrorsAsList();
     }
 

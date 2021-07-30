@@ -19,9 +19,9 @@ import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.util.ArgumentUtils;
-import io.micronaut.jackson.JacksonConfiguration;
 import io.micronaut.json.GenericJsonAdapter;
 import io.micronaut.json.GenericJsonMediaTypeCodec;
+import io.micronaut.json.JsonConfiguration;
 import jakarta.inject.Singleton;
 
 import java.util.Map;
@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author mmindenhall
  * @author graemerocher
  */
-@Requires(beans = JacksonConfiguration.class)
+@Requires(beans = JsonConfiguration.class)
 @Requires(property = JsonViewServerFilter.PROPERTY_JSON_VIEW_ENABLED)
 @Singleton
 @Primary
