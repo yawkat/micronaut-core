@@ -14,9 +14,6 @@ public interface GenericJsonAdapter {
         return Helper.instance;
     }
 
-    @Nullable
-    JsonFeatures detectFeatures(AnnotationMetadata annotations);
-
     ExtendedObjectCodec createObjectMapper();
 }
 

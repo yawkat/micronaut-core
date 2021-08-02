@@ -2,8 +2,9 @@ package io.micronaut.json;
 
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.core.util.ByteArrayBuilder;
-import com.fasterxml.jackson.jr.stree.JacksonJrsTreeCodec;
 import com.fasterxml.jackson.jr.stree.JrsValue;
+import io.micronaut.core.annotation.AnnotationMetadata;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
 import io.micronaut.json.tree.TreeGenerator;
 
@@ -50,4 +51,7 @@ public interface ExtendedObjectCodec {
     }
 
     GenericDeserializationConfig getDeserializationConfig();
+
+    @Nullable
+    JsonFeatures detectFeatures(AnnotationMetadata annotations);
 }

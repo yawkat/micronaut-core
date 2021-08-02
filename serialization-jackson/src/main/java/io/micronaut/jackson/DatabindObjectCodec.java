@@ -2,12 +2,12 @@ package io.micronaut.jackson;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.ObjectCodec;
-import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
-import io.micronaut.core.convert.TypeConverter;
+import io.micronaut.core.annotation.AnnotationMetadata;
+import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.type.Argument;
 import io.micronaut.jackson.codec.JacksonFeatures;
 import io.micronaut.json.ExtendedObjectCodec;
@@ -74,5 +74,15 @@ public class DatabindObjectCodec implements ExtendedObjectCodec {
     @Override
     public GenericDeserializationConfig getDeserializationConfig() {
         return DatabindUtil.toGenericConfig(objectMapper);
+    }
+
+    @Override
+    public JsonFeatures detectFeatures(AnnotationMetadata annotations) {
+        AnnotationValue<io.micronaut.jackson.annotation.JacksonFeatures> annotationValue = annotations.getAnnotation(io.micronaut.jackson.annotation.JacksonFeatures.class);
+        if (annotationValue != null) {
+            return io.micronaut.jackson.codec.JacksonFeatures.fromAnnotation(annotationValue);
+        } else {
+            return null;
+        }
     }
 }
