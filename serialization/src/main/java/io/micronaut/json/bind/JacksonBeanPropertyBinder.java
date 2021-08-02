@@ -13,18 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.jackson.bind;
+package io.micronaut.json.bind;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.InvalidFormatException;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.jr.stree.JrsArray;
+import com.fasterxml.jackson.jr.stree.JrsNull;
+import com.fasterxml.jackson.jr.stree.JrsObject;
+import com.fasterxml.jackson.jr.stree.JrsValue;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.core.bind.BeanPropertyBinder;
 import io.micronaut.core.convert.ArgumentConversionContext;
@@ -34,14 +29,12 @@ import io.micronaut.core.naming.NameUtils;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.core.util.StringUtils;
-import io.micronaut.jackson.JacksonConfiguration;
+import io.micronaut.json.ExtendedObjectCodec;
+import io.micronaut.json.JsonConfiguration;
 import jakarta.inject.Singleton;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * An {@link io.micronaut.core.bind.ArgumentBinder} capable of binding from an object from a map.
@@ -53,14 +46,14 @@ import java.util.Set;
 @Primary
 class JacksonBeanPropertyBinder implements BeanPropertyBinder {
 
-    private final ObjectMapper objectMapper;
+    private final ExtendedObjectCodec objectMapper;
     private final int arraySizeThreshhold;
 
     /**
      * @param objectMapper  To read/write JSON
      * @param configuration The configuration for Jackson JSON parser
      */
-    JacksonBeanPropertyBinder(ObjectMapper objectMapper, JacksonConfiguration configuration) {
+    JacksonBeanPropertyBinder(ExtendedObjectCodec objectMapper, JsonConfiguration configuration) {
         this.objectMapper = objectMapper;
         this.arraySizeThreshhold = configuration.getArraySizeThreshold();
     }
@@ -68,11 +61,9 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
     @Override
     public BindingResult<Object> bind(ArgumentConversionContext<Object> context, Map<CharSequence, ? super Object> source) {
         try {
-            ObjectNode objectNode = buildSourceObjectNode(source.entrySet());
-            JsonParser jsonParser = objectMapper.treeAsTokens(objectNode);
-            TypeFactory typeFactory = objectMapper.getTypeFactory();
-            JavaType javaType = JacksonConfiguration.constructType(context.getArgument(), typeFactory);
-            Object result = objectMapper.readValue(jsonParser, javaType);
+            JrsValue objectNode = buildSourceObjectNode(source.entrySet());
+            JsonParser jsonParser = objectNode.traverse(objectMapper.getObjectCodec());
+            Object result = objectMapper.readValue(jsonParser, context.getArgument());
             return () -> Optional.of(result);
         } catch (Exception e) {
             context.reject(e);
@@ -98,8 +89,8 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
     @Override
     public <T2> T2 bind(Class<T2> type, Set<? extends Map.Entry<? extends CharSequence, Object>> source) throws ConversionErrorException {
         try {
-            ObjectNode objectNode = buildSourceObjectNode(source);
-            return objectMapper.treeToValue(objectNode, type);
+            JrsValue objectNode = buildSourceObjectNode(source);
+            return objectMapper.readValue(objectNode.traverse(objectMapper.getObjectCodec()), type);
         } catch (Exception e) {
             throw newConversionError(null, e);
         }
@@ -108,8 +99,8 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
     @Override
     public <T2> T2 bind(T2 object, ArgumentConversionContext<T2> context, Set<? extends Map.Entry<? extends CharSequence, Object>> source) {
         try {
-            ObjectNode objectNode = buildSourceObjectNode(source);
-            objectMapper.readerForUpdating(object).readValue(objectNode);
+            JrsValue objectNode = buildSourceObjectNode(source);
+            objectMapper.updateValue(objectNode.traverse(objectMapper.getObjectCodec()), object);
         } catch (Exception e) {
             context.reject(e);
         }
@@ -119,11 +110,12 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
     @Override
     public <T2> T2 bind(T2 object, Set<? extends Map.Entry<? extends CharSequence, Object>> source) throws ConversionErrorException {
         try {
-            ObjectNode objectNode = buildSourceObjectNode(source);
-            return objectMapper.readerForUpdating(object).readValue(objectNode);
+            JrsValue objectNode = buildSourceObjectNode(source);
+            objectMapper.updateValue(objectNode.traverse(objectMapper.getObjectCodec()), object);
         } catch (Exception e) {
             throw newConversionError(object, e);
         }
+        return object;
     }
 
     /**
@@ -132,6 +124,7 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
      * @return The new conversion error
      */
     protected ConversionErrorException newConversionError(Object object, Exception e) {
+        /* todo
         if (e instanceof InvalidFormatException) {
             InvalidFormatException ife = (InvalidFormatException) e;
             Object originalValue = ife.getValue();
@@ -155,7 +148,7 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
                 name = NameUtils.decapitalize(type.getSimpleName());
             }
             return new ConversionErrorException(Argument.of(ife.getTargetType(), name), conversionError);
-        } else {
+        } else */ {
 
             ConversionError conversionError = new ConversionError() {
                 @Override
@@ -173,14 +166,13 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
         }
     }
 
-    private ObjectNode buildSourceObjectNode(Set<? extends Map.Entry<? extends CharSequence, Object>> source) {
-        JsonNodeFactory nodeFactory = objectMapper.getNodeFactory();
-        ObjectNode rootNode = new ObjectNode(nodeFactory);
+    private JrsValue buildSourceObjectNode(Set<? extends Map.Entry<? extends CharSequence, Object>> source) {
+        ObjectBuilder rootNode = new ObjectBuilder();
         for (Map.Entry<? extends CharSequence, ? super Object> entry : source) {
             CharSequence key = entry.getKey();
             Object value = entry.getValue();
             String property = key.toString();
-            JsonNode current = rootNode;
+            ValueBuilder current = rootNode;
             String index = null;
             Iterator<String> tokenIterator = StringUtils.splitOmitEmptyStringsIterator(property, '.');
             while (tokenIterator.hasNext()) {
@@ -192,108 +184,147 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
                 }
 
                 if (!tokenIterator.hasNext()) {
-                    if (current instanceof ObjectNode) {
-                        ObjectNode objectNode = (ObjectNode) current;
+                    if (current instanceof ObjectBuilder) {
+                        ObjectBuilder objectNode = (ObjectBuilder) current;
                         if (index != null) {
-                            JsonNode existing = objectNode.get(index);
-                            if (!(existing instanceof ObjectNode)) {
-                                existing = new ObjectNode(nodeFactory);
-                                objectNode.set(index, existing);
+                            ValueBuilder existing = objectNode.values.get(index);
+                            if (!(existing instanceof ObjectBuilder)) {
+                                existing = new ObjectBuilder();
+                                objectNode.values.put(index, existing);
                             }
-                            ObjectNode node = (ObjectNode) existing;
-                            node.set(token, objectMapper.valueToTree(value));
+                            ObjectBuilder node = (ObjectBuilder) existing;
+                            node.values.put(token, new FixedValue(objectMapper.valueToTree(value)));
                             index = null;
                         } else {
-                            objectNode.set(token, objectMapper.valueToTree(value));
+                            objectNode.values.put(token, new FixedValue(objectMapper.valueToTree(value)));
                         }
-                    } else if (current instanceof ArrayNode && index != null) {
-                        ArrayNode arrayNode = (ArrayNode) current;
+                    } else if (current instanceof ArrayBuilder && index != null) {
+                        ArrayBuilder arrayNode = (ArrayBuilder) current;
                         int arrayIndex = Integer.parseInt(index);
                         if (arrayIndex < arraySizeThreshhold) {
 
-                            if (arrayIndex < arrayNode.size()) {
-                                JsonNode jsonNode = arrayNode.get(arrayIndex);
-                                if (jsonNode instanceof ObjectNode) {
-                                    ((ObjectNode) jsonNode).set(token, objectMapper.valueToTree(value));
-                                } else {
-
-                                    arrayNode.set(arrayIndex, new ObjectNode(nodeFactory, CollectionUtils.mapOf(token, objectMapper.valueToTree(value))));
-                                }
-                            } else {
+                            if (arrayIndex >= arrayNode.values.size()) {
                                 expandArrayToThreshold(arrayIndex, arrayNode);
-                                arrayNode.set(arrayIndex, new ObjectNode(nodeFactory, CollectionUtils.mapOf(token, objectMapper.valueToTree(value))));
                             }
+                            ValueBuilder jsonNode = arrayNode.values.get(arrayIndex);
+                            if (!(jsonNode instanceof ObjectBuilder)) {
+                                jsonNode = new ObjectBuilder();
+                                arrayNode.values.set(arrayIndex, jsonNode);
+                            }
+                            ((ObjectBuilder) jsonNode).values.put(token, new FixedValue(objectMapper.valueToTree(value)));
                         }
                         index = null;
                     }
                 } else {
-                    if (current instanceof ObjectNode) {
-                        ObjectNode objectNode = (ObjectNode) current;
-                        JsonNode existing = objectNode.get(token);
+                    if (current instanceof ObjectBuilder) {
+                        ObjectBuilder objectNode = (ObjectBuilder) current;
+                        ValueBuilder existing = objectNode.values.get(token);
                         if (index != null) {
-                            JsonNode jsonNode;
+                            ValueBuilder jsonNode;
                             if (StringUtils.isDigits(index)) {
                                 int arrayIndex = Integer.parseInt(index);
-                                ArrayNode arrayNode;
-                                if (!(existing instanceof ArrayNode)) {
-                                    arrayNode = new ArrayNode(nodeFactory);
-                                    objectNode.set(token, arrayNode);
+                                ArrayBuilder arrayNode;
+                                if (!(existing instanceof ArrayBuilder)) {
+                                    arrayNode = new ArrayBuilder();
+                                    objectNode.values.put(token, arrayNode);
                                 } else {
-                                    arrayNode = (ArrayNode) existing;
+                                    arrayNode = (ArrayBuilder) existing;
                                 }
                                 expandArrayToThreshold(arrayIndex, arrayNode);
-                                jsonNode = getOrCreateNodeAtIndex(nodeFactory, arrayNode, arrayIndex);
+                                jsonNode = getOrCreateNodeAtIndex(arrayNode, arrayIndex);
                             } else {
-                                if (!(existing instanceof ObjectNode)) {
-                                    existing = new ObjectNode(nodeFactory);
-                                    objectNode.set(token, existing);
+                                if (!(existing instanceof ObjectBuilder)) {
+                                    existing = new ObjectBuilder();
+                                    objectNode.values.put(token, existing);
                                 }
-                                jsonNode = existing.get(index);
-                                if (!(jsonNode instanceof ObjectNode)) {
-                                    jsonNode = new ObjectNode(nodeFactory);
-                                    ((ObjectNode) existing).set(index, jsonNode);
+                                jsonNode = ((ObjectBuilder) existing).values.get(index);
+                                if (!(jsonNode instanceof ObjectBuilder)) {
+                                    jsonNode = new ObjectBuilder();
+                                    ((ObjectBuilder) existing).values.put(index, jsonNode);
                                 }
                             }
 
                             current = jsonNode;
                             index = null;
                         } else {
-                            if (!(existing instanceof ObjectNode)) {
-                                existing = new ObjectNode(nodeFactory);
-                                objectNode.set(token, existing);
+                            if (!(existing instanceof ObjectBuilder)) {
+                                existing = new ObjectBuilder();
+                                objectNode.values.put(token, existing);
                             }
                             current = existing;
                         }
-                    } else if (current instanceof ArrayNode && StringUtils.isDigits(index)) {
-                        ArrayNode arrayNode = (ArrayNode) current;
+                    } else if (current instanceof ArrayBuilder && StringUtils.isDigits(index)) {
+                        ArrayBuilder arrayNode = (ArrayBuilder) current;
                         int arrayIndex = Integer.parseInt(index);
                         expandArrayToThreshold(arrayIndex, arrayNode);
-                        JsonNode jsonNode = getOrCreateNodeAtIndex(nodeFactory, arrayNode, arrayIndex);
+                        ObjectBuilder jsonNode = getOrCreateNodeAtIndex(arrayNode, arrayIndex);
 
-                        current = new ObjectNode(nodeFactory);
-                        ((ObjectNode) jsonNode).set(token, current);
+                        current = new ObjectBuilder();
+                        jsonNode.values.put(token, current);
                         index = null;
                     }
                 }
             }
         }
-        return rootNode;
+        return rootNode.build();
     }
 
-    private JsonNode getOrCreateNodeAtIndex(JsonNodeFactory nodeFactory, ArrayNode arrayNode, int arrayIndex) {
-        JsonNode jsonNode = arrayNode.get(arrayIndex);
-        if (!(jsonNode instanceof ObjectNode)) {
-            jsonNode = new ObjectNode(nodeFactory);
-            arrayNode.set(arrayIndex, jsonNode);
+    private ObjectBuilder getOrCreateNodeAtIndex(ArrayBuilder arrayNode, int arrayIndex) {
+        ValueBuilder jsonNode = arrayNode.values.get(arrayIndex);
+        if (!(jsonNode instanceof ObjectBuilder)) {
+            jsonNode = new ObjectBuilder();
+            arrayNode.values.set(arrayIndex, jsonNode);
         }
-        return jsonNode;
+        return (ObjectBuilder) jsonNode;
     }
 
-    private void expandArrayToThreshold(int arrayIndex, ArrayNode arrayNode) {
+    private void expandArrayToThreshold(int arrayIndex, ArrayBuilder arrayNode) {
         if (arrayIndex < arraySizeThreshhold) {
-            while (arrayNode.size() != arrayIndex + 1) {
-                arrayNode.addNull();
+            while (arrayNode.values.size() != arrayIndex + 1) {
+                arrayNode.values.add(FixedValue.NULL);
             }
+        }
+    }
+
+    private interface ValueBuilder {
+        JrsValue build();
+    }
+
+    private static class FixedValue implements ValueBuilder {
+        static final FixedValue NULL = new FixedValue(JrsNull.instance());
+
+        final JrsValue value;
+
+        FixedValue(JrsValue value) {
+            this.value = value;
+        }
+
+        @Override
+        public JrsValue build() {
+            return value;
+        }
+    }
+
+    private static class ObjectBuilder implements ValueBuilder {
+        final Map<String, ValueBuilder> values = new LinkedHashMap<>();
+
+        @Override
+        public JrsValue build() {
+            Map<String, JrsValue> built = new LinkedHashMap<>();
+            for (Map.Entry<String, ValueBuilder> entry : values.entrySet()) {
+                // todo: is it dangerous to recurse here?
+                built.put(entry.getKey(), entry.getValue().build());
+            }
+            return new JrsObject(built);
+        }
+    }
+
+    private static class ArrayBuilder implements ValueBuilder {
+        final List<ValueBuilder> values = new ArrayList<>();
+
+        @Override
+        public JrsValue build() {
+            return new JrsArray(values.stream().map(ValueBuilder::build).collect(Collectors.toList()));
         }
     }
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.jackson.convert;
+package io.micronaut.json.convert;
 
 import com.fasterxml.jackson.core.TreeNode;
 import io.micronaut.core.annotation.Internal;

@@ -1,0 +1,34 @@
+package io.micronaut.json;
+
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.ObjectCodec;
+import com.fasterxml.jackson.core.TreeNode;
+import com.fasterxml.jackson.jr.stree.JacksonJrsTreeCodec;
+import com.fasterxml.jackson.jr.stree.JrsValue;
+import io.micronaut.core.type.Argument;
+import io.micronaut.json.tree.TreeGenerator;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
+public interface ExtendedObjectCodec {
+    ObjectCodec getObjectCodec();
+
+    default JrsValue valueToTree(Object value) {
+        TreeGenerator generator = new TreeGenerator();
+        try {
+            getObjectCodec().writeValue(generator, value);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return generator.getCompletedValue();
+    }
+
+    <T> T readValue(JsonParser parser, Argument<T> type) throws IOException;
+
+    default <T> T readValue(JsonParser parser, Class<T> type) throws IOException {
+        return getObjectCodec().readValue(parser, type);
+    }
+
+    void updateValue(JsonParser parser, Object value) throws IOException;
+}

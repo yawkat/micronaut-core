@@ -16,7 +16,6 @@
 package io.micronaut.jackson.convert;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,26 +29,19 @@ import io.micronaut.context.BeanProvider;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.bind.ArgumentBinder;
-import io.micronaut.core.bind.BeanPropertyBinder;
 import io.micronaut.core.convert.ArgumentConversionContext;
-import io.micronaut.core.convert.ConversionContext;
 import io.micronaut.core.convert.ConversionService;
 import io.micronaut.core.convert.TypeConverter;
 import io.micronaut.core.convert.TypeConverterRegistrar;
-import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.naming.NameUtils;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.StringUtils;
 import io.micronaut.jackson.JacksonConfiguration;
+import io.micronaut.json.convert.JsonConverterRegistrar;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -63,67 +55,37 @@ import java.util.Optional;
 public class JacksonConverterRegistrar implements TypeConverterRegistrar {
 
     private final BeanProvider<ObjectMapper> objectMapper;
-    private final ConversionService<?> conversionService;
-    private final BeanProvider<BeanPropertyBinder> beanPropertyBinder;
+    private final JsonConverterRegistrar genericConverter;
 
     /**
      * Default constructor.
      * @param objectMapper The object mapper provider
-     * @param beanPropertyBinder The bean property binder provider
-     * @param conversionService The conversion service
+     * @param genericConverter The generic json converter (without jackson-databind)
      */
     @Inject
     protected JacksonConverterRegistrar(
             BeanProvider<ObjectMapper> objectMapper,
-            BeanProvider<BeanPropertyBinder> beanPropertyBinder,
-            ConversionService<?> conversionService) {
+            JsonConverterRegistrar genericConverter) {
         this.objectMapper = objectMapper;
-        this.conversionService = conversionService;
-        this.beanPropertyBinder = beanPropertyBinder;
+        this.genericConverter = genericConverter;
     }
 
     @Override
     public void register(ConversionService<?> conversionService) {
-        // there's no common supertype for array nodes, so we need two converter registrations here
         conversionService.addConverter(
                 ArrayNode.class,
                 Object[].class,
-                arrayNodeToObjectConverter()
-        );
-        conversionService.addConverter(
-                JrsArray.class,
-                Object[].class,
-                arrayNodeToObjectConverter()
+                genericConverter.arrayNodeToObjectConverter()
         );
         conversionService.addConverter(
                 ArrayNode.class,
                 Iterable.class,
-                arrayNodeToIterableConverter()
-        );
-        conversionService.addConverter(
-                JrsArray.class,
-                Iterable.class,
-                arrayNodeToIterableConverter()
-        );
-        conversionService.addConverter(
-                TreeNode.class,
-                Object.class,
-                jsonNodeToObjectConverter()
-        );
-        conversionService.addConverter(
-                TreeNode.class,
-                ConvertibleValues.class,
-                objectNodeToConvertibleValuesConverter()
+                genericConverter.arrayNodeToIterableConverter()
         );
         conversionService.addConverter(
                 Object.class,
                 JsonNode.class,
                 objectToJsonNodeConverter()
-        );
-        conversionService.addConverter(
-                Map.class,
-                Object.class,
-                mapToObjectConverter()
         );
         conversionService.addConverter(
                 CharSequence.class,
@@ -142,130 +104,14 @@ public class JacksonConverterRegistrar implements TypeConverterRegistrar {
     }
 
     /**
-     * @return The map to object converter
-     */
-    protected TypeConverter<Map, Object> mapToObjectConverter() {
-        return (map, targetType, context) -> {
-            ArgumentConversionContext<Object> conversionContext;
-            if (context instanceof ArgumentConversionContext) {
-                conversionContext = (ArgumentConversionContext<Object>) context;
-            } else {
-                conversionContext = ConversionContext.of(targetType);
-            }
-            ArgumentBinder binder = this.beanPropertyBinder.get();
-            ArgumentBinder.BindingResult result = binder.bind(conversionContext, correctKeys(map));
-            return result.getValue();
-        };
-    }
-
-    private Map correctKeys(Map<?, ?> map) {
-        Map mapWithExtraProps = new LinkedHashMap(map.size());
-        for (Map.Entry entry : map.entrySet()) {
-            Object key = entry.getKey();
-            Object value = correctKeys(entry.getValue());
-            mapWithExtraProps.put(NameUtils.decapitalize(NameUtils.dehyphenate(key.toString())), value);
-        }
-        return mapWithExtraProps;
-    }
-
-    private List correctKeys(List list) {
-        List newList = new ArrayList(list.size());
-        for (Object o : list) {
-            newList.add(correctKeys(o));
-        }
-        return newList;
-    }
-
-    private Object correctKeys(Object o) {
-        if (o instanceof List) {
-            return correctKeys((List) o);
-        } else if (o instanceof Map) {
-            return correctKeys((Map) o);
-        }
-        return o;
-    }
-
-    /**
      * @return A converter that converts an object to a json node
      */
     protected TypeConverter<Object, JsonNode> objectToJsonNodeConverter() {
+        // same as in JsonConverterRegistrar, but with JsonNode
         return (object, targetType, context) -> {
             try {
                 return Optional.of(objectMapper.get().valueToTree(object));
             } catch (IllegalArgumentException e) {
-                context.reject(e);
-                return Optional.empty();
-            }
-        };
-    }
-
-    /**
-     * @return A converter that converts object nodes to convertible values
-     */
-    protected TypeConverter<TreeNode, ConvertibleValues> objectNodeToConvertibleValuesConverter() {
-        return (object, targetType, context) -> Optional.of(new ObjectNodeConvertibleValues<>(object, conversionService));
-    }
-
-    /**
-     * @return The JSON node to object converter
-     */
-    protected TypeConverter<TreeNode, Object> jsonNodeToObjectConverter() {
-        return (node, targetType, context) -> {
-            try {
-                if (CharSequence.class.isAssignableFrom(targetType) && node.isObject()) {
-                    return Optional.of(node.toString());
-                } else {
-                    Argument<Object> argument = null;
-                    if (node.isContainerNode() && context instanceof ArgumentConversionContext && targetType.getTypeParameters().length != 0) {
-                        argument = ((ArgumentConversionContext<Object>) context).getArgument();
-                    }
-                    ObjectMapper om = this.objectMapper.get();
-                    Object result;
-                    if (argument != null) {
-                        JsonParser jsonParser = node.traverse(om);
-                        TypeFactory typeFactory = om.getTypeFactory();
-                        JavaType javaType = JacksonConfiguration.constructType(argument, typeFactory);
-                        result = om.readValue(jsonParser, javaType);
-                    } else {
-                        result = om.readValue(node.traverse(om), targetType);
-                    }
-                    return Optional.ofNullable(result);
-                }
-            } catch (IOException e) {
-                context.reject(e);
-                return Optional.empty();
-            }
-        };
-    }
-
-    /**
-     * @return Converts array nodes to iterables.
-     */
-    protected <ARR extends TreeNode> TypeConverter<ARR, Iterable> arrayNodeToIterableConverter() {
-        return (node, targetType, context) -> {
-            Map<String, Argument<?>> typeVariables = context.getTypeVariables();
-            Class elementType = typeVariables.isEmpty() ? Map.class : typeVariables.values().iterator().next().getType();
-            List results = new ArrayList();
-            for (int i = 0; i < node.size(); i++) {
-                Optional converted = conversionService.convert(node.get(i), elementType, context);
-                if (converted.isPresent()) {
-                    results.add(converted.get());
-                }
-            }
-            return Optional.of(results);
-        };
-    }
-
-    /**
-     * @return Converts array nodes to objects.
-     */
-    protected <ARR extends TreeNode> TypeConverter<ARR, Object[]> arrayNodeToObjectConverter() {
-        return (node, targetType, context) -> {
-            try {
-                ObjectMapper om = this.objectMapper.get();
-                Object[] result = om.readValue(node.traverse(om), targetType);
-                return Optional.of(result);
-            } catch (IOException e) {
                 context.reject(e);
                 return Optional.empty();
             }

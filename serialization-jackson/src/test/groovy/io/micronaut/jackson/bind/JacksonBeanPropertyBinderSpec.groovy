@@ -22,6 +22,7 @@ import groovy.transform.ToString
 import io.micronaut.context.ApplicationContext
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.convert.ConversionService
+import io.micronaut.json.bind.JacksonBeanPropertyBinder
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
