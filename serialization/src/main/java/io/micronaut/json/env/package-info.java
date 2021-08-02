@@ -19,4 +19,4 @@
  * @author Graeme Rocher
  * @since 1.0
  */
-package io.micronaut.jackson.env;
+package io.micronaut.json.env;

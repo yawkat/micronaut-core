@@ -18,6 +18,8 @@ package io.micronaut.jackson.env
 import io.micronaut.context.env.Environment
 import io.micronaut.context.env.PropertySource
 import io.micronaut.context.exceptions.ConfigurationException
+import io.micronaut.json.env.CloudFoundryVcapApplicationPropertySourceLoader
+import io.micronaut.json.env.CloudFoundryVcapServicesPropertySourceLoader
 import spock.lang.Specification
 
 class CloudFoundryVcapPropertySourceLoaderSpec extends Specification {

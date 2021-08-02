@@ -13,20 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.jackson.env;
+package io.micronaut.json.env;
 
 import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.MapType;
-import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.jr.stree.*;
 import io.micronaut.context.env.AbstractPropertySourceLoader;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * <p>A {@link io.micronaut.context.env.PropertySourceLoader} that reads <tt>application.json</tt> files if they exist.</p>
@@ -52,17 +48,34 @@ public class JsonPropertySourceLoader extends AbstractPropertySourceLoader {
         processMap(finalMap, map, "");
     }
 
-    /**
-     * @param input    The input stream
-     * @throws IOException If the input stream doesn't exist
-     *
-     * @return map representation of the json
-     */
+    @SuppressWarnings("unchecked")
     protected Map<String, Object> readJsonAsMap(InputStream input) throws IOException {
-        ObjectMapper objectMapper = new ObjectMapper(new JsonFactory());
-        TypeFactory factory = TypeFactory.defaultInstance();
-        MapType mapType = factory.constructMapType(LinkedHashMap.class, String.class, Object.class);
+        return (Map<String, Object>) unwrap(readJsonAsObject(input));
+    }
 
-        return objectMapper.readValue(input, mapType);
+    private JrsObject readJsonAsObject(InputStream input) throws IOException {
+        try (JsonParser parser = new JsonFactory().createParser(input)) {
+            return JacksonJrsTreeCodec.SINGLETON.readTree(parser);
+        }
+    }
+
+    private Object unwrap(JrsValue value) {
+        if (value instanceof JrsNumber) {
+            return ((JrsNumber) value).getValue();
+        } else if (value.isNull()) {
+            return null;
+        } else if (value instanceof JrsBoolean) {
+            return ((JrsBoolean) value).booleanValue();
+        } else if (value instanceof JrsArray) {
+            List<Object> unwrapped = new ArrayList<>();
+            ((JrsArray) value).elements().forEachRemaining(v -> unwrapped.add(unwrap(v)));
+            return unwrapped;
+        } else if (value instanceof JrsObject) {
+            Map<String, Object> unwrapped = new LinkedHashMap<>();
+            ((JrsObject) value).fields().forEachRemaining(e -> unwrapped.put(e.getKey(), unwrap(e.getValue())));
+            return unwrapped;
+        } else {
+            return value.asText();
+        }
     }
 }

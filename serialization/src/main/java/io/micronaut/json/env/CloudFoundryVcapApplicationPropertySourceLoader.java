@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.jackson.env;
+package io.micronaut.json.env;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import io.micronaut.context.env.MapPropertySource;
@@ -24,27 +24,26 @@ import io.micronaut.core.io.ResourceLoader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 /**
- * <p>A {@link io.micronaut.context.env.PropertySourceLoader} that reads from the environment variable VCAP_SERVICES
+ * <p>A {@link io.micronaut.context.env.PropertySourceLoader} that reads from the environment variable VCAP_APPLICATION
  * which is used by CloudFoundry.</p>
  *
  * @author Fabian Nonnenmacher
  * @since 2.0
  */
 @Internal
-public class CloudFoundryVcapServicesPropertySourceLoader extends EnvJsonPropertySourceLoader {
+public class CloudFoundryVcapApplicationPropertySourceLoader extends EnvJsonPropertySourceLoader {
 
     /**
      * Position for the system property source loader in the chain.
      */
-    public static final int POSITION = EnvJsonPropertySourceLoader.POSITION + 11;
+    public static final int POSITION = EnvJsonPropertySourceLoader.POSITION + 10;
 
-    private static final String VCAP_SERVICES = "VCAP_SERVICES";
+    private static final String VCAP_APPLICATION = "VCAP_APPLICATION";
 
     @Override
     public int getOrder() {
@@ -52,18 +51,18 @@ public class CloudFoundryVcapServicesPropertySourceLoader extends EnvJsonPropert
     }
 
     @Override
-    protected String getEnvValue() {
-        return System.getenv(VCAP_SERVICES);
+    public Set<String> getExtensions() {
+        return Collections.singleton(VCAP_APPLICATION);
     }
 
     @Override
-    public Set<String> getExtensions() {
-        return Collections.singleton(VCAP_SERVICES);
+    protected String getEnvValue() {
+        return System.getenv(VCAP_APPLICATION);
     }
 
     @Override
     protected Optional<InputStream> readInput(ResourceLoader resourceLoader, String fileName) {
-        if (fileName.equals("application." + VCAP_SERVICES)) {
+        if (fileName.equals("application." + VCAP_APPLICATION)) {
             return getEnvValueAsStream();
         }
         return Optional.empty();
@@ -73,32 +72,14 @@ public class CloudFoundryVcapServicesPropertySourceLoader extends EnvJsonPropert
     protected void processInput(String name, InputStream input, Map<String, Object> finalMap) throws IOException {
         try {
             Map<String, Object> map = readJsonAsMap(input);
-            processVcapServices(finalMap, map);
+            processMap(finalMap, map, "vcap.application.");
         } catch (JsonParseException e) {
-            throw new ConfigurationException("Could not parse '" + VCAP_SERVICES + "': " + e.getMessage(), e);
-        }
-    }
-
-    private void processVcapServices(Map<String, Object> finalMap, Map<String, Object> vcapServices) {
-        if (vcapServices != null) {
-            for (Object services : vcapServices.values()) {
-                @SuppressWarnings("unchecked")
-                List<Object> list = (List<Object>) services;
-                for (Object object : list) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> service = (Map<String, Object>) object;
-                    String key = (String) service.get("name");
-                    if (key == null) {
-                        key = (String) service.get("label");
-                    }
-                    processMap(finalMap, service, "vcap.services." + key + ".");
-                }
-            }
+            throw new ConfigurationException("Could not parse '" + VCAP_APPLICATION + "'." + e.getMessage(), e);
         }
     }
 
     @Override
     protected MapPropertySource createPropertySource(String name, Map<String, Object> map, int order) {
-        return super.createPropertySource("cloudfoundry-vcap-services", map, order);
+        return super.createPropertySource("cloudfoundry-vcap-application", map, order);
     }
 }
