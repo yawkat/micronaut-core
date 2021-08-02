@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 /**
- * Jackson parser.
+ * Jackson bean binding to properties.
  *
  * @author Graeme Rocher
  * @since 1.0
  */
-package io.micronaut.jackson.parser;
+package io.micronaut.json.bind;

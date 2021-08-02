@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.jackson.codec
+package io.micronaut.json.codec
 
 import io.micronaut.context.ApplicationContext
 import io.micronaut.http.MediaType
-import io.micronaut.json.codec.JsonMediaTypeCodec
 import spock.lang.Specification
 
 class JsonMediaTypeCodecSpec extends Specification {

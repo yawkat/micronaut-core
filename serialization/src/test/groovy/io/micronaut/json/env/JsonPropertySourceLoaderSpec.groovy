@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.jackson.env
+package io.micronaut.json.env
 
 import io.micronaut.context.env.DefaultEnvironment
 import io.micronaut.context.env.Environment
@@ -21,8 +21,6 @@ import io.micronaut.context.env.PropertySource
 import io.micronaut.context.env.PropertySourceLoader
 import io.micronaut.core.io.service.ServiceDefinition
 import io.micronaut.core.io.service.SoftServiceLoader
-import io.micronaut.json.env.EnvJsonPropertySourceLoader
-import io.micronaut.json.env.JsonPropertySourceLoader
 import spock.lang.Specification
 
 /**
