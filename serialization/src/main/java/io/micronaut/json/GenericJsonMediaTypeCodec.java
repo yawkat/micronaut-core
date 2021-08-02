@@ -6,6 +6,8 @@ import io.micronaut.http.codec.CodecException;
 import io.micronaut.http.codec.MediaTypeCodec;
 
 public interface GenericJsonMediaTypeCodec extends MediaTypeCodec {
+    String REGULAR_JSON_MEDIA_TYPE_CODEC_NAME = "json";
+
     /**
      * Decodes the given JSON node.
      *

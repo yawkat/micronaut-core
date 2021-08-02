@@ -5,7 +5,6 @@ import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.http.codec.CodecConfiguration;
 import io.micronaut.jackson.annotation.JacksonFeatures;
 import io.micronaut.jackson.codec.JsonMediaTypeCodec;
 import io.micronaut.jackson.codec.JsonStreamMediaTypeCodec;
@@ -20,25 +19,30 @@ import jakarta.inject.Singleton;
 @Singleton
 @BootstrapContextCompatible
 public class JacksonJsonAdapter implements GenericJsonAdapter {
-    private final ApplicationConfiguration applicationConfiguration;
-    @Nullable
-    private final CodecConfiguration codecConfiguration;
+    private final JsonMediaTypeCodec baseCodec;
+    private final JsonStreamMediaTypeCodec streamCodec;
 
     @Inject
     public JacksonJsonAdapter(
-            ApplicationConfiguration applicationConfiguration,
-            @Named(JsonMediaTypeCodec.CONFIGURATION_QUALIFIER)
-            @Nullable CodecConfiguration codecConfiguration
+            @Named("json") JsonMediaTypeCodec baseCodec,
+            JsonStreamMediaTypeCodec streamCodec
     ) {
-        this.applicationConfiguration = applicationConfiguration;
-        this.codecConfiguration = codecConfiguration;
+        this.baseCodec = baseCodec;
+        this.streamCodec = streamCodec;
+    }
+
+    private JacksonJsonAdapter(ObjectMapper objectMapper, ApplicationConfiguration configuration) {
+        this(
+                new JsonMediaTypeCodec(objectMapper, configuration, null),
+                new JsonStreamMediaTypeCodec(objectMapper, configuration, null)
+        );
     }
 
     /**
      * For ServiceLoader (used where no app context is available)
      */
     public JacksonJsonAdapter() {
-        this(new ApplicationConfiguration(), null);
+        this(new ObjectMapperFactory().objectMapper(null, null), new ApplicationConfiguration());
     }
 
     @Nullable
@@ -53,14 +57,12 @@ public class JacksonJsonAdapter implements GenericJsonAdapter {
     }
 
     @Override
-    public GenericJsonMediaTypeCodec createNewJsonCodec() {
-        ObjectMapper objectMapper = new ObjectMapperFactory().objectMapper(null, null);
-        return new JsonMediaTypeCodec(objectMapper, applicationConfiguration, codecConfiguration);
+    public GenericJsonMediaTypeCodec getJsonCodec() {
+        return baseCodec;
     }
 
     @Override
-    public GenericJsonMediaTypeCodec createNewStreamingJsonCodec() {
-        ObjectMapper objectMapper = new ObjectMapperFactory().objectMapper(null, null);
-        return new JsonStreamMediaTypeCodec(objectMapper, applicationConfiguration, codecConfiguration);
+    public GenericJsonMediaTypeCodec getStreamingJsonCodec() {
+        return streamCodec;
     }
 }

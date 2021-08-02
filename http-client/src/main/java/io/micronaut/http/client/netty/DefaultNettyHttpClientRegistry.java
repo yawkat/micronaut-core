@@ -477,7 +477,11 @@ class DefaultNettyHttpClientRegistry implements AutoCloseable,
     }
 
     private static MediaTypeCodec createNewJsonCodec(BeanContext beanContext, JsonFeatures jsonFeatures) {
-        return beanContext.getBean(GenericJsonAdapter.class).createNewJsonCodec().cloneWithFeatures(jsonFeatures);
+        return getJsonCodec(beanContext).cloneWithFeatures(jsonFeatures);
+    }
+
+    private static GenericJsonMediaTypeCodec getJsonCodec(BeanContext beanContext) {
+        return beanContext.getBean(GenericJsonMediaTypeCodec.class, Qualifiers.byName(GenericJsonMediaTypeCodec.REGULAR_JSON_MEDIA_TYPE_CODEC_NAME));
     }
 
     /**

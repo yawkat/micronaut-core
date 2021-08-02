@@ -6,6 +6,7 @@ import io.micronaut.core.annotation.Nullable;
 
 import java.util.ServiceLoader;
 
+// todo: would be nice to remove this
 @Internal
 public interface GenericJsonAdapter {
     static GenericJsonAdapter getUnboundInstance() {
@@ -15,9 +16,9 @@ public interface GenericJsonAdapter {
     @Nullable
     JsonFeatures detectFeatures(AnnotationMetadata annotations);
 
-    GenericJsonMediaTypeCodec createNewJsonCodec();
+    GenericJsonMediaTypeCodec getJsonCodec();
 
-    GenericJsonMediaTypeCodec createNewStreamingJsonCodec();
+    GenericJsonMediaTypeCodec getStreamingJsonCodec();
 }
 
 class Helper {

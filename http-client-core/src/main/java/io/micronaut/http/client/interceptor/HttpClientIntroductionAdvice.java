@@ -68,6 +68,7 @@ import io.micronaut.http.sse.Event;
 import io.micronaut.http.uri.UriBuilder;
 import io.micronaut.http.uri.UriMatchTemplate;
 import io.micronaut.json.GenericJsonMediaTypeCodec;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
@@ -129,7 +130,7 @@ public class HttpClientIntroductionAdvice implements MethodInterceptor<Object, O
      */
     public HttpClientIntroductionAdvice(
             HttpClientRegistry<?> clientFactory,
-            GenericJsonMediaTypeCodec jsonMediaTypeCodec,
+            @Named("json") GenericJsonMediaTypeCodec jsonMediaTypeCodec,
             List<ReactiveClientResultTransformer> transformers,
             HttpClientBinderRegistry binderRegistry,
             ConversionService<?> conversionService) {

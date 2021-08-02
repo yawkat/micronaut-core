@@ -2551,8 +2551,8 @@ public class DefaultHttpClient implements
 
     private static MediaTypeCodecRegistry createDefaultMediaTypeRegistry() {
         return MediaTypeCodecRegistry.of(
-                GenericJsonAdapter.getUnboundInstance().createNewJsonCodec(),
-                GenericJsonAdapter.getUnboundInstance().createNewStreamingJsonCodec()
+                GenericJsonAdapter.getUnboundInstance().getJsonCodec(),
+                GenericJsonAdapter.getUnboundInstance().getStreamingJsonCodec()
         );
     }
 
