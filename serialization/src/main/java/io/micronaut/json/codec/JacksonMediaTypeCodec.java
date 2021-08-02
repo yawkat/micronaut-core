@@ -13,13 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.jackson.codec;
+package io.micronaut.json.codec;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.TreeNode;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.core.*;
 import io.micronaut.context.BeanProvider;
 import io.micronaut.core.io.buffer.ByteBuffer;
 import io.micronaut.core.io.buffer.ByteBufferFactory;
@@ -29,10 +25,9 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
 import io.micronaut.http.codec.CodecException;
 import io.micronaut.http.codec.MediaTypeCodec;
-import io.micronaut.jackson.DatabindUtil;
+import io.micronaut.json.ExtendedObjectCodec;
 import io.micronaut.json.GenericDeserializationConfig;
 import io.micronaut.json.GenericJsonMediaTypeCodec;
-import io.micronaut.jackson.JacksonConfiguration;
 import io.micronaut.json.JsonFeatures;
 import io.micronaut.runtime.ApplicationConfiguration;
 
@@ -57,8 +52,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
     protected final List<MediaType> additionalTypes;
     protected final CodecConfiguration codecConfiguration;
     protected final MediaType mediaType;
-    private final BeanProvider<ObjectMapper> objectMapperProvider;
-    private ObjectMapper objectMapper;
+    private final BeanProvider<ExtendedObjectCodec> objectMapperProvider;
+    private ExtendedObjectCodec objectMapper;
 
     /**
      * @param objectMapperProvider     To read/write JSON
@@ -66,7 +61,7 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
      * @param codecConfiguration       The configuration for the codec
      * @param mediaType                Client request/response media type
      */
-    public JacksonMediaTypeCodec(BeanProvider<ObjectMapper> objectMapperProvider,
+    public JacksonMediaTypeCodec(BeanProvider<ExtendedObjectCodec> objectMapperProvider,
                                  ApplicationConfiguration applicationConfiguration,
                                  CodecConfiguration codecConfiguration,
                                  MediaType mediaType) {
@@ -87,11 +82,11 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
      * @param codecConfiguration       The configuration for the codec
      * @param mediaType                Client request/response media type
      */
-    public JacksonMediaTypeCodec(ObjectMapper objectMapper,
+    public JacksonMediaTypeCodec(ExtendedObjectCodec objectMapper,
                                  ApplicationConfiguration applicationConfiguration,
                                  CodecConfiguration codecConfiguration,
                                  MediaType mediaType) {
-        this((BeanProvider<ObjectMapper>) () -> objectMapper, applicationConfiguration, codecConfiguration, mediaType);
+        this(() -> objectMapper, applicationConfiguration, codecConfiguration, mediaType);
         ArgumentUtils.requireNonNull("objectMapper", objectMapper);
         this.objectMapper = objectMapper;
     }
@@ -99,8 +94,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
     /**
      * @return The object mapper
      */
-    public ObjectMapper getObjectMapper() {
-        ObjectMapper objectMapper = this.objectMapper;
+    public ExtendedObjectCodec getObjectMapper() {
+        ExtendedObjectCodec objectMapper = this.objectMapper;
         if (objectMapper == null) {
             synchronized (this) { // double check
                 objectMapper = this.objectMapper;
@@ -115,26 +110,15 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
 
     @Override
     public GenericJsonMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
-        JacksonFeatures jacksonFeatures = (JacksonFeatures) features;
-
-        ObjectMapper objectMapper = getObjectMapper().copy();
-        jacksonFeatures.getDeserializationFeatures().forEach(objectMapper::configure);
-        jacksonFeatures.getSerializationFeatures().forEach(objectMapper::configure);
-
-        return cloneWithMapper(objectMapper);
+        return cloneWithMapper(getObjectMapper().cloneWithFeatures(features));
     }
 
     @Override
     public GenericJsonMediaTypeCodec cloneWithViewClass(Class<?> viewClass) {
-        ObjectMapper objectMapper = getObjectMapper().copy();
-        objectMapper.setConfig(objectMapper.getSerializationConfig().withView(viewClass));
-        // todo: JsonViewMediaTypeCodecFactory doesn't set the deser config, is doing this an issue?
-        objectMapper.setConfig(objectMapper.getDeserializationConfig().withView(viewClass));
-
-        return cloneWithMapper(objectMapper);
+        return cloneWithMapper(getObjectMapper().cloneWithViewClass(viewClass));
     }
 
-    protected abstract JacksonMediaTypeCodec cloneWithMapper(ObjectMapper mapper);
+    protected abstract JacksonMediaTypeCodec cloneWithMapper(ExtendedObjectCodec mapper);
 
     @Override
     public Collection<MediaType> getMediaTypes() {
@@ -152,13 +136,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
     @SuppressWarnings("Duplicates")
     @Override
     public <T> T decode(Argument<T> type, InputStream inputStream) throws CodecException {
-        try {
-            if (type.hasTypeVariables()) {
-                JavaType javaType = constructJavaType(type);
-                return getObjectMapper().readValue(inputStream, javaType);
-            } else {
-                return getObjectMapper().readValue(inputStream, type.getType());
-            }
+        try (JsonParser parser = getObjectMapper().getObjectCodec().getFactory().createParser(inputStream)) {
+            return getObjectMapper().readValue(parser, type);
         } catch (IOException e) {
             throw new CodecException("Error decoding JSON stream for type [" + type.getName() + "]: " + e.getMessage(), e);
         }
@@ -176,13 +155,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
     @Override
     public <T> T decode(Argument<T> type, TreeNode node) throws CodecException {
         try {
-            ObjectMapper objectMapper = getObjectMapper();
-            if (type.hasTypeVariables()) {
-                JsonParser jsonParser = objectMapper.treeAsTokens(node);
-                return objectMapper.readValue(jsonParser, constructJavaType(type));
-            } else {
-                return objectMapper.treeToValue(node, type.getType());
-            }
+            ExtendedObjectCodec om = getObjectMapper();
+            return om.readValue(node.traverse(om.getObjectCodec()), type);
         } catch (IOException e) {
             throw new CodecException("Error decoding JSON stream for type [" + type.getName() + "]: " + e.getMessage(), e);
         }
@@ -193,11 +167,10 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
         try {
             if (CharSequence.class.isAssignableFrom(type.getType())) {
                 return (T) buffer.toString(applicationConfiguration.getDefaultCharset());
-            } else if (type.hasTypeVariables()) {
-                JavaType javaType = constructJavaType(type);
-                return getObjectMapper().readValue(buffer.toByteArray(), javaType);
             } else {
-                return getObjectMapper().readValue(buffer.toByteArray(), type.getType());
+                try (JsonParser parser = getObjectMapper().getObjectCodec().getFactory().createParser(buffer.toByteArray())) {
+                    return getObjectMapper().readValue(parser, type);
+                }
             }
         } catch (IOException e) {
             throw new CodecException("Error decoding stream for type [" + type.getType() + "]: " + e.getMessage(), e);
@@ -209,11 +182,10 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
         try {
             if (CharSequence.class.isAssignableFrom(type.getType())) {
                 return (T) new String(bytes, applicationConfiguration.getDefaultCharset());
-            } else if (type.hasTypeVariables()) {
-                JavaType javaType = constructJavaType(type);
-                return getObjectMapper().readValue(bytes, javaType);
             } else {
-                return getObjectMapper().readValue(bytes, type.getType());
+                try (JsonParser parser = getObjectMapper().getObjectCodec().getFactory().createParser(bytes)) {
+                    return getObjectMapper().readValue(parser, type);
+                }
             }
         } catch (IOException e) {
             throw new CodecException("Error decoding stream for type [" + type.getType() + "]: " + e.getMessage(), e);
@@ -223,13 +195,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
     @SuppressWarnings("Duplicates")
     @Override
     public <T> T decode(Argument<T> type, String data) throws CodecException {
-        try {
-            if (type.hasTypeVariables()) {
-                JavaType javaType = constructJavaType(type);
-                return getObjectMapper().readValue(data, javaType);
-            } else {
-                return getObjectMapper().readValue(data, type.getType());
-            }
+        try (JsonParser parser = getObjectMapper().getObjectCodec().getFactory().createParser(data)) {
+            return getObjectMapper().readValue(parser, type);
         } catch (IOException e) {
             throw new CodecException("Error decoding JSON stream for type [" + type.getName() + "]: " + e.getMessage(), e);
         }
@@ -237,8 +204,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
 
     @Override
     public <T> void encode(T object, OutputStream outputStream) throws CodecException {
-        try {
-            getObjectMapper().writeValue(outputStream, object);
+        try (JsonGenerator generator = getObjectMapper().getObjectCodec().getFactory().createGenerator(outputStream)) {
+            getObjectMapper().getObjectCodec().writeValue(generator, object);
         } catch (IOException e) {
             throw new CodecException("Error encoding object [" + object + "] to JSON: " + e.getMessage(), e);
         }
@@ -270,12 +237,6 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
 
     @Override
     public GenericDeserializationConfig getDeserializationConfig() {
-        return DatabindUtil.toGenericConfig(getObjectMapper());
+        return getObjectMapper().getDeserializationConfig();
     }
-
-    private <T> JavaType constructJavaType(Argument<T> type) {
-        TypeFactory typeFactory = getObjectMapper().getTypeFactory();
-        return JacksonConfiguration.constructType(type, typeFactory);
-    }
-
 }

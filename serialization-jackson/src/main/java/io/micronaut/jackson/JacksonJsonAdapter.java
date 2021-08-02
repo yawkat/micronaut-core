@@ -1,13 +1,13 @@
 package io.micronaut.jackson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.jackson.annotation.JacksonFeatures;
-import io.micronaut.jackson.codec.JsonMediaTypeCodec;
-import io.micronaut.jackson.codec.JsonStreamMediaTypeCodec;
+import io.micronaut.json.codec.JsonMediaTypeCodec;
+import io.micronaut.json.codec.JsonStreamMediaTypeCodec;
+import io.micronaut.json.ExtendedObjectCodec;
 import io.micronaut.json.GenericJsonAdapter;
 import io.micronaut.json.GenericJsonMediaTypeCodec;
 import io.micronaut.json.JsonFeatures;
@@ -31,7 +31,7 @@ public class JacksonJsonAdapter implements GenericJsonAdapter {
         this.streamCodec = streamCodec;
     }
 
-    private JacksonJsonAdapter(ObjectMapper objectMapper, ApplicationConfiguration configuration) {
+    private JacksonJsonAdapter(ExtendedObjectCodec objectMapper, ApplicationConfiguration configuration) {
         this(
                 new JsonMediaTypeCodec(objectMapper, configuration, null),
                 new JsonStreamMediaTypeCodec(objectMapper, configuration, null)
@@ -42,7 +42,7 @@ public class JacksonJsonAdapter implements GenericJsonAdapter {
      * For ServiceLoader (used where no app context is available)
      */
     public JacksonJsonAdapter() {
-        this(new ObjectMapperFactory().objectMapper(null, null), new ApplicationConfiguration());
+        this(new DatabindObjectCodec(new ObjectMapperFactory().objectMapper(null, null)), new ApplicationConfiguration());
     }
 
     @Nullable

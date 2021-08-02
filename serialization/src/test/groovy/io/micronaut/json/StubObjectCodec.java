@@ -22,6 +22,21 @@ public class StubObjectCodec implements ExtendedObjectCodec {
 
     @Override
     public void updateValue(JsonParser parser, Object value) throws IOException {
-        throw new UnsupportedEncodingException();
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ExtendedObjectCodec cloneWithFeatures(JsonFeatures features) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ExtendedObjectCodec cloneWithViewClass(Class<?> viewClass) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public GenericDeserializationConfig getDeserializationConfig() {
+        throw new UnsupportedOperationException();
     }
 }

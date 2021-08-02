@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.jackson.codec;
+package io.micronaut.json.codec;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.context.BeanProvider;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
+import io.micronaut.json.ExtendedObjectCodec;
 import io.micronaut.runtime.ApplicationConfiguration;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -50,7 +50,7 @@ public class JsonStreamMediaTypeCodec extends JsonMediaTypeCodec {
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      */
-    public JsonStreamMediaTypeCodec(ObjectMapper objectMapper,
+    public JsonStreamMediaTypeCodec(ExtendedObjectCodec objectMapper,
                                     ApplicationConfiguration applicationConfiguration,
                                     @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
         super(objectMapper, applicationConfiguration, null);
@@ -67,7 +67,7 @@ public class JsonStreamMediaTypeCodec extends JsonMediaTypeCodec {
      * @param codecConfiguration       The configuration for the codec
      */
     @Inject
-    public JsonStreamMediaTypeCodec(BeanProvider<ObjectMapper> objectMapper,
+    public JsonStreamMediaTypeCodec(BeanProvider<ExtendedObjectCodec> objectMapper,
                                     ApplicationConfiguration applicationConfiguration,
                                     @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
         super(objectMapper, applicationConfiguration, null);

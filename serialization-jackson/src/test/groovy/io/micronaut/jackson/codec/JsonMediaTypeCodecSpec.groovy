@@ -17,6 +17,7 @@ package io.micronaut.jackson.codec
 
 import io.micronaut.context.ApplicationContext
 import io.micronaut.http.MediaType
+import io.micronaut.json.codec.JsonMediaTypeCodec
 import spock.lang.Specification
 
 class JsonMediaTypeCodecSpec extends Specification {

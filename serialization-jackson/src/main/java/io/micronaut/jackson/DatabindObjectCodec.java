@@ -6,14 +6,19 @@ import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.convert.TypeConverter;
 import io.micronaut.core.type.Argument;
+import io.micronaut.jackson.codec.JacksonFeatures;
 import io.micronaut.json.ExtendedObjectCodec;
+import io.micronaut.json.GenericDeserializationConfig;
+import io.micronaut.json.JsonFeatures;
 import jakarta.inject.Singleton;
 
 import java.io.IOException;
 
 @Singleton
+@BootstrapContextCompatible
 public class DatabindObjectCodec implements ExtendedObjectCodec {
     private final ObjectMapper objectMapper;
 
@@ -43,5 +48,31 @@ public class DatabindObjectCodec implements ExtendedObjectCodec {
     @Override
     public void updateValue(JsonParser parser, Object value) throws IOException {
         objectMapper.readerForUpdating(value).readValue(parser);
+    }
+
+    @Override
+    public ExtendedObjectCodec cloneWithFeatures(JsonFeatures features) {
+        JacksonFeatures jacksonFeatures = (JacksonFeatures) features;
+
+        ObjectMapper objectMapper = this.objectMapper.copy();
+        jacksonFeatures.getDeserializationFeatures().forEach(objectMapper::configure);
+        jacksonFeatures.getSerializationFeatures().forEach(objectMapper::configure);
+
+        return new DatabindObjectCodec(objectMapper);
+    }
+
+    @Override
+    public ExtendedObjectCodec cloneWithViewClass(Class<?> viewClass) {
+        ObjectMapper objectMapper = this.objectMapper.copy();
+        objectMapper.setConfig(objectMapper.getSerializationConfig().withView(viewClass));
+        // todo: JsonViewMediaTypeCodecFactory doesn't set the deser config, is doing this an issue?
+        objectMapper.setConfig(objectMapper.getDeserializationConfig().withView(viewClass));
+
+        return new DatabindObjectCodec(objectMapper);
+    }
+
+    @Override
+    public GenericDeserializationConfig getDeserializationConfig() {
+        return DatabindUtil.toGenericConfig(objectMapper);
     }
 }

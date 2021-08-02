@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.jackson.codec;
+package io.micronaut.json.codec;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.context.BeanProvider;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
+import io.micronaut.json.ExtendedObjectCodec;
 import io.micronaut.json.GenericJsonMediaTypeCodec;
 import io.micronaut.runtime.ApplicationConfiguration;
 import jakarta.inject.Inject;
@@ -45,7 +45,7 @@ public class JsonMediaTypeCodec extends JacksonMediaTypeCodec {
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      */
-    public JsonMediaTypeCodec(ObjectMapper objectMapper,
+    public JsonMediaTypeCodec(ExtendedObjectCodec objectMapper,
                               ApplicationConfiguration applicationConfiguration,
                               @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
         super(objectMapper, applicationConfiguration, codecConfiguration, MediaType.APPLICATION_JSON_TYPE);
@@ -57,14 +57,14 @@ public class JsonMediaTypeCodec extends JacksonMediaTypeCodec {
      * @param codecConfiguration       The configuration for the codec
      */
     @Inject
-    public JsonMediaTypeCodec(BeanProvider<ObjectMapper> objectMapper,
+    public JsonMediaTypeCodec(BeanProvider<ExtendedObjectCodec> objectMapper,
                               ApplicationConfiguration applicationConfiguration,
                               @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
         super(objectMapper, applicationConfiguration, codecConfiguration, MediaType.APPLICATION_JSON_TYPE);
     }
 
     @Override
-    protected JacksonMediaTypeCodec cloneWithMapper(ObjectMapper mapper) {
+    protected JacksonMediaTypeCodec cloneWithMapper(ExtendedObjectCodec mapper) {
         return new JsonMediaTypeCodec(mapper, applicationConfiguration, codecConfiguration);
     }
 }
