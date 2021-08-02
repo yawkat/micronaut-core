@@ -21,7 +21,6 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
 import io.micronaut.json.ExtendedObjectCodec;
-import io.micronaut.json.GenericJsonMediaTypeCodec;
 import io.micronaut.runtime.ApplicationConfiguration;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -33,7 +32,7 @@ import jakarta.inject.Singleton;
  * @author Graeme Rocher
  * @since 1.0.0
  */
-@Named(GenericJsonMediaTypeCodec.REGULAR_JSON_MEDIA_TYPE_CODEC_NAME)
+@Named(JacksonMediaTypeCodec.REGULAR_JSON_MEDIA_TYPE_CODEC_NAME)
 @Singleton
 @BootstrapContextCompatible
 public class JsonMediaTypeCodec extends JacksonMediaTypeCodec {

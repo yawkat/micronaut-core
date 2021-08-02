@@ -19,9 +19,8 @@ import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.util.ArgumentUtils;
-import io.micronaut.json.GenericJsonAdapter;
-import io.micronaut.json.GenericJsonMediaTypeCodec;
 import io.micronaut.json.JsonConfiguration;
+import io.micronaut.json.codec.JacksonMediaTypeCodec;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 
@@ -42,10 +41,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @Primary
 class JsonViewMediaTypeCodecFactory implements JsonViewCodecResolver {
 
-    private final GenericJsonMediaTypeCodec jsonCodec;
-    private final Map<Class<?>, GenericJsonMediaTypeCodec> jsonViewCodecs = new ConcurrentHashMap<>(5);
+    private final JacksonMediaTypeCodec jsonCodec;
+    private final Map<Class<?>, JacksonMediaTypeCodec> jsonViewCodecs = new ConcurrentHashMap<>(5);
 
-    JsonViewMediaTypeCodecFactory(@Named(GenericJsonMediaTypeCodec.REGULAR_JSON_MEDIA_TYPE_CODEC_NAME) GenericJsonMediaTypeCodec jsonCodec) {
+    JsonViewMediaTypeCodecFactory(@Named(JacksonMediaTypeCodec.REGULAR_JSON_MEDIA_TYPE_CODEC_NAME) JacksonMediaTypeCodec jsonCodec) {
         this.jsonCodec = jsonCodec;
     }
 
@@ -55,9 +54,10 @@ class JsonViewMediaTypeCodecFactory implements JsonViewCodecResolver {
      * @return The codec
      */
     @Override
-    public @NonNull GenericJsonMediaTypeCodec resolveJsonViewCodec(@NonNull Class<?> viewClass) {
+    public @NonNull
+    JacksonMediaTypeCodec resolveJsonViewCodec(@NonNull Class<?> viewClass) {
         ArgumentUtils.requireNonNull("viewClass", viewClass);
-        GenericJsonMediaTypeCodec codec = jsonViewCodecs.get(viewClass);
+        JacksonMediaTypeCodec codec = jsonViewCodecs.get(viewClass);
         if (codec == null) {
             codec = jsonCodec.cloneWithViewClass(viewClass);
             jsonViewCodecs.put(viewClass, codec);

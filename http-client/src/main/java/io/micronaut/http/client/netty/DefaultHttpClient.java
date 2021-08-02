@@ -93,9 +93,13 @@ import io.micronaut.http.netty.stream.StreamingInboundHttp2ToHttpAdapter;
 import io.micronaut.http.sse.Event;
 import io.micronaut.http.uri.UriBuilder;
 import io.micronaut.http.uri.UriTemplate;
+import io.micronaut.json.ExtendedObjectCodec;
 import io.micronaut.json.GenericJsonAdapter;
-import io.micronaut.json.GenericJsonMediaTypeCodec;
+import io.micronaut.json.codec.JacksonMediaTypeCodec;
+import io.micronaut.json.codec.JsonMediaTypeCodec;
+import io.micronaut.json.codec.JsonStreamMediaTypeCodec;
 import io.micronaut.json.parser.JacksonJrProcessor;
+import io.micronaut.runtime.ApplicationConfiguration;
 import io.micronaut.scheduling.instrument.Instrumentation;
 import io.micronaut.scheduling.instrument.InvocationInstrumenter;
 import io.micronaut.scheduling.instrument.InvocationInstrumenterFactory;
@@ -956,7 +960,7 @@ public class DefaultHttpClient implements
                     throw new IllegalStateException("Response has been wrapped in non streaming type. Do not wrap the response in client filters for stream requests");
                 }
 
-                GenericJsonMediaTypeCodec mediaTypeCodec = (GenericJsonMediaTypeCodec) mediaTypeCodecRegistry.findCodec(MediaType.APPLICATION_JSON_TYPE)
+                JacksonMediaTypeCodec mediaTypeCodec = (JacksonMediaTypeCodec) mediaTypeCodecRegistry.findCodec(MediaType.APPLICATION_JSON_TYPE)
                         .orElseThrow(() -> new IllegalStateException("No JSON codec found"));
 
                 StreamedHttpResponse streamResponse = NettyHttpResponseBuilder.toStreamResponse(response);
@@ -2550,9 +2554,11 @@ public class DefaultHttpClient implements
     }
 
     private static MediaTypeCodecRegistry createDefaultMediaTypeRegistry() {
+        ExtendedObjectCodec mapper = GenericJsonAdapter.getUnboundInstance().createObjectMapper();
+        ApplicationConfiguration configuration = new ApplicationConfiguration();
         return MediaTypeCodecRegistry.of(
-                GenericJsonAdapter.getUnboundInstance().getJsonCodec(),
-                GenericJsonAdapter.getUnboundInstance().getStreamingJsonCodec()
+                new JsonMediaTypeCodec(mapper, configuration, null),
+                new JsonStreamMediaTypeCodec(mapper, configuration, null)
         );
     }
 

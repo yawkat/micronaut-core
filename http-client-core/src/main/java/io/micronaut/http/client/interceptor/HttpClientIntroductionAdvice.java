@@ -67,7 +67,7 @@ import io.micronaut.http.client.sse.SseClient;
 import io.micronaut.http.sse.Event;
 import io.micronaut.http.uri.UriBuilder;
 import io.micronaut.http.uri.UriMatchTemplate;
-import io.micronaut.json.GenericJsonMediaTypeCodec;
+import io.micronaut.json.codec.JacksonMediaTypeCodec;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import org.reactivestreams.Publisher;
@@ -115,7 +115,7 @@ public class HttpClientIntroductionAdvice implements MethodInterceptor<Object, O
     private static final int ATTRIBUTES_INITIAL_CAPACITY = 1;
     private final List<ReactiveClientResultTransformer> transformers;
     private final HttpClientBinderRegistry binderRegistry;
-    private final GenericJsonMediaTypeCodec jsonMediaTypeCodec;
+    private final JacksonMediaTypeCodec jsonMediaTypeCodec;
     private final HttpClientRegistry<?> clientFactory;
     private final ConversionService<?> conversionService;
 
@@ -130,7 +130,7 @@ public class HttpClientIntroductionAdvice implements MethodInterceptor<Object, O
      */
     public HttpClientIntroductionAdvice(
             HttpClientRegistry<?> clientFactory,
-            @Named("json") GenericJsonMediaTypeCodec jsonMediaTypeCodec,
+            @Named("json") JacksonMediaTypeCodec jsonMediaTypeCodec,
             List<ReactiveClientResultTransformer> transformers,
             HttpClientBinderRegistry binderRegistry,
             ConversionService<?> conversionService) {

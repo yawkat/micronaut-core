@@ -27,7 +27,6 @@ import io.micronaut.http.codec.CodecException;
 import io.micronaut.http.codec.MediaTypeCodec;
 import io.micronaut.json.ExtendedObjectCodec;
 import io.micronaut.json.GenericDeserializationConfig;
-import io.micronaut.json.GenericJsonMediaTypeCodec;
 import io.micronaut.json.JsonFeatures;
 import io.micronaut.runtime.ApplicationConfiguration;
 
@@ -46,7 +45,8 @@ import java.util.List;
  * @author svishnyakov
  * @since 1.3.0
  */
-public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJsonMediaTypeCodec {
+public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
+    public static final String REGULAR_JSON_MEDIA_TYPE_CODEC_NAME = "json";
 
     protected final ApplicationConfiguration applicationConfiguration;
     protected final List<MediaType> additionalTypes;
@@ -108,13 +108,11 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
         return objectMapper;
     }
 
-    @Override
-    public GenericJsonMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
+    public JacksonMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
         return cloneWithMapper(getObjectMapper().cloneWithFeatures(features));
     }
 
-    @Override
-    public GenericJsonMediaTypeCodec cloneWithViewClass(Class<?> viewClass) {
+    public JacksonMediaTypeCodec cloneWithViewClass(Class<?> viewClass) {
         return cloneWithMapper(getObjectMapper().cloneWithViewClass(viewClass));
     }
 
@@ -152,7 +150,6 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
      * @return The decoded object
      * @throws CodecException When object cannot be decoded
      */
-    @Override
     public <T> T decode(Argument<T> type, TreeNode node) throws CodecException {
         try {
             ExtendedObjectCodec om = getObjectMapper();
@@ -235,7 +232,6 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec, GenericJs
         return buffer;
     }
 
-    @Override
     public GenericDeserializationConfig getDeserializationConfig() {
         return getObjectMapper().getDeserializationConfig();
     }

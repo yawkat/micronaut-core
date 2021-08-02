@@ -59,8 +59,8 @@ import io.micronaut.http.netty.channel.EventLoopGroupRegistry;
 import io.micronaut.inject.InjectionPoint;
 import io.micronaut.inject.qualifiers.Qualifiers;
 import io.micronaut.json.GenericJsonAdapter;
-import io.micronaut.json.GenericJsonMediaTypeCodec;
 import io.micronaut.json.JsonFeatures;
+import io.micronaut.json.codec.JacksonMediaTypeCodec;
 import io.micronaut.scheduling.instrument.InvocationInstrumenterFactory;
 import io.micronaut.websocket.WebSocketClient;
 import io.micronaut.websocket.WebSocketClientRegistry;
@@ -350,8 +350,8 @@ class DefaultNettyHttpClientRegistry implements AutoCloseable,
                 List<MediaTypeCodec> codecs = new ArrayList<>(2);
                 MediaTypeCodecRegistry codecRegistry = client.getMediaTypeCodecRegistry();
                 for (MediaTypeCodec codec : codecRegistry.getCodecs()) {
-                    if (codec instanceof GenericJsonMediaTypeCodec) {
-                        codecs.add(((GenericJsonMediaTypeCodec) codec).cloneWithFeatures(jsonFeatures));
+                    if (codec instanceof JacksonMediaTypeCodec) {
+                        codecs.add(((JacksonMediaTypeCodec) codec).cloneWithFeatures(jsonFeatures));
                     } else {
                         codecs.add(codec);
                     }
@@ -470,8 +470,7 @@ class DefaultNettyHttpClientRegistry implements AutoCloseable,
                 .getAnnotationNamesByStereotype(FilterMatcher.class);
         final Class configurationClass =
                 metadata.classValue(Client.class, "configuration").orElse(null);
-        GenericJsonAdapter jsonAdapter = beanContext.getBean(GenericJsonAdapter.class);
-        JsonFeatures jsonFeatures = jsonAdapter.detectFeatures(metadata);
+        JsonFeatures jsonFeatures = GenericJsonAdapter.getUnboundInstance().detectFeatures(metadata);
 
         return new ClientKey(httpVersion, clientId, filterAnnotation, path, configurationClass, jsonFeatures);
     }
@@ -480,8 +479,8 @@ class DefaultNettyHttpClientRegistry implements AutoCloseable,
         return getJsonCodec(beanContext).cloneWithFeatures(jsonFeatures);
     }
 
-    private static GenericJsonMediaTypeCodec getJsonCodec(BeanContext beanContext) {
-        return beanContext.getBean(GenericJsonMediaTypeCodec.class, Qualifiers.byName(GenericJsonMediaTypeCodec.REGULAR_JSON_MEDIA_TYPE_CODEC_NAME));
+    private static JacksonMediaTypeCodec getJsonCodec(BeanContext beanContext) {
+        return beanContext.getBean(JacksonMediaTypeCodec.class, Qualifiers.byName(JacksonMediaTypeCodec.REGULAR_JSON_MEDIA_TYPE_CODEC_NAME));
     }
 
     /**

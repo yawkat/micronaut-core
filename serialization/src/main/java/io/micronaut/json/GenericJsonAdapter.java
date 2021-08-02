@@ -3,6 +3,7 @@ package io.micronaut.json;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.json.codec.JacksonMediaTypeCodec;
 
 import java.util.ServiceLoader;
 
@@ -16,9 +17,7 @@ public interface GenericJsonAdapter {
     @Nullable
     JsonFeatures detectFeatures(AnnotationMetadata annotations);
 
-    GenericJsonMediaTypeCodec getJsonCodec();
-
-    GenericJsonMediaTypeCodec getStreamingJsonCodec();
+    ExtendedObjectCodec createObjectMapper();
 }
 
 class Helper {
