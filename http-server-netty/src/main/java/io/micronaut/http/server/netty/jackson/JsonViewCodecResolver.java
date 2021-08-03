@@ -16,7 +16,7 @@
 package io.micronaut.http.server.netty.jackson;
 
 import io.micronaut.core.annotation.NonNull;
-import io.micronaut.json.codec.JacksonMediaTypeCodec;
+import io.micronaut.json.codec.JsonMediaTypeCodec;
 
 /**
  * Interface for resolving codecs for {@link com.fasterxml.jackson.annotation.JsonView} types.
@@ -26,10 +26,9 @@ import io.micronaut.json.codec.JacksonMediaTypeCodec;
  */
 interface JsonViewCodecResolver {
     /**
-     * Resolves a {@link JacksonMediaTypeCodec} for the view class (specified as the JsonView annotation value).
+     * Resolves a {@link JsonMediaTypeCodec} for the view class (specified as the JsonView annotation value).
      * @param viewClass The view class
      * @return The codec
      */
-    @NonNull
-    JacksonMediaTypeCodec resolveJsonViewCodec(@NonNull Class<?> viewClass);
+    @NonNull JsonMediaTypeCodec resolveJsonViewCodec(@NonNull Class<?> viewClass);
 }
