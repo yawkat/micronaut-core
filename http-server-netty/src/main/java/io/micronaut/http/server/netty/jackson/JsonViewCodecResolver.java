@@ -26,7 +26,7 @@ import io.micronaut.json.codec.JacksonMediaTypeCodec;
  */
 interface JsonViewCodecResolver {
     /**
-     * Resolves a {@link GenericJsonMediaTypeCodec} for the view class (specified as the JsonView annotation value).
+     * Resolves a {@link JacksonMediaTypeCodec} for the view class (specified as the JsonView annotation value).
      * @param viewClass The view class
      * @return The codec
      */

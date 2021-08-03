@@ -20,8 +20,7 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.util.ArgumentUtils;
 import io.micronaut.json.JsonConfiguration;
-import io.micronaut.json.codec.JacksonMediaTypeCodec;
-import jakarta.inject.Named;
+import io.micronaut.json.codec.JsonMediaTypeCodec;
 import jakarta.inject.Singleton;
 
 import java.util.Map;
@@ -41,25 +40,25 @@ import java.util.concurrent.ConcurrentHashMap;
 @Primary
 class JsonViewMediaTypeCodecFactory implements JsonViewCodecResolver {
 
-    private final JacksonMediaTypeCodec jsonCodec;
-    private final Map<Class<?>, JacksonMediaTypeCodec> jsonViewCodecs = new ConcurrentHashMap<>(5);
+    private final JsonMediaTypeCodec jsonCodec;
+    private final Map<Class<?>, JsonMediaTypeCodec> jsonViewCodecs = new ConcurrentHashMap<>(5);
 
-    JsonViewMediaTypeCodecFactory(@Named(JacksonMediaTypeCodec.REGULAR_JSON_MEDIA_TYPE_CODEC_NAME) JacksonMediaTypeCodec jsonCodec) {
+    JsonViewMediaTypeCodecFactory(JsonMediaTypeCodec jsonCodec) {
         this.jsonCodec = jsonCodec;
     }
 
     /**
-     * Creates a {@link GenericJsonMediaTypeCodec} for the view class (specified as the JsonView annotation value).
+     * Creates a {@link JsonMediaTypeCodec} for the view class (specified as the JsonView annotation value).
      * @param viewClass The view class
      * @return The codec
      */
     @Override
-    public @NonNull
-    JacksonMediaTypeCodec resolveJsonViewCodec(@NonNull Class<?> viewClass) {
+    @NonNull
+    public JsonMediaTypeCodec resolveJsonViewCodec(@NonNull Class<?> viewClass) {
         ArgumentUtils.requireNonNull("viewClass", viewClass);
-        JacksonMediaTypeCodec codec = jsonViewCodecs.get(viewClass);
+        JsonMediaTypeCodec codec = jsonViewCodecs.get(viewClass);
         if (codec == null) {
-            codec = jsonCodec.cloneWithViewClass(viewClass);
+            codec = (JsonMediaTypeCodec) jsonCodec.cloneWithViewClass(viewClass);
             jsonViewCodecs.put(viewClass, codec);
         }
         return codec;
