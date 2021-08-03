@@ -18,6 +18,7 @@ package io.micronaut.json.tree;
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.jr.stree.*;
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.json.GenericDeserializationConfig;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,11 +27,21 @@ import java.math.BigInteger;
 import java.util.*;
 
 public final class TreeGenerator extends JsonGenerator {
+    private final JacksonJrsTreeCodec treeCodec;
+
     private ObjectCodec codec;
     private int generatorFeatures;
 
     private final Deque<StructureBuilder> structureStack = new ArrayDeque<>();
     private JrsValue completed = null;
+
+    public TreeGenerator(JacksonJrsTreeCodec treeCodec) {
+        this.treeCodec = treeCodec;
+    }
+
+    public TreeGenerator() {
+        this(JacksonJrsTreeCodec.SINGLETON);
+    }
 
     @Override
     public JsonGenerator setCodec(ObjectCodec oc) {
@@ -115,8 +126,10 @@ public final class TreeGenerator extends JsonGenerator {
         }
     }
 
-    private void complete(JrsValue value) {
-        // todo
+    private void complete(JrsValue value) throws JsonGenerationException {
+        if (completed != null) {
+            throw new JsonGenerationException("Tree generator has already completed", this);
+        }
         completed = value;
     }
 
@@ -183,7 +196,7 @@ public final class TreeGenerator extends JsonGenerator {
 
     @Override
     public void writeString(String text) throws IOException {
-        writeScalar(JsonToken.VALUE_STRING, new JrsString(text));
+        writeScalar(JsonToken.VALUE_STRING, treeCodec.stringNode(text));
     }
 
     @Override
@@ -254,33 +267,33 @@ public final class TreeGenerator extends JsonGenerator {
 
     @Override
     public void writeNumber(int v) throws IOException {
-        writeScalar(JsonToken.VALUE_NUMBER_INT, new JrsNumber(v));
+        writeScalar(JsonToken.VALUE_NUMBER_INT, treeCodec.numberNode(v));
     }
 
     @Override
     public void writeNumber(long v) throws IOException {
-        writeScalar(JsonToken.VALUE_NUMBER_INT, new JrsNumber(v));
+        writeScalar(JsonToken.VALUE_NUMBER_INT, treeCodec.numberNode(v));
     }
 
     @Override
     public void writeNumber(BigInteger v) throws IOException {
-        // todo: normalize
-        writeScalar(JsonToken.VALUE_NUMBER_INT, new JrsNumber(v));
+        // the tree codec could normalize
+        writeScalar(JsonToken.VALUE_NUMBER_INT, treeCodec.numberNode(v));
     }
 
     @Override
     public void writeNumber(double v) throws IOException {
-        writeScalar(JsonToken.VALUE_NUMBER_FLOAT, new JrsNumber(v));
+        writeScalar(JsonToken.VALUE_NUMBER_FLOAT, treeCodec.numberNode(v));
     }
 
     @Override
     public void writeNumber(float v) throws IOException {
-        writeScalar(JsonToken.VALUE_NUMBER_FLOAT, new JrsNumber(v));
+        writeScalar(JsonToken.VALUE_NUMBER_FLOAT, treeCodec.numberNode(v));
     }
 
     @Override
     public void writeNumber(BigDecimal v) throws IOException {
-        writeScalar(JsonToken.VALUE_NUMBER_FLOAT, new JrsNumber(v));
+        writeScalar(JsonToken.VALUE_NUMBER_FLOAT, treeCodec.numberNode(v));
     }
 
     @Override
@@ -290,16 +303,12 @@ public final class TreeGenerator extends JsonGenerator {
 
     @Override
     public void writeBoolean(boolean state) throws IOException {
-        if (state) {
-            writeScalar(JsonToken.VALUE_TRUE, JrsBoolean.TRUE);
-        } else {
-            writeScalar(JsonToken.VALUE_FALSE, JrsBoolean.FALSE);
-        }
+        writeScalar(state ? JsonToken.VALUE_TRUE : JsonToken.VALUE_FALSE, treeCodec.booleanNode(state));
     }
 
     @Override
     public void writeNull() throws IOException {
-        writeScalar(JsonToken.VALUE_NULL, JrsNull.instance());
+        writeScalar(JsonToken.VALUE_NULL, treeCodec.nullNode());
     }
 
     @Override
@@ -314,7 +323,7 @@ public final class TreeGenerator extends JsonGenerator {
         } else if (rootNode instanceof JrsValue) {
             writeScalar(JsonToken.VALUE_EMBEDDED_OBJECT, (JrsValue) rootNode);
         } else {
-            // todo: copy
+            JsonStreamTransfer.transferNext(rootNode.traverse(), this, GenericDeserializationConfig.DEFAULT);
         }
     }
 
