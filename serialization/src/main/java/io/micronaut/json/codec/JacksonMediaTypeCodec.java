@@ -108,11 +108,11 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
         return objectMapper;
     }
 
-    public JacksonMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
+    public final JacksonMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
         return cloneWithMapper(getObjectMapper().cloneWithFeatures(features));
     }
 
-    public JacksonMediaTypeCodec cloneWithViewClass(Class<?> viewClass) {
+    public final JacksonMediaTypeCodec cloneWithViewClass(Class<?> viewClass) {
         return cloneWithMapper(getObjectMapper().cloneWithViewClass(viewClass));
     }
 
@@ -232,7 +232,7 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
         return buffer;
     }
 
-    public GenericDeserializationConfig getDeserializationConfig() {
+    public final GenericDeserializationConfig getDeserializationConfig() {
         return getObjectMapper().getDeserializationConfig();
     }
 }

@@ -60,7 +60,8 @@ public class JacksonJrProcessor extends SingleThreadedBufferingProcessor<byte[],
     /**
      * Creates a new JacksonProcessor.
      *
-     * @param streamArray Whether arrays should be streamed
+     * @param streamArray           Whether arrays should be streamed
+     * @param deserializationConfig The deserialization configuration (in particular bignum handling)
      */
     public JacksonJrProcessor(boolean streamArray, @NonNull GenericDeserializationConfig deserializationConfig) {
         this.jsonFactory = deserializationConfig.getFactory();

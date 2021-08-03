@@ -48,6 +48,12 @@ public class JsonPropertySourceLoader extends AbstractPropertySourceLoader {
         processMap(finalMap, map, "");
     }
 
+    /**
+     * @param input    The input stream
+     * @throws IOException If the input stream doesn't exist
+     *
+     * @return map representation of the json
+     */
     @SuppressWarnings("unchecked")
     protected Map<String, Object> readJsonAsMap(InputStream input) throws IOException {
         return (Map<String, Object>) unwrap(readJsonAsObject(input));
