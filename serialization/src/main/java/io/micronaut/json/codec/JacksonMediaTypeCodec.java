@@ -94,7 +94,7 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
     /**
      * @return The object mapper
      */
-    public ExtendedObjectCodec getObjectMapper() {
+    public ExtendedObjectCodec getObjectCodec() {
         ExtendedObjectCodec objectMapper = this.objectMapper;
         if (objectMapper == null) {
             synchronized (this) { // double check
@@ -108,12 +108,12 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
         return objectMapper;
     }
 
-    public final JacksonMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
-        return cloneWithMapper(getObjectMapper().cloneWithFeatures(features));
+    public JacksonMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
+        return cloneWithMapper(getObjectCodec().cloneWithFeatures(features));
     }
 
     public final JacksonMediaTypeCodec cloneWithViewClass(Class<?> viewClass) {
-        return cloneWithMapper(getObjectMapper().cloneWithViewClass(viewClass));
+        return cloneWithMapper(getObjectCodec().cloneWithViewClass(viewClass));
     }
 
     protected abstract JacksonMediaTypeCodec cloneWithMapper(ExtendedObjectCodec mapper);
@@ -134,8 +134,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
     @SuppressWarnings("Duplicates")
     @Override
     public <T> T decode(Argument<T> type, InputStream inputStream) throws CodecException {
-        try (JsonParser parser = getObjectMapper().getObjectCodec().getFactory().createParser(inputStream)) {
-            return getObjectMapper().readValue(parser, type);
+        try (JsonParser parser = getObjectCodec().getObjectCodec().getFactory().createParser(inputStream)) {
+            return getObjectCodec().readValue(parser, type);
         } catch (IOException e) {
             throw new CodecException("Error decoding JSON stream for type [" + type.getName() + "]: " + e.getMessage(), e);
         }
@@ -152,7 +152,7 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
      */
     public <T> T decode(Argument<T> type, TreeNode node) throws CodecException {
         try {
-            ExtendedObjectCodec om = getObjectMapper();
+            ExtendedObjectCodec om = getObjectCodec();
             return om.readValue(node.traverse(om.getObjectCodec()), type);
         } catch (IOException e) {
             throw new CodecException("Error decoding JSON stream for type [" + type.getName() + "]: " + e.getMessage(), e);
@@ -165,8 +165,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
             if (CharSequence.class.isAssignableFrom(type.getType())) {
                 return (T) buffer.toString(applicationConfiguration.getDefaultCharset());
             } else {
-                try (JsonParser parser = getObjectMapper().getObjectCodec().getFactory().createParser(buffer.toByteArray())) {
-                    return getObjectMapper().readValue(parser, type);
+                try (JsonParser parser = getObjectCodec().getObjectCodec().getFactory().createParser(buffer.toByteArray())) {
+                    return getObjectCodec().readValue(parser, type);
                 }
             }
         } catch (IOException e) {
@@ -180,8 +180,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
             if (CharSequence.class.isAssignableFrom(type.getType())) {
                 return (T) new String(bytes, applicationConfiguration.getDefaultCharset());
             } else {
-                try (JsonParser parser = getObjectMapper().getObjectCodec().getFactory().createParser(bytes)) {
-                    return getObjectMapper().readValue(parser, type);
+                try (JsonParser parser = getObjectCodec().getObjectCodec().getFactory().createParser(bytes)) {
+                    return getObjectCodec().readValue(parser, type);
                 }
             }
         } catch (IOException e) {
@@ -192,8 +192,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
     @SuppressWarnings("Duplicates")
     @Override
     public <T> T decode(Argument<T> type, String data) throws CodecException {
-        try (JsonParser parser = getObjectMapper().getObjectCodec().getFactory().createParser(data)) {
-            return getObjectMapper().readValue(parser, type);
+        try (JsonParser parser = getObjectCodec().getObjectCodec().getFactory().createParser(data)) {
+            return getObjectCodec().readValue(parser, type);
         } catch (IOException e) {
             throw new CodecException("Error decoding JSON stream for type [" + type.getName() + "]: " + e.getMessage(), e);
         }
@@ -201,8 +201,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
 
     @Override
     public <T> void encode(T object, OutputStream outputStream) throws CodecException {
-        try (JsonGenerator generator = getObjectMapper().getObjectCodec().getFactory().createGenerator(outputStream)) {
-            getObjectMapper().getObjectCodec().writeValue(generator, object);
+        try (JsonGenerator generator = getObjectCodec().getObjectCodec().getFactory().createGenerator(outputStream)) {
+            getObjectCodec().getObjectCodec().writeValue(generator, object);
         } catch (IOException e) {
             throw new CodecException("Error encoding object [" + object + "] to JSON: " + e.getMessage(), e);
         }
@@ -214,7 +214,7 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
             if (object instanceof byte[]) {
                 return (byte[]) object;
             } else {
-                return getObjectMapper().writeValueAsBytes(object);
+                return getObjectCodec().writeValueAsBytes(object);
             }
         } catch (JsonProcessingException e) {
             throw new CodecException("Error encoding object [" + object + "] to JSON: " + e.getMessage(), e);
@@ -233,6 +233,6 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
     }
 
     public final GenericDeserializationConfig getDeserializationConfig() {
-        return getObjectMapper().getDeserializationConfig();
+        return getObjectCodec().getDeserializationConfig();
     }
 }
