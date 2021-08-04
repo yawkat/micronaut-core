@@ -16,12 +16,14 @@
 package io.micronaut.http.server.exceptions.response;
 
 import io.micronaut.context.annotation.Secondary;
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.hateoas.JsonError;
 import io.micronaut.http.hateoas.Link;
 import io.micronaut.http.hateoas.Resource;
+import io.micronaut.jackson.JacksonConfiguration;
 import io.micronaut.json.JsonConfiguration;
 import jakarta.inject.Singleton;
 
@@ -42,6 +44,11 @@ public class HateoasErrorResponseProcessor implements ErrorResponseProcessor<Jso
 
     public HateoasErrorResponseProcessor(JsonConfiguration jacksonConfiguration) {
         this.alwaysSerializeErrorsAsList = jacksonConfiguration.isAlwaysSerializeErrorsAsList();
+    }
+
+    @Internal
+    public HateoasErrorResponseProcessor(JacksonConfiguration jacksonConfiguration) {
+        this((JsonConfiguration) jacksonConfiguration);
     }
 
     @Override

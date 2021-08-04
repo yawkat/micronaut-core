@@ -48,22 +48,6 @@ public class ComputeInstanceMetadataResolverUtils {
      * @param url                 the URL to read
      * @param connectionTimeoutMs connection timeout, in milliseconds
      * @param readTimeoutMs       read timeout, in milliseconds
-     * @param objectMapper        Jackson's {@link ObjectMapper}
-     * @param requestProperties   any request properties to pass
-     * @return a {@link JsonNode} instance
-     * @throws IOException if any I/O error occurs
-     */
-    @Deprecated // todo: this class is internal, can we remove these?
-    public static JsonNode readMetadataUrl(URL url, int connectionTimeoutMs, int readTimeoutMs, ObjectMapper objectMapper, Map<String, String> requestProperties) throws IOException {
-        return (JsonNode) readMetadataUrl(url, connectionTimeoutMs, readTimeoutMs, objectMapper, objectMapper.getFactory(), requestProperties);
-    }
-
-    /**
-     * Reads the result of a URL and parses it using the given {@link ObjectMapper}.
-     *
-     * @param url                 the URL to read
-     * @param connectionTimeoutMs connection timeout, in milliseconds
-     * @param readTimeoutMs       read timeout, in milliseconds
      * @param treeCodec           Jackson's {@link TreeCodec}
      * @param jsonFactory         Jackson's {@link JsonFactory}
      * @param requestProperties   any request properties to pass
