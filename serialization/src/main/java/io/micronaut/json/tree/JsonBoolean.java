@@ -3,6 +3,7 @@ package io.micronaut.json.tree;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import io.micronaut.core.annotation.NonNull;
 
 import java.io.IOException;
 
@@ -28,6 +29,12 @@ class JsonBoolean extends JsonScalar {
     @Override
     public JsonParser.NumberType numberType() {
         return null;
+    }
+
+    @NonNull
+    @Override
+    public String coerceStringValue() {
+        return Boolean.toString(value);
     }
 
     @Override

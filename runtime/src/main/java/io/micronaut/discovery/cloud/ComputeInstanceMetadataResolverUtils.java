@@ -21,8 +21,6 @@ import com.fasterxml.jackson.core.TreeCodec;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jr.stree.JrsString;
-import com.fasterxml.jackson.jr.stree.JrsValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.http.HttpMethod;
 
@@ -110,7 +108,7 @@ public class ComputeInstanceMetadataResolverUtils {
             if (value instanceof JsonNode) {
                 return Optional.of(((JsonNode) value).textValue());
             } else {
-                return Optional.of(((JrsValue) value).asText());
+                return Optional.of(((io.micronaut.json.tree.JsonNode) value).getStringValue());
             }
         } else {
             return Optional.empty();
@@ -142,13 +140,13 @@ public class ComputeInstanceMetadataResolverUtils {
      * @param instanceMetadata The instance metadata
      * @param metadata         A json object of metadata
      */
-    public static void populateMetadata(AbstractComputeInstanceMetadata instanceMetadata, JrsValue metadata) {
+    public static void populateMetadata(AbstractComputeInstanceMetadata instanceMetadata, io.micronaut.json.tree.JsonNode metadata) {
         if (metadata != null) {
             Map<String, String> finalMetadata = new HashMap<>(metadata.size());
             metadata.fieldNames().forEachRemaining(key -> {
-                JrsValue value = metadata.get(key);
-                if (value instanceof JrsString) {
-                    finalMetadata.put(key, ((JrsString) value).getValue());
+                io.micronaut.json.tree.JsonNode value = metadata.get(key);
+                if (value.isString()) {
+                    finalMetadata.put(key, value.getStringValue());
                 }
             });
             instanceMetadata.setMetadata(finalMetadata);

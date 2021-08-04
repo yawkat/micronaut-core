@@ -17,15 +17,13 @@ package io.micronaut.discovery.cloud.digitalocean;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.TreeNode;
-import com.fasterxml.jackson.jr.stree.JacksonJrsTreeCodec;
-import com.fasterxml.jackson.jr.stree.JrsArray;
-import com.fasterxml.jackson.jr.stree.JrsNumber;
-import com.fasterxml.jackson.jr.stree.JrsValue;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import io.micronaut.discovery.cloud.ComputeInstanceMetadata;
 import io.micronaut.discovery.cloud.ComputeInstanceMetadataResolver;
 import io.micronaut.discovery.cloud.NetworkInterface;
+import io.micronaut.json.tree.JsonNode;
+import io.micronaut.json.tree.MicronautTreeCodec;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -92,7 +90,7 @@ public class DigitalOceanMetadataResolver implements ComputeInstanceMetadataReso
 
         try {
             String metadataUrl = configuration.getUrl();
-            JrsValue metadataJson = (JrsValue) readMetadataUrl(new URL(metadataUrl), CONNECTION_TIMEOUT_IN_MILLS, READ_TIMEOUT_IN_MILLS, JacksonJrsTreeCodec.SINGLETON, new JsonFactory(), new HashMap<>());
+            JsonNode metadataJson = (JsonNode) readMetadataUrl(new URL(metadataUrl), CONNECTION_TIMEOUT_IN_MILLS, READ_TIMEOUT_IN_MILLS, MicronautTreeCodec.getInstance(), new JsonFactory(), new HashMap<>());
             if (metadataJson != null) {
                 instanceMetadata.setInstanceId(textValue(metadataJson, DROPLET_ID));
                 instanceMetadata.setName(textValue(metadataJson, HOSTNAME));
@@ -100,9 +98,9 @@ public class DigitalOceanMetadataResolver implements ComputeInstanceMetadataReso
                 instanceMetadata.setUserData(textValue(metadataJson, USER_DATA));
                 instanceMetadata.setRegion(textValue(metadataJson, REGION));
 
-                TreeNode networkInterfaces = metadataJson.get(INTERFACES.getName());
-                List<NetworkInterface> privateInterfaces = processJsonInterfaces((JrsArray) networkInterfaces.get(PRIVATE_INTERFACES.getName()), instanceMetadata::setPrivateIpV4, instanceMetadata::setPrivateIpV6);
-                List<NetworkInterface> publicInterfaces = processJsonInterfaces((JrsArray) networkInterfaces.get(PUBLIC_INTERFACES.getName()), instanceMetadata::setPublicIpV4, instanceMetadata::setPublicIpV6);
+                JsonNode networkInterfaces = metadataJson.get(INTERFACES.getName());
+                List<NetworkInterface> privateInterfaces = processJsonInterfaces(networkInterfaces.get(PRIVATE_INTERFACES.getName()), instanceMetadata::setPrivateIpV4, instanceMetadata::setPrivateIpV6);
+                List<NetworkInterface> publicInterfaces = processJsonInterfaces(networkInterfaces.get(PUBLIC_INTERFACES.getName()), instanceMetadata::setPublicIpV4, instanceMetadata::setPublicIpV6);
                 List<NetworkInterface> allInterfaces = new ArrayList<>();
                 allInterfaces.addAll(publicInterfaces);
                 allInterfaces.addAll(privateInterfaces);
@@ -126,26 +124,26 @@ public class DigitalOceanMetadataResolver implements ComputeInstanceMetadataReso
         return Optional.empty();
     }
 
-    private List<NetworkInterface> processJsonInterfaces(JrsArray interfaces, Consumer<String> ipv4Setter, Consumer<String> ipv6Setter) {
+    private List<NetworkInterface> processJsonInterfaces(JsonNode interfaces, Consumer<String> ipv4Setter, Consumer<String> ipv6Setter) {
         List<NetworkInterface> networkInterfaces = new ArrayList<>();
 
         if (interfaces != null) {
             AtomicReference<Integer> networkCounter = new AtomicReference<>(0);
-            interfaces.elements().forEachRemaining(
+            interfaces.valueIterator().forEachRemaining(
                     jsonNode -> {
                         DigitalOceanNetworkInterface networkInterface = new DigitalOceanNetworkInterface();
                         networkInterface.setId(networkCounter.toString());
-                        JrsValue ipv4 = jsonNode.get(IPV4.getName());
+                        JsonNode ipv4 = jsonNode.get(IPV4.getName());
                         if (ipv4 != null) {
                             networkInterface.setIpv4(textValue(ipv4, IP_ADDRESS));
                             networkInterface.setNetmask(textValue(ipv4, NETMASK));
                             networkInterface.setGateway(textValue(ipv4, GATEWAY));
                         }
-                        JrsValue ipv6 = jsonNode.get(IPV6.getName());
+                        JsonNode ipv6 = jsonNode.get(IPV6.getName());
                         if (ipv6 != null) {
                             networkInterface.setIpv6(textValue(ipv6, IP_ADDRESS));
                             networkInterface.setIpv6Gateway(textValue(ipv6, GATEWAY));
-                            networkInterface.setCidr(((JrsNumber) ipv6.get(CIDR.getName())).getValue().intValue());
+                            networkInterface.setCidr(ipv6.get(CIDR.getName()).getIntValue());
                         }
                         networkInterface.setMac(textValue(jsonNode, MAC));
 
@@ -154,10 +152,10 @@ public class DigitalOceanMetadataResolver implements ComputeInstanceMetadataReso
                     }
             );
 
-            JrsValue firstIpv4 = interfaces.get(0).get(IPV4.getName());
+            JsonNode firstIpv4 = interfaces.get(0).get(IPV4.getName());
             ipv4Setter.accept(textValue(firstIpv4, IP_ADDRESS));
 
-            JrsValue firstIpv6 = interfaces.get(0).get(IPV6.getName());
+            JsonNode firstIpv6 = interfaces.get(0).get(IPV6.getName());
             if (firstIpv6 != null) {
                 ipv6Setter.accept(textValue(firstIpv6, IP_ADDRESS));
             }
@@ -167,10 +165,10 @@ public class DigitalOceanMetadataResolver implements ComputeInstanceMetadataReso
         return networkInterfaces;
     }
 
-    private String textValue(JrsValue node, DigitalOceanMetadataKeys key) {
-        JrsValue value = node.get(key.getName());
+    private String textValue(JsonNode node, DigitalOceanMetadataKeys key) {
+        JsonNode value = node.get(key.getName());
         if (value != null) {
-            return value.asText();
+            return value.coerceStringValue();
         } else {
             return null;
         }

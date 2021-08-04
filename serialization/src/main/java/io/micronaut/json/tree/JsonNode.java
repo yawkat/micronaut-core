@@ -69,8 +69,19 @@ public abstract class JsonNode implements TreeNode {
         return false;
     }
 
+    @NonNull
     public String getStringValue() {
         throw new IllegalStateException("Not a string");
+    }
+
+    /**
+     * Attempt to coerce this node to a string.
+     *
+     * @throws IllegalStateException if this node is not a scalar value
+     */
+    @NonNull
+    public String coerceStringValue() {
+        throw new IllegalStateException("Not a scalar value");
     }
 
     public boolean isBoolean() {

@@ -3,6 +3,7 @@ package io.micronaut.json.tree;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import io.micronaut.core.annotation.NonNull;
 
 import java.io.IOException;
 
@@ -10,6 +11,12 @@ class JsonNull extends JsonScalar {
     static final JsonNull INSTANCE = new JsonNull();
 
     private JsonNull() {}
+
+    @NonNull
+    @Override
+    public String coerceStringValue() {
+        return "null";
+    }
 
     @Override
     public boolean isNull() {

@@ -12,7 +12,7 @@ class MicronautTreeCodecSpec extends Specification {
         c.readTree(new JsonFactory().createParser('"bar"')) == c.createStringNode("bar")
         c.readTree(new JsonFactory().createParser('42')) == c.createNumberNode(42)
         c.readTree(new JsonFactory().createParser('true')) == c.createBooleanNode(true)
-        c.readTree(new JsonFactory().createParser('null')) == c.createNullNode()
+        c.readTree(new JsonFactory().createParser('null')) == c.nullNode()
         c.readTree(new JsonFactory().createParser('{"foo":"bar","x":42}')) ==
                 c.createObjectNode(["foo": c.createStringNode("bar"), "x": c.createNumberNode(42)])
         c.readTree(new JsonFactory().createParser('["bar",42]')) ==

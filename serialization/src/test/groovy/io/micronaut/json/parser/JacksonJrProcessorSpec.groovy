@@ -20,12 +20,10 @@ import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.TreeNode
 import com.fasterxml.jackson.core.io.JsonEOFException
-import com.fasterxml.jackson.jr.stree.JacksonJrsTreeCodec
-import com.fasterxml.jackson.jr.stree.JrsNumber
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.DefaultApplicationContext
 import io.micronaut.json.GenericDeserializationConfig
-import io.micronaut.json.parser.JacksonJrProcessor
+import io.micronaut.json.tree.MicronautTreeCodec
 import org.reactivestreams.Subscriber
 import org.reactivestreams.Subscription
 import spock.lang.AutoCleanup
@@ -51,7 +49,7 @@ class JacksonJrProcessorSpec extends Specification {
         when:
         def string = '{"bd1":"888.7794538169553400000","bd2":888.7794538169553400000}'
         byte[] bytes = string.getBytes(StandardCharsets.UTF_8)
-        def expectedNode = JacksonJrsTreeCodec.SINGLETON.readTree(new JsonFactory().createParser(string))
+        def expectedNode = MicronautTreeCodec.getInstance().readTree(new JsonFactory().createParser(string))
         boolean complete = false
         TreeNode node = null
         Throwable error = null
@@ -110,7 +108,7 @@ class JacksonJrProcessorSpec extends Specification {
         when:
         def string = '{"bd1":"888.7794538169553400000","bd2":888.7794538169553400000}'
         byte[] bytes = string.getBytes(StandardCharsets.UTF_8)
-        def expectedNode = cfg.getJrsTreeCodec().readTree(new JsonFactory().createParser(string))
+        def expectedNode = MicronautTreeCodec.getInstance().withConfig(cfg).readTree(new JsonFactory().createParser(string))
         boolean complete = false
         TreeNode node = null
         Throwable error = null
@@ -170,7 +168,7 @@ class JacksonJrProcessorSpec extends Specification {
         when:
         def string = '{"bd1":"888.7794538169553400000","bd2":888.7794538169553400000}'
         byte[] bytes = string.getBytes(StandardCharsets.UTF_8)
-        def expectedNode = cfg.getJrsTreeCodec().readTree(new JsonFactory().createParser(string))
+        def expectedNode = MicronautTreeCodec.getInstance().withConfig(cfg).readTree(new JsonFactory().createParser(string))
         boolean complete = false
         TreeNode node = null
         Throwable error = null
@@ -228,7 +226,7 @@ class JacksonJrProcessorSpec extends Specification {
         when:
         def string = '{"bi1":"9223372036854775807","bi2":9223372036854775807}'
         byte[] bytes = string.getBytes(StandardCharsets.UTF_8)
-        def expectedNode = JacksonJrsTreeCodec.SINGLETON.readTree(new JsonFactory().createParser(string))
+        def expectedNode = MicronautTreeCodec.getInstance().readTree(new JsonFactory().createParser(string))
         boolean complete = false
         TreeNode node = null
         Throwable error = null
@@ -287,7 +285,7 @@ class JacksonJrProcessorSpec extends Specification {
         when:
         def string = '{"bi1":"9223372036854775807","bi2":9223372036854775807}'
         byte[] bytes = string.getBytes(StandardCharsets.UTF_8)
-        def expectedNode = cfg.getJrsTreeCodec().readTree(new JsonFactory().createParser(string))
+        def expectedNode = MicronautTreeCodec.getInstance().withConfig(cfg).readTree(new JsonFactory().createParser(string))
         boolean complete = false
         TreeNode node = null
         Throwable error = null
@@ -347,7 +345,7 @@ class JacksonJrProcessorSpec extends Specification {
         when:
         def string = '{"bi1":9223372036854775807,"bi2":9223372036854775807}'
         byte[] bytes = string.getBytes(StandardCharsets.UTF_8)
-        def expectedNode = cfg.getJrsTreeCodec().readTree(new JsonFactory().createParser(string))
+        def expectedNode = MicronautTreeCodec.getInstance().withConfig(cfg).readTree(new JsonFactory().createParser(string))
         boolean complete = false
         TreeNode node = null
         Throwable error = null
@@ -405,7 +403,7 @@ class JacksonJrProcessorSpec extends Specification {
         when:
         def string = '{"name":"Fred","age":10}'
         byte[] bytes = string.getBytes(StandardCharsets.UTF_8)
-        def expectedNode = JacksonJrsTreeCodec.SINGLETON.readTree(new JsonFactory().createParser(string))
+        def expectedNode = MicronautTreeCodec.getInstance().readTree(new JsonFactory().createParser(string))
         boolean complete = false
         TreeNode node = null
         Throwable error = null
@@ -463,7 +461,7 @@ class JacksonJrProcessorSpec extends Specification {
         when:
         def string = '[{"name":"Fred","age":10},{"name":"Barney","age":11}]'
         byte[] bytes = string.getBytes(StandardCharsets.UTF_8)
-        def expectedNode = JacksonJrsTreeCodec.SINGLETON.readTree(new JsonFactory().createParser(string))
+        def expectedNode = MicronautTreeCodec.getInstance().readTree(new JsonFactory().createParser(string))
         boolean complete = false
         TreeNode node = null
         Throwable error = null
@@ -673,13 +671,13 @@ class JacksonJrProcessorSpec extends Specification {
         then:
         complete
         nodeCount == 7
-        nodes[0].equals(new JrsNumber(1))
-        nodes[1].equals(new JrsNumber(longValue))
+        nodes[0].equals(MicronautTreeCodec.getInstance().createNumberNode(1))
+        nodes[1].equals(MicronautTreeCodec.getInstance().createNumberNode(longValue))
         nodes[2].size() == 4
         nodes[3].value.toBigDecimal() == bigDecimalValue
         nodes[4].size() == 3
-        nodes[5].equals(new JrsNumber(11))
-        nodes[6].equals(new JrsNumber(bigIntegerValue))
+        nodes[5].equals(MicronautTreeCodec.getInstance().createNumberNode(11))
+        nodes[6].equals(MicronautTreeCodec.getInstance().createNumberNode(bigIntegerValue))
     }
 
 }

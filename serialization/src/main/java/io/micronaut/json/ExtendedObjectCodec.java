@@ -17,10 +17,10 @@ package io.micronaut.json;
 
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.core.util.ByteArrayBuilder;
-import com.fasterxml.jackson.jr.stree.JrsValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
+import io.micronaut.json.tree.JsonNode;
 import io.micronaut.json.tree.TreeGenerator;
 
 import java.io.IOException;
@@ -29,7 +29,7 @@ import java.io.UncheckedIOException;
 public interface ExtendedObjectCodec {
     ObjectCodec getObjectCodec();
 
-    default JrsValue valueToTree(Object value) {
+    default JsonNode valueToTree(Object value) {
         TreeGenerator generator = new TreeGenerator();
         try {
             getObjectCodec().writeValue(generator, value);

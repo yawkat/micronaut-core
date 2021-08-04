@@ -40,8 +40,15 @@ class JsonString extends JsonScalar {
         return true;
     }
 
+    @NonNull
     @Override
     public String getStringValue() {
+        return value;
+    }
+
+    @NonNull
+    @Override
+    public String coerceStringValue() {
         return value;
     }
 

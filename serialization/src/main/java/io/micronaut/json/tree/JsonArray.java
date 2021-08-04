@@ -2,6 +2,7 @@ package io.micronaut.json.tree;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonToken;
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 
 import java.io.IOException;
@@ -10,7 +11,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-class JsonArray extends JsonContainer {
+/**
+ * Public to allow special handling for conversion service.
+ */
+@Internal
+public class JsonArray extends JsonContainer {
     private final List<JsonNode> values;
 
     JsonArray(List<JsonNode> values) {

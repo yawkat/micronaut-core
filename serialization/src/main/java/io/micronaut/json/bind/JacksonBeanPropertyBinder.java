@@ -16,10 +16,6 @@
 package io.micronaut.json.bind;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.jr.stree.JrsArray;
-import com.fasterxml.jackson.jr.stree.JrsNull;
-import com.fasterxml.jackson.jr.stree.JrsObject;
-import com.fasterxml.jackson.jr.stree.JrsValue;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.core.bind.BeanPropertyBinder;
 import io.micronaut.core.convert.ArgumentConversionContext;
@@ -30,6 +26,8 @@ import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.core.util.StringUtils;
 import io.micronaut.json.ExtendedObjectCodec;
 import io.micronaut.json.JsonConfiguration;
+import io.micronaut.json.tree.JsonNode;
+import io.micronaut.json.tree.MicronautTreeCodec;
 import jakarta.inject.Singleton;
 
 import java.util.*;
@@ -60,7 +58,7 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
     @Override
     public BindingResult<Object> bind(ArgumentConversionContext<Object> context, Map<CharSequence, ? super Object> source) {
         try {
-            JrsValue objectNode = buildSourceObjectNode(source.entrySet());
+            JsonNode objectNode = buildSourceObjectNode(source.entrySet());
             JsonParser jsonParser = objectNode.traverse(objectMapper.getObjectCodec());
             Object result = objectMapper.readValue(jsonParser, context.getArgument());
             return () -> Optional.of(result);
@@ -88,7 +86,7 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
     @Override
     public <T2> T2 bind(Class<T2> type, Set<? extends Map.Entry<? extends CharSequence, Object>> source) throws ConversionErrorException {
         try {
-            JrsValue objectNode = buildSourceObjectNode(source);
+            JsonNode objectNode = buildSourceObjectNode(source);
             return objectMapper.readValue(objectNode.traverse(objectMapper.getObjectCodec()), type);
         } catch (Exception e) {
             throw newConversionError(null, e);
@@ -98,7 +96,7 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
     @Override
     public <T2> T2 bind(T2 object, ArgumentConversionContext<T2> context, Set<? extends Map.Entry<? extends CharSequence, Object>> source) {
         try {
-            JrsValue objectNode = buildSourceObjectNode(source);
+            JsonNode objectNode = buildSourceObjectNode(source);
             objectMapper.updateValue(objectNode.traverse(objectMapper.getObjectCodec()), object);
         } catch (Exception e) {
             context.reject(e);
@@ -109,7 +107,7 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
     @Override
     public <T2> T2 bind(T2 object, Set<? extends Map.Entry<? extends CharSequence, Object>> source) throws ConversionErrorException {
         try {
-            JrsValue objectNode = buildSourceObjectNode(source);
+            JsonNode objectNode = buildSourceObjectNode(source);
             objectMapper.updateValue(objectNode.traverse(objectMapper.getObjectCodec()), object);
         } catch (Exception e) {
             throw newConversionError(object, e);
@@ -165,7 +163,7 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
         }
     }
 
-    private JrsValue buildSourceObjectNode(Set<? extends Map.Entry<? extends CharSequence, Object>> source) {
+    private JsonNode buildSourceObjectNode(Set<? extends Map.Entry<? extends CharSequence, Object>> source) {
         ObjectBuilder rootNode = new ObjectBuilder();
         for (Map.Entry<? extends CharSequence, ? super Object> entry : source) {
             CharSequence key = entry.getKey();
@@ -286,20 +284,20 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
     }
 
     private interface ValueBuilder {
-        JrsValue build();
+        JsonNode build();
     }
 
     private static class FixedValue implements ValueBuilder {
-        static final FixedValue NULL = new FixedValue(JrsNull.instance());
+        static final FixedValue NULL = new FixedValue(MicronautTreeCodec.getInstance().nullNode());
 
-        final JrsValue value;
+        final JsonNode value;
 
-        FixedValue(JrsValue value) {
+        FixedValue(JsonNode value) {
             this.value = value;
         }
 
         @Override
-        public JrsValue build() {
+        public JsonNode build() {
             return value;
         }
     }
@@ -308,13 +306,13 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
         final Map<String, ValueBuilder> values = new LinkedHashMap<>();
 
         @Override
-        public JrsValue build() {
-            Map<String, JrsValue> built = new LinkedHashMap<>();
+        public JsonNode build() {
+            Map<String, JsonNode> built = new LinkedHashMap<>();
             for (Map.Entry<String, ValueBuilder> entry : values.entrySet()) {
                 // todo: is it dangerous to recurse here?
                 built.put(entry.getKey(), entry.getValue().build());
             }
-            return new JrsObject(built);
+            return MicronautTreeCodec.getInstance().createObjectNode(built);
         }
     }
 
@@ -322,8 +320,8 @@ class JacksonBeanPropertyBinder implements BeanPropertyBinder {
         final List<ValueBuilder> values = new ArrayList<>();
 
         @Override
-        public JrsValue build() {
-            return new JrsArray(values.stream().map(ValueBuilder::build).collect(Collectors.toList()));
+        public JsonNode build() {
+            return MicronautTreeCodec.getInstance().createArrayNode(values.stream().map(ValueBuilder::build).collect(Collectors.toList()));
         }
     }
 }

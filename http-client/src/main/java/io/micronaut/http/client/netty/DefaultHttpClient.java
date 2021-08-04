@@ -15,7 +15,6 @@
  */
 package io.micronaut.http.client.netty;
 
-import com.fasterxml.jackson.jr.stree.JrsValue;
 import io.micronaut.buffer.netty.NettyByteBufferFactory;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.AnnotationMetadataResolver;
@@ -99,6 +98,7 @@ import io.micronaut.json.codec.JacksonMediaTypeCodec;
 import io.micronaut.json.codec.JsonMediaTypeCodec;
 import io.micronaut.json.codec.JsonStreamMediaTypeCodec;
 import io.micronaut.json.parser.JacksonJrProcessor;
+import io.micronaut.json.tree.JsonNode;
 import io.micronaut.runtime.ApplicationConfiguration;
 import io.micronaut.scheduling.instrument.Instrumentation;
 import io.micronaut.scheduling.instrument.InvocationInstrumenter;
@@ -970,7 +970,7 @@ public class DefaultHttpClient implements
                 boolean streamArray = !Iterable.class.isAssignableFrom(type.getType()) && !isJsonStream;
                 JacksonJrProcessor jacksonProcessor = new JacksonJrProcessor(streamArray, mediaTypeCodec.getDeserializationConfig()) {
                     @Override
-                    public void subscribe(Subscriber<? super JrsValue> downstreamSubscriber) {
+                    public void subscribe(Subscriber<? super JsonNode> downstreamSubscriber) {
                         httpContentReactiveSequence.map(content -> {
                             ByteBuf chunk = content.content();
                             if (log.isTraceEnabled()) {

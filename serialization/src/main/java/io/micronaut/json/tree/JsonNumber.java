@@ -26,6 +26,12 @@ class JsonNumber extends JsonScalar {
         return value;
     }
 
+    @NonNull
+    @Override
+    public String coerceStringValue() {
+        return value.toString();
+    }
+
     @Override
     public JsonToken asToken() {
         JsonParser.NumberType numberType = numberType();

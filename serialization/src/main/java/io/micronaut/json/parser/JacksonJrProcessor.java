@@ -20,10 +20,10 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.async.ByteArrayFeeder;
 import com.fasterxml.jackson.core.io.JsonEOFException;
 import com.fasterxml.jackson.core.json.async.NonBlockingJsonParser;
-import com.fasterxml.jackson.jr.stree.*;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.async.processor.SingleThreadedBufferingProcessor;
 import io.micronaut.json.GenericDeserializationConfig;
+import io.micronaut.json.tree.JsonNode;
 import io.micronaut.json.tree.JsonStreamTransfer;
 import io.micronaut.json.tree.TreeGenerator;
 import org.reactivestreams.Subscriber;
@@ -34,14 +34,14 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * A Reactive streams publisher that publishes a {@link JrsValue} once the JSON has been fully consumed.
+ * A Reactive streams publisher that publishes a {@link JsonNode} once the JSON has been fully consumed.
  * Uses {@link NonBlockingJsonParser} internally allowing the parsing of
  * JSON from an incoming stream of bytes in a non-blocking manner
  *
  * @author Graeme Rocher
  * @since 1.0
  */
-public class JacksonJrProcessor extends SingleThreadedBufferingProcessor<byte[], JrsValue> {
+public class JacksonJrProcessor extends SingleThreadedBufferingProcessor<byte[], JsonNode> {
 
     private static final Logger LOG = LoggerFactory.getLogger(JacksonJrProcessor.class);
 
@@ -175,8 +175,8 @@ public class JacksonJrProcessor extends SingleThreadedBufferingProcessor<byte[],
         }
     }
 
-    private void publishNode(final JrsValue root) {
-        final Optional<Subscriber<? super JrsValue>> opt = currentDownstreamSubscriber();
+    private void publishNode(final JsonNode root) {
+        final Optional<Subscriber<? super JsonNode>> opt = currentDownstreamSubscriber();
         if (opt.isPresent()) {
             if (LOG.isTraceEnabled()) {
                 LOG.trace("Materialized new JsonNode call onNext...");

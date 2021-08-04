@@ -54,6 +54,7 @@ class JsonObjectSpec extends Specification {
         !node.isBoolean()
         !node.isNull()
         thrownException { node.getStringValue() } instanceof IllegalStateException
+        thrownException { node.coerceStringValue() } instanceof IllegalStateException
         thrownException { node.getBooleanValue() } instanceof IllegalStateException
         thrownException { node.getNumberValue() } instanceof IllegalStateException
         thrownException { node.getIntValue() } instanceof IllegalStateException

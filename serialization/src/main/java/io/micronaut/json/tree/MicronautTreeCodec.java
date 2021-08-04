@@ -2,6 +2,7 @@ package io.micronaut.json.tree;
 
 import com.fasterxml.jackson.core.*;
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.json.GenericDeserializationConfig;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -9,13 +10,20 @@ import java.math.BigInteger;
 import java.util.*;
 
 public final class MicronautTreeCodec extends TreeCodec {
-    private static final MicronautTreeCodec INSTANCE = new MicronautTreeCodec();
+    private static final MicronautTreeCodec INSTANCE = new MicronautTreeCodec(GenericDeserializationConfig.DEFAULT);
 
-    private MicronautTreeCodec() {
+    private final GenericDeserializationConfig config;
+
+    private MicronautTreeCodec(GenericDeserializationConfig config) {
+        this.config = config;
     }
 
     public static MicronautTreeCodec getInstance() {
         return INSTANCE;
+    }
+
+    public MicronautTreeCodec withConfig(GenericDeserializationConfig config) {
+        return new MicronautTreeCodec(config);
     }
 
     @SuppressWarnings("unchecked")
@@ -27,7 +35,7 @@ public final class MicronautTreeCodec extends TreeCodec {
     private JsonNode readTree0(JsonParser p) throws IOException {
         switch (p.hasCurrentToken() ? p.currentToken() : p.nextToken()) {
             case NOT_AVAILABLE:
-                return createMissingNode();
+                return missingNode();
             case START_OBJECT: {
                 Map<String, JsonNode> values = new LinkedHashMap<>();
                 while (p.nextToken() != JsonToken.END_OBJECT) {
@@ -47,15 +55,25 @@ public final class MicronautTreeCodec extends TreeCodec {
             case VALUE_STRING:
                 return createStringNode(p.getText());
             case VALUE_NUMBER_INT:
+                if (config.useBigIntegerForInts()) {
+                    return createNumberNode(p.getBigIntegerValue());
+                } else {
+                    // technically, we could get an unsupported number value here.
+                    return createNumberNode(p.getNumberValue());
+                }
             case VALUE_NUMBER_FLOAT:
-                // technically, we could get an unsupported number value here.
-                return createNumberNode(p.getNumberValue());
+                if (config.useBigDecimalForFloats()) {
+                    return createNumberNode(p.getDecimalValue());
+                } else {
+                    // technically, we could get an unsupported number value here.
+                    return createNumberNode(p.getNumberValue());
+                }
             case VALUE_TRUE:
                 return createBooleanNode(true);
             case VALUE_FALSE:
                 return createBooleanNode(false);
             case VALUE_NULL:
-                return createNullNode();
+                return nullNode();
             default:
                 throw new UnsupportedOperationException("Unsupported token: " + p.currentToken());
         }
@@ -84,11 +102,13 @@ public final class MicronautTreeCodec extends TreeCodec {
         return new JsonObject(nodes);
     }
 
-    public JsonNode createMissingNode() {
+    @Override
+    public JsonNode missingNode() {
         return JsonMissing.INSTANCE;
     }
 
-    public JsonNode createNullNode() {
+    @Override
+    public JsonNode nullNode() {
         return JsonNull.INSTANCE;
     }
 

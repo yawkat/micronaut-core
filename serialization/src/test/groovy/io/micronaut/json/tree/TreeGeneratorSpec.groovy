@@ -1,9 +1,5 @@
 package io.micronaut.json.tree
 
-import com.fasterxml.jackson.jr.stree.JrsArray
-import com.fasterxml.jackson.jr.stree.JrsNumber
-import com.fasterxml.jackson.jr.stree.JrsObject
-import com.fasterxml.jackson.jr.stree.JrsString
 import spock.lang.Specification
 
 class TreeGeneratorSpec extends Specification {
@@ -16,7 +12,7 @@ class TreeGeneratorSpec extends Specification {
 
         then:
         gen.isComplete()
-        gen.getCompletedValue() == new JrsString("abc")
+        gen.getCompletedValue() == MicronautTreeCodec.getInstance().createStringNode("abc")
     }
 
     def array() {
@@ -31,7 +27,9 @@ class TreeGeneratorSpec extends Specification {
 
         then:
         gen.isComplete()
-        gen.getCompletedValue() == new JrsArray([new JrsString("abc"), new JrsNumber(123)])
+        gen.getCompletedValue() == MicronautTreeCodec.getInstance().createArrayNode([
+                MicronautTreeCodec.getInstance().createStringNode("abc"),
+                MicronautTreeCodec.getInstance().createNumberNode(123)])
     }
 
     def object() {
@@ -48,7 +46,9 @@ class TreeGeneratorSpec extends Specification {
 
         then:
         gen.isComplete()
-        gen.getCompletedValue() == new JrsObject(["foo": new JrsString("abc"), "bar": new JrsNumber(123)])
+        gen.getCompletedValue() == MicronautTreeCodec.getInstance().createObjectNode([
+                "foo": MicronautTreeCodec.getInstance().createStringNode("abc"),
+                "bar": MicronautTreeCodec.getInstance().createNumberNode(123)])
     }
 
     def nested() {
@@ -66,6 +66,8 @@ class TreeGeneratorSpec extends Specification {
 
         then:
         gen.isComplete()
-        gen.getCompletedValue() == new JrsObject(["foo": new JrsObject(["bar": new JrsNumber(123)])])
+        gen.getCompletedValue() == MicronautTreeCodec.getInstance().createObjectNode([
+                "foo": MicronautTreeCodec.getInstance().createObjectNode([
+                        "bar": MicronautTreeCodec.getInstance().createNumberNode(123)])])
     }
 }

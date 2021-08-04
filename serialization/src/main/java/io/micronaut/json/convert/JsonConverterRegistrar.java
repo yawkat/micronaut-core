@@ -17,7 +17,6 @@ package io.micronaut.json.convert;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.TreeNode;
-import com.fasterxml.jackson.jr.stree.JrsArray;
 import io.micronaut.context.BeanProvider;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.bind.ArgumentBinder;
@@ -27,6 +26,8 @@ import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.naming.NameUtils;
 import io.micronaut.core.type.Argument;
 import io.micronaut.json.ExtendedObjectCodec;
+import io.micronaut.json.tree.JsonArray;
+import io.micronaut.json.tree.JsonNode;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -53,12 +54,12 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
     @Override
     public void register(ConversionService<?> conversionService) {
         conversionService.addConverter(
-                JrsArray.class,
+                JsonArray.class,
                 Object[].class,
                 arrayNodeToObjectConverter()
         );
         conversionService.addConverter(
-                JrsArray.class,
+                JsonArray.class,
                 Iterable.class,
                 arrayNodeToIterableConverter()
         );

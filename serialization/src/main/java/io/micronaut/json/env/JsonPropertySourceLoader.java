@@ -17,8 +17,9 @@ package io.micronaut.json.env;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.jr.stree.*;
 import io.micronaut.context.env.AbstractPropertySourceLoader;
+import io.micronaut.json.tree.JsonNode;
+import io.micronaut.json.tree.MicronautTreeCodec;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -59,29 +60,29 @@ public class JsonPropertySourceLoader extends AbstractPropertySourceLoader {
         return (Map<String, Object>) unwrap(readJsonAsObject(input));
     }
 
-    private JrsObject readJsonAsObject(InputStream input) throws IOException {
+    private JsonNode readJsonAsObject(InputStream input) throws IOException {
         try (JsonParser parser = new JsonFactory().createParser(input)) {
-            return JacksonJrsTreeCodec.SINGLETON.readTree(parser);
+            return MicronautTreeCodec.getInstance().readTree(parser);
         }
     }
 
-    private Object unwrap(JrsValue value) {
-        if (value instanceof JrsNumber) {
-            return ((JrsNumber) value).getValue();
+    private Object unwrap(JsonNode value) {
+        if (value.isNumber()) {
+            return value.getNumberValue();
         } else if (value.isNull()) {
             return null;
-        } else if (value instanceof JrsBoolean) {
-            return ((JrsBoolean) value).booleanValue();
-        } else if (value instanceof JrsArray) {
+        } else if (value.isBoolean()) {
+            return value.getBooleanValue();
+        } else if (value.isArray()) {
             List<Object> unwrapped = new ArrayList<>();
-            ((JrsArray) value).elements().forEachRemaining(v -> unwrapped.add(unwrap(v)));
+            value.valueIterator().forEachRemaining(v -> unwrapped.add(unwrap(v)));
             return unwrapped;
-        } else if (value instanceof JrsObject) {
+        } else if (value.isObject()) {
             Map<String, Object> unwrapped = new LinkedHashMap<>();
-            ((JrsObject) value).fields().forEachRemaining(e -> unwrapped.put(e.getKey(), unwrap(e.getValue())));
+            value.entryIterator().forEachRemaining(e -> unwrapped.put(e.getKey(), unwrap(e.getValue())));
             return unwrapped;
         } else {
-            return value.asText();
+            return value.getStringValue();
         }
     }
 }

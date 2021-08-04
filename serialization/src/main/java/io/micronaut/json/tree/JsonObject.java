@@ -2,13 +2,18 @@ package io.micronaut.json.tree;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonToken;
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
-class JsonObject extends JsonContainer {
+/**
+ * Public to allow special handling for conversion service.
+ */
+@Internal
+public class JsonObject extends JsonContainer {
     private final Map<String, JsonNode> values;
 
     JsonObject(Map<String, JsonNode> values) {

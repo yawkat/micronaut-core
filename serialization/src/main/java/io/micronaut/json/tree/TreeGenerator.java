@@ -16,7 +16,7 @@
 package io.micronaut.json.tree;
 
 import com.fasterxml.jackson.core.*;
-import com.fasterxml.jackson.jr.stree.*;
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.json.GenericDeserializationConfig;
 
@@ -26,21 +26,22 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 
+@Internal
 public final class TreeGenerator extends JsonGenerator {
-    private final JacksonJrsTreeCodec treeCodec;
+    private final MicronautTreeCodec treeCodec;
 
     private ObjectCodec codec;
     private int generatorFeatures;
 
     private final Deque<StructureBuilder> structureStack = new ArrayDeque<>();
-    private JrsValue completed = null;
+    private JsonNode completed = null;
 
-    public TreeGenerator(JacksonJrsTreeCodec treeCodec) {
+    public TreeGenerator(MicronautTreeCodec treeCodec) {
         this.treeCodec = treeCodec;
     }
 
     public TreeGenerator() {
-        this(JacksonJrsTreeCodec.SINGLETON);
+        this(MicronautTreeCodec.getInstance());
     }
 
     @Override
@@ -126,7 +127,7 @@ public final class TreeGenerator extends JsonGenerator {
         }
     }
 
-    private void complete(JrsValue value) throws JsonGenerationException {
+    private void complete(JsonNode value) throws JsonGenerationException {
         if (completed != null) {
             throw new JsonGenerationException("Tree generator has already completed", this);
         }
@@ -138,7 +139,7 @@ public final class TreeGenerator extends JsonGenerator {
     }
 
     @NonNull
-    public JrsValue getCompletedValue() {
+    public JsonNode getCompletedValue() {
         if (!isComplete()) {
             throw new IllegalStateException("Not completed");
         }
@@ -186,7 +187,7 @@ public final class TreeGenerator extends JsonGenerator {
         writeFieldName(name.getValue());
     }
 
-    private void writeScalar(JsonToken token, JrsValue value) throws JsonGenerationException {
+    private void writeScalar(JsonToken token, JsonNode value) throws JsonGenerationException {
         if (structureStack.isEmpty()) {
             complete(value);
         } else {
@@ -196,7 +197,7 @@ public final class TreeGenerator extends JsonGenerator {
 
     @Override
     public void writeString(String text) throws IOException {
-        writeScalar(JsonToken.VALUE_STRING, treeCodec.stringNode(text));
+        writeScalar(JsonToken.VALUE_STRING, treeCodec.createStringNode(text));
     }
 
     @Override
@@ -267,33 +268,33 @@ public final class TreeGenerator extends JsonGenerator {
 
     @Override
     public void writeNumber(int v) throws IOException {
-        writeScalar(JsonToken.VALUE_NUMBER_INT, treeCodec.numberNode(v));
+        writeScalar(JsonToken.VALUE_NUMBER_INT, treeCodec.createNumberNode(v));
     }
 
     @Override
     public void writeNumber(long v) throws IOException {
-        writeScalar(JsonToken.VALUE_NUMBER_INT, treeCodec.numberNode(v));
+        writeScalar(JsonToken.VALUE_NUMBER_INT, treeCodec.createNumberNode(v));
     }
 
     @Override
     public void writeNumber(BigInteger v) throws IOException {
         // the tree codec could normalize
-        writeScalar(JsonToken.VALUE_NUMBER_INT, treeCodec.numberNode(v));
+        writeScalar(JsonToken.VALUE_NUMBER_INT, treeCodec.createNumberNode(v));
     }
 
     @Override
     public void writeNumber(double v) throws IOException {
-        writeScalar(JsonToken.VALUE_NUMBER_FLOAT, treeCodec.numberNode(v));
+        writeScalar(JsonToken.VALUE_NUMBER_FLOAT, treeCodec.createNumberNode(v));
     }
 
     @Override
     public void writeNumber(float v) throws IOException {
-        writeScalar(JsonToken.VALUE_NUMBER_FLOAT, treeCodec.numberNode(v));
+        writeScalar(JsonToken.VALUE_NUMBER_FLOAT, treeCodec.createNumberNode(v));
     }
 
     @Override
     public void writeNumber(BigDecimal v) throws IOException {
-        writeScalar(JsonToken.VALUE_NUMBER_FLOAT, treeCodec.numberNode(v));
+        writeScalar(JsonToken.VALUE_NUMBER_FLOAT, treeCodec.createNumberNode(v));
     }
 
     @Override
@@ -303,7 +304,7 @@ public final class TreeGenerator extends JsonGenerator {
 
     @Override
     public void writeBoolean(boolean state) throws IOException {
-        writeScalar(state ? JsonToken.VALUE_TRUE : JsonToken.VALUE_FALSE, treeCodec.booleanNode(state));
+        writeScalar(state ? JsonToken.VALUE_TRUE : JsonToken.VALUE_FALSE, treeCodec.createBooleanNode(state));
     }
 
     @Override
@@ -313,15 +314,15 @@ public final class TreeGenerator extends JsonGenerator {
 
     @Override
     public void writeObject(Object pojo) throws IOException {
-        writeScalar(JsonToken.VALUE_EMBEDDED_OBJECT, new JrsEmbeddedObject(pojo));
+        throw new UnsupportedOperationException("Embedded objects are not supported");
     }
 
     @Override
     public void writeTree(TreeNode rootNode) throws IOException {
         if (rootNode == null) {
             writeNull();
-        } else if (rootNode instanceof JrsValue) {
-            writeScalar(JsonToken.VALUE_EMBEDDED_OBJECT, (JrsValue) rootNode);
+        } else if (rootNode instanceof JsonNode) {
+            writeScalar(JsonToken.VALUE_EMBEDDED_OBJECT, (JsonNode) rootNode);
         } else {
             JsonStreamTransfer.transferNext(rootNode.traverse(), this, GenericDeserializationConfig.DEFAULT);
         }
@@ -341,18 +342,18 @@ public final class TreeGenerator extends JsonGenerator {
     }
 
     private interface StructureBuilder {
-        void addValue(JrsValue value) throws JsonGenerationException;
+        void addValue(JsonNode value) throws JsonGenerationException;
 
         void setCurrentFieldName(String currentFieldName) throws JsonGenerationException;
 
-        JrsValue build();
+        JsonNode build();
     }
 
     private class ArrayBuilder implements StructureBuilder {
-        final List<JrsValue> values = new ArrayList<>();
+        final List<JsonNode> values = new ArrayList<>();
 
         @Override
-        public void addValue(JrsValue value) {
+        public void addValue(JsonNode value) {
             values.add(value);
         }
 
@@ -362,17 +363,17 @@ public final class TreeGenerator extends JsonGenerator {
         }
 
         @Override
-        public JrsValue build() {
-            return new JrsArray(values);
+        public JsonNode build() {
+            return treeCodec.createArrayNode(values);
         }
     }
 
     private class ObjectBuilder implements StructureBuilder {
-        final Map<String, JrsValue> values = new HashMap<>();
+        final Map<String, JsonNode> values = new HashMap<>();
         String currentFieldName = null;
 
         @Override
-        public void addValue(JrsValue value) throws JsonGenerationException {
+        public void addValue(JsonNode value) throws JsonGenerationException {
             if (currentFieldName == null) {
                 throw new JsonGenerationException("Expected field name, got value", TreeGenerator.this);
             }
@@ -386,8 +387,8 @@ public final class TreeGenerator extends JsonGenerator {
         }
 
         @Override
-        public JrsValue build() {
-            return new JrsObject(values);
+        public JsonNode build() {
+            return treeCodec.createObjectNode(values);
         }
     }
 }

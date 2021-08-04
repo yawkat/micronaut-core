@@ -61,6 +61,7 @@ class JsonScalarSpec extends Specification {
         !node.isBoolean()
         !node.isNull()
         thrownException { node.getStringValue() } instanceof IllegalStateException
+        node.coerceStringValue() == "42"
         thrownException { node.getBooleanValue() } instanceof IllegalStateException
         node.getNumberValue() == 42
         node.getIntValue() == 42
@@ -89,6 +90,7 @@ class JsonScalarSpec extends Specification {
         !node.isBoolean()
         !node.isNull()
         thrownException { node.getStringValue() } instanceof IllegalStateException
+        node.coerceStringValue() == "12345678901"
         thrownException { node.getBooleanValue() } instanceof IllegalStateException
         node.getNumberValue() == 12345678901L
         node.getIntValue() == -539222987
@@ -117,6 +119,7 @@ class JsonScalarSpec extends Specification {
         !node.isBoolean()
         !node.isNull()
         thrownException { node.getStringValue() } instanceof IllegalStateException
+        node.coerceStringValue() == "42.5"
         thrownException { node.getBooleanValue() } instanceof IllegalStateException
         node.getNumberValue() == 42.5F
         node.getIntValue() == 42
@@ -145,6 +148,7 @@ class JsonScalarSpec extends Specification {
         !node.isBoolean()
         !node.isNull()
         thrownException { node.getStringValue() } instanceof IllegalStateException
+        node.coerceStringValue() == "1.23456789015E10"
         thrownException { node.getBooleanValue() } instanceof IllegalStateException
         node.getNumberValue() == 12345678901.5D
         node.getIntValue() == Integer.MAX_VALUE
@@ -173,6 +177,7 @@ class JsonScalarSpec extends Specification {
         !node.isBoolean()
         !node.isNull()
         thrownException { node.getStringValue() } instanceof IllegalStateException
+        node.coerceStringValue() == "123456789012345678901234567890"
         thrownException { node.getBooleanValue() } instanceof IllegalStateException
         node.getNumberValue() == new BigInteger("123456789012345678901234567890")
         node.getIntValue() == 1312754386
@@ -201,6 +206,7 @@ class JsonScalarSpec extends Specification {
         !node.isBoolean()
         !node.isNull()
         thrownException { node.getStringValue() } instanceof IllegalStateException
+        node.coerceStringValue() == "123456789012345678901234567890.5"
         thrownException { node.getBooleanValue() } instanceof IllegalStateException
         node.getNumberValue() == new BigDecimal("123456789012345678901234567890.5")
         node.getIntValue() == 1312754386
@@ -229,6 +235,7 @@ class JsonScalarSpec extends Specification {
         node.isBoolean()
         !node.isNull()
         thrownException { node.getStringValue() } instanceof IllegalStateException
+        node.coerceStringValue() == "true"
         node.getBooleanValue()
         thrownException { node.getNumberValue() } instanceof IllegalStateException
         thrownException { node.getIntValue() } instanceof IllegalStateException
@@ -257,6 +264,7 @@ class JsonScalarSpec extends Specification {
         !node.isBoolean()
         !node.isNull()
         node.getStringValue() == 'foo'
+        node.coerceStringValue() == "foo"
         thrownException { node.getBooleanValue() } instanceof IllegalStateException
         thrownException { node.getNumberValue() } instanceof IllegalStateException
         thrownException { node.getIntValue() } instanceof IllegalStateException
@@ -285,6 +293,7 @@ class JsonScalarSpec extends Specification {
         !node.isBoolean()
         node.isNull()
         thrownException { node.getStringValue() } instanceof IllegalStateException
+        node.coerceStringValue() == "null"
         thrownException { node.getBooleanValue() } instanceof IllegalStateException
         thrownException { node.getNumberValue() } instanceof IllegalStateException
         thrownException { node.getIntValue() } instanceof IllegalStateException
@@ -312,6 +321,7 @@ class JsonScalarSpec extends Specification {
         !node.isBoolean()
         !node.isNull()
         thrownException { node.getStringValue() } instanceof IllegalStateException
+        thrownException { node.coerceStringValue() } instanceof IllegalStateException
         thrownException { node.getBooleanValue() } instanceof IllegalStateException
         thrownException { node.getNumberValue() } instanceof IllegalStateException
         thrownException { node.getIntValue() } instanceof IllegalStateException
