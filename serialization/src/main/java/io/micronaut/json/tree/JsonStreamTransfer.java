@@ -31,6 +31,9 @@ public final class JsonStreamTransfer {
     }
 
     public static void transfer(JsonParser from, JsonGenerator to, GenericDeserializationConfig config) throws IOException {
+        if (!from.hasCurrentToken()) {
+            throw new IllegalArgumentException("Parser not positioned at token. Try transferNext");
+        }
         do {
             transferCurrentToken(from, to, config);
         } while (from.nextToken() != null);
