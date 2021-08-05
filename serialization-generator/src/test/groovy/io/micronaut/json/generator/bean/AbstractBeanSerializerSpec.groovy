@@ -2,7 +2,7 @@ package io.micronaut.json.generator.bean
 
 import groovy.transform.Immutable
 import io.micronaut.annotation.processing.test.AbstractTypeElementSpec
-import io.micronaut.json.generator.Serializer
+import io.micronaut.json.Serializer
 import io.micronaut.json.generator.SerializerUtils
 import io.micronaut.json.generator.symbol.ProblemReporter
 import io.micronaut.json.generator.symbol.SerializerLinker

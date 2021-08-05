@@ -21,6 +21,7 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.visitor.TypeElementVisitor;
 import io.micronaut.inject.visitor.VisitorContext;
+import io.micronaut.json.annotation.SerializableBean;
 import io.micronaut.json.generator.symbol.ProblemReporter;
 import io.micronaut.json.generator.symbol.SerializerLinker;
 import io.micronaut.json.generator.symbol.SingletonSerializerGenerator;

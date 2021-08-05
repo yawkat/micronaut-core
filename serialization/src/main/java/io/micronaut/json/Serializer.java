@@ -13,14 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.json.generator;
+package io.micronaut.json;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 
-@Target({ElementType.METHOD, ElementType.PARAMETER, ElementType.FIELD})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface RecursiveSerialization {
+import java.io.IOException;
+
+public interface Serializer<T> {
+    /**
+     * Deserialize from the given {@code decoder}.
+     * <p>
+     * The decoder {@link JsonParser#currentToken()} should be positioned at the first token of this value.
+     *
+     * @param decoder The decoder to parse from
+     * @return The decoded value
+     */
+    T deserialize(JsonParser decoder) throws IOException;
+
+    void serialize(JsonGenerator encoder, T value) throws IOException;
 }

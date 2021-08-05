@@ -20,7 +20,7 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterizedTypeName;
 import io.micronaut.context.BeanProvider;
 import io.micronaut.inject.ast.ClassElement;
-import io.micronaut.json.generator.Serializer;
+import io.micronaut.json.Serializer;
 
 final class InjectingSerializerSymbol implements SerializerSymbol {
     private final SerializerLinker linker;

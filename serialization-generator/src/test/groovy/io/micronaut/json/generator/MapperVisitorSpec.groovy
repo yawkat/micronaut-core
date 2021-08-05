@@ -2,6 +2,7 @@ package io.micronaut.json.generator
 
 import io.micronaut.annotation.processing.test.AbstractTypeElementSpec
 import io.micronaut.context.BeanProvider
+import io.micronaut.json.Serializer
 
 import java.lang.reflect.ParameterizedType
 
@@ -11,7 +12,7 @@ class MapperVisitorSpec extends AbstractTypeElementSpec implements SerializerUti
         def compiled = buildClassLoader('example.Test', '''
 package example;
 
-@io.micronaut.json.generator.SerializableBean
+import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 public class Test {
 }
 ''')
@@ -28,13 +29,13 @@ public class Test {
         def compiled = buildClassLoader('example.Test', '''
 package example;
 
-@io.micronaut.json.generator.SerializableBean
+import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class A {
     B b;
     String bar;
 }
 
-@io.micronaut.json.generator.SerializableBean
+@io.micronaut.json.annotation.SerializableBean
 class B {
     String foo;
 }
@@ -63,9 +64,9 @@ class B {
         def compiled = buildClassLoader('example.Test', '''
 package example;
 
-import java.util.List;
+import io.micronaut.json.annotation.SerializableBean;import java.util.List;
 
-@io.micronaut.json.generator.SerializableBean
+@io.micronaut.json.annotation.SerializableBean
 class Test {
     List<String> list;
 }
@@ -87,9 +88,9 @@ class Test {
         def compiled = buildClassLoader('example.Test', '''
 package example;
 
-@io.micronaut.json.generator.SerializableBean
+import io.micronaut.json.annotation.RecursiveSerialization;import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class Test {
-    @io.micronaut.json.generator.RecursiveSerialization Test foo;
+    @io.micronaut.json.annotation.RecursiveSerialization Test foo;
 }
 ''')
 
@@ -114,7 +115,7 @@ class Test {
         buildClassLoader('example.Test', '''
 package example;
 
-@io.micronaut.json.generator.SerializableBean
+import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class Test {
     Test foo;
 }
@@ -132,7 +133,7 @@ class Test {
         buildClassLoader('example.Test', '''
 package example;
 
-@io.micronaut.json.generator.SerializableBean
+import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class Test {
     Test[] foo;
 }
@@ -150,11 +151,11 @@ class Test {
         buildClassLoader('example.A', '''
 package example;
 
-@io.micronaut.json.generator.SerializableBean
+import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class A {
     B b;
 }
-@io.micronaut.json.generator.SerializableBean
+@io.micronaut.json.annotation.SerializableBean
 class B {
     A a;
 }
@@ -173,7 +174,7 @@ class B {
         buildClassLoader('example.A', '''
 package example;
 
-@io.micronaut.json.generator.SerializableBean
+import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class A {
     B b;
 }
@@ -191,17 +192,17 @@ class B {
         def compiled = buildClassLoader('example.Test', '''
 package example;
 
-@io.micronaut.json.generator.SerializableBean
+import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class A {
     B<C> b;
 }
 
-@io.micronaut.json.generator.SerializableBean
+@io.micronaut.json.annotation.SerializableBean
 class B<T> {
     T foo;
 }
 
-@io.micronaut.json.generator.SerializableBean
+@io.micronaut.json.annotation.SerializableBean
 class C {
     String bar;
 }
@@ -236,17 +237,17 @@ class C {
         def compiled = buildClassLoader('example.Test', '''
 package example;
 
-@io.micronaut.json.generator.SerializableBean
+import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class A {
     B<C> b;
 }
 
-@io.micronaut.json.generator.SerializableBean(inline = true)
+@io.micronaut.json.annotation.SerializableBean(inline = true)
 class B<T> {
     T foo;
 }
 
-@io.micronaut.json.generator.SerializableBean
+@io.micronaut.json.annotation.SerializableBean
 class C {
     String bar;
 }
@@ -273,7 +274,7 @@ class C {
         def compiled = buildClassLoader('example.Test', '''
 package example;
 
-@io.micronaut.json.generator.SerializableBean
+import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class A {
     E e;
 }

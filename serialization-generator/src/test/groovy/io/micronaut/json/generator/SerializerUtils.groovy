@@ -2,6 +2,7 @@ package io.micronaut.json.generator
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonFactoryBuilder
+import io.micronaut.json.Serializer
 import org.intellij.lang.annotations.Language
 
 trait SerializerUtils {

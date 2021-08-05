@@ -5,7 +5,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
 import io.micronaut.inject.visitor.VisitorContext;
-import io.micronaut.json.generator.SerializableBean;
+import io.micronaut.json.annotation.SerializableBean;
 import io.micronaut.json.generator.symbol.SerializerLinker;
 import io.micronaut.json.generator.symbol.SerializerSymbol;
 

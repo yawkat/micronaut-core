@@ -20,7 +20,7 @@ import io.micronaut.core.annotation.AnnotatedElement;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.*;
-import io.micronaut.json.generator.RecursiveSerialization;
+import io.micronaut.json.annotation.RecursiveSerialization;
 import io.micronaut.json.generator.symbol.ProblemReporter;
 
 import java.util.*;

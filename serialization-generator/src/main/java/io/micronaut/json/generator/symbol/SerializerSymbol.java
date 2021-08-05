@@ -20,6 +20,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
+import io.micronaut.json.Serializer;
 
 @Internal
 public interface SerializerSymbol {
@@ -48,7 +49,7 @@ public interface SerializerSymbol {
      * Generate code that reads a value from {@link Names#DECODER}.
      * <p>
      * Decoder should be positioned at the first token of the value (as specified by
-     * {@link io.micronaut.json.generator.Serializer#deserialize})
+     * {@link Serializer#deserialize})
      *
      * @param generatorContext The context of the generator, e.g. declared local variables.
      * @param type The type of the value being deserialized.

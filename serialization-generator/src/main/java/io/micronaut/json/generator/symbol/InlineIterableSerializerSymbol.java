@@ -19,6 +19,7 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.inject.ast.ClassElement;
+import io.micronaut.json.Serializer;
 import io.micronaut.json.generator.JsonParseException;
 
 import java.util.ArrayList;
@@ -28,7 +29,7 @@ import static io.micronaut.json.generator.symbol.Names.ENCODER;
 
 /**
  * {@link SerializerSymbol} that deserializes iterables (and arrays) inline, i.e. without a separate
- * {@link io.micronaut.json.generator.Serializer} implementation.
+ * {@link Serializer} implementation.
  */
 abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
     private final SerializerLinker linker;

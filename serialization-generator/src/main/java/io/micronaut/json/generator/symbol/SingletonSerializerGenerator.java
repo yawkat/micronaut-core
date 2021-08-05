@@ -21,7 +21,7 @@ import com.squareup.javapoet.*;
 import io.micronaut.context.annotation.Secondary;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.ast.ClassElement;
-import io.micronaut.json.generator.Serializer;
+import io.micronaut.json.Serializer;
 import jakarta.inject.Inject;
 
 import javax.lang.model.element.Modifier;
