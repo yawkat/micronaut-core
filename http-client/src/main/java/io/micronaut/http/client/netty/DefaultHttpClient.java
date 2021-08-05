@@ -92,7 +92,7 @@ import io.micronaut.http.netty.stream.StreamingInboundHttp2ToHttpAdapter;
 import io.micronaut.http.sse.Event;
 import io.micronaut.http.uri.UriBuilder;
 import io.micronaut.http.uri.UriTemplate;
-import io.micronaut.json.ExtendedObjectCodec;
+import io.micronaut.json.MicronautObjectCodec;
 import io.micronaut.json.GenericJsonAdapter;
 import io.micronaut.json.codec.JacksonMediaTypeCodec;
 import io.micronaut.json.codec.JsonMediaTypeCodec;
@@ -2554,7 +2554,7 @@ public class DefaultHttpClient implements
     }
 
     private static MediaTypeCodecRegistry createDefaultMediaTypeRegistry() {
-        ExtendedObjectCodec mapper = GenericJsonAdapter.getUnboundInstance().createObjectMapper();
+        MicronautObjectCodec mapper = GenericJsonAdapter.getUnboundInstance().createObjectMapper();
         ApplicationConfiguration configuration = new ApplicationConfiguration();
         return MediaTypeCodecRegistry.of(
                 new JsonMediaTypeCodec(mapper, configuration, null),

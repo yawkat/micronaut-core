@@ -8,10 +8,9 @@ import io.micronaut.core.type.Argument;
 import jakarta.inject.Singleton;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 
 @Singleton
-public class StubObjectCodec implements ExtendedObjectCodec {
+public class StubObjectCodec extends MicronautObjectCodec {
     @Override
     public ObjectCodec getObjectCodec() {
         throw new UnsupportedOperationException();
@@ -28,12 +27,12 @@ public class StubObjectCodec implements ExtendedObjectCodec {
     }
 
     @Override
-    public ExtendedObjectCodec cloneWithFeatures(JsonFeatures features) {
+    public MicronautObjectCodec cloneWithFeatures(JsonFeatures features) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public ExtendedObjectCodec cloneWithViewClass(Class<?> viewClass) {
+    public MicronautObjectCodec cloneWithViewClass(Class<?> viewClass) {
         throw new UnsupportedOperationException();
     }
 

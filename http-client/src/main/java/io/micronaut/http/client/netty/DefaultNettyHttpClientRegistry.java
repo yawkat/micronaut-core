@@ -58,7 +58,7 @@ import io.micronaut.http.netty.channel.EventLoopGroupFactory;
 import io.micronaut.http.netty.channel.EventLoopGroupRegistry;
 import io.micronaut.inject.InjectionPoint;
 import io.micronaut.inject.qualifiers.Qualifiers;
-import io.micronaut.json.ExtendedObjectCodec;
+import io.micronaut.json.MicronautObjectCodec;
 import io.micronaut.json.JsonFeatures;
 import io.micronaut.json.codec.JacksonMediaTypeCodec;
 import io.micronaut.scheduling.instrument.InvocationInstrumenterFactory;
@@ -470,7 +470,7 @@ class DefaultNettyHttpClientRegistry implements AutoCloseable,
                 .getAnnotationNamesByStereotype(FilterMatcher.class);
         final Class configurationClass =
                 metadata.classValue(Client.class, "configuration").orElse(null);
-        JsonFeatures jsonFeatures = beanContext.getBean(ExtendedObjectCodec.class).detectFeatures(metadata);
+        JsonFeatures jsonFeatures = beanContext.getBean(MicronautObjectCodec.class).detectFeatures(metadata);
 
         return new ClientKey(httpVersion, clientId, filterAnnotation, path, configurationClass, jsonFeatures);
     }

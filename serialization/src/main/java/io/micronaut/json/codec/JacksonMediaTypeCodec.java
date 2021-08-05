@@ -25,7 +25,7 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
 import io.micronaut.http.codec.CodecException;
 import io.micronaut.http.codec.MediaTypeCodec;
-import io.micronaut.json.ExtendedObjectCodec;
+import io.micronaut.json.MicronautObjectCodec;
 import io.micronaut.json.GenericDeserializationConfig;
 import io.micronaut.json.JsonFeatures;
 import io.micronaut.runtime.ApplicationConfiguration;
@@ -52,8 +52,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
     protected final List<MediaType> additionalTypes;
     protected final CodecConfiguration codecConfiguration;
     protected final MediaType mediaType;
-    private final BeanProvider<ExtendedObjectCodec> objectMapperProvider;
-    private ExtendedObjectCodec objectMapper;
+    private final BeanProvider<MicronautObjectCodec> objectMapperProvider;
+    private MicronautObjectCodec objectMapper;
 
     /**
      * @param objectMapperProvider     To read/write JSON
@@ -61,7 +61,7 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
      * @param codecConfiguration       The configuration for the codec
      * @param mediaType                Client request/response media type
      */
-    public JacksonMediaTypeCodec(BeanProvider<ExtendedObjectCodec> objectMapperProvider,
+    public JacksonMediaTypeCodec(BeanProvider<MicronautObjectCodec> objectMapperProvider,
                                  ApplicationConfiguration applicationConfiguration,
                                  CodecConfiguration codecConfiguration,
                                  MediaType mediaType) {
@@ -82,7 +82,7 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
      * @param codecConfiguration       The configuration for the codec
      * @param mediaType                Client request/response media type
      */
-    public JacksonMediaTypeCodec(ExtendedObjectCodec objectMapper,
+    public JacksonMediaTypeCodec(MicronautObjectCodec objectMapper,
                                  ApplicationConfiguration applicationConfiguration,
                                  CodecConfiguration codecConfiguration,
                                  MediaType mediaType) {
@@ -94,8 +94,8 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
     /**
      * @return The object mapper
      */
-    public ExtendedObjectCodec getObjectCodec() {
-        ExtendedObjectCodec objectMapper = this.objectMapper;
+    public MicronautObjectCodec getObjectCodec() {
+        MicronautObjectCodec objectMapper = this.objectMapper;
         if (objectMapper == null) {
             synchronized (this) { // double check
                 objectMapper = this.objectMapper;
@@ -116,7 +116,7 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
         return cloneWithMapper(getObjectCodec().cloneWithViewClass(viewClass));
     }
 
-    protected abstract JacksonMediaTypeCodec cloneWithMapper(ExtendedObjectCodec mapper);
+    protected abstract JacksonMediaTypeCodec cloneWithMapper(MicronautObjectCodec mapper);
 
     @Override
     public Collection<MediaType> getMediaTypes() {
@@ -152,7 +152,7 @@ public abstract class JacksonMediaTypeCodec implements MediaTypeCodec {
      */
     public <T> T decode(Argument<T> type, TreeNode node) throws CodecException {
         try {
-            ExtendedObjectCodec om = getObjectCodec();
+            MicronautObjectCodec om = getObjectCodec();
             return om.readValue(node.traverse(om.getObjectCodec()), type);
         } catch (IOException e) {
             throw new CodecException("Error decoding JSON stream for type [" + type.getName() + "]: " + e.getMessage(), e);

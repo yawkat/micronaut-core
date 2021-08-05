@@ -8,7 +8,7 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
 import io.micronaut.http.codec.CodecException;
 import io.micronaut.jackson.DatabindObjectCodec;
-import io.micronaut.json.ExtendedObjectCodec;
+import io.micronaut.json.MicronautObjectCodec;
 import io.micronaut.json.JsonFeatures;
 import io.micronaut.runtime.ApplicationConfiguration;
 
@@ -56,7 +56,7 @@ public abstract class JacksonMediaTypeCodec extends io.micronaut.json.codec.Jack
     public abstract JacksonMediaTypeCodec cloneWithFeatures(JacksonFeatures jacksonFeatures);
 
     @Override
-    protected io.micronaut.json.codec.JacksonMediaTypeCodec cloneWithMapper(ExtendedObjectCodec mapper) {
+    protected io.micronaut.json.codec.JacksonMediaTypeCodec cloneWithMapper(MicronautObjectCodec mapper) {
         throw new UnsupportedOperationException();
     }
 

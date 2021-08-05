@@ -26,10 +26,10 @@ import io.micronaut.json.tree.TreeGenerator;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
-public interface ExtendedObjectCodec {
-    ObjectCodec getObjectCodec();
+public abstract class MicronautObjectCodec {
+    public abstract ObjectCodec getObjectCodec();
 
-    default JsonNode valueToTree(Object value) {
+    public final JsonNode valueToTree(Object value) {
         TreeGenerator generator = new TreeGenerator();
         try {
             getObjectCodec().writeValue(generator, value);
@@ -39,19 +39,11 @@ public interface ExtendedObjectCodec {
         return generator.getCompletedValue();
     }
 
-    <T> T readValue(JsonParser parser, Argument<T> type) throws IOException;
-
-    default <T> T readValue(JsonParser parser, Class<T> type) throws IOException {
+    public final <T> T readValue(JsonParser parser, Class<T> type) throws IOException {
         return getObjectCodec().readValue(parser, type);
     }
 
-    void updateValue(JsonParser parser, Object value) throws IOException;
-
-    ExtendedObjectCodec cloneWithFeatures(JsonFeatures features);
-
-    ExtendedObjectCodec cloneWithViewClass(Class<?> viewClass);
-
-    default byte[] writeValueAsBytes(Object value) throws JsonProcessingException {
+    public final byte[] writeValueAsBytes(Object value) throws JsonProcessingException {
         ByteArrayBuilder bb = new ByteArrayBuilder(getObjectCodec().getFactory()._getBufferRecycler());
         try (JsonGenerator generator = getObjectCodec().getFactory().createGenerator(bb)) {
             getObjectCodec().writeValue(generator, value);
@@ -65,8 +57,16 @@ public interface ExtendedObjectCodec {
         return bytes;
     }
 
-    GenericDeserializationConfig getDeserializationConfig();
+    public abstract <T> T readValue(JsonParser parser, Argument<T> type) throws IOException;
+
+    public abstract void updateValue(JsonParser parser, Object value) throws IOException;
+
+    public abstract MicronautObjectCodec cloneWithFeatures(JsonFeatures features);
+
+    public abstract MicronautObjectCodec cloneWithViewClass(Class<?> viewClass);
+
+    public abstract GenericDeserializationConfig getDeserializationConfig();
 
     @Nullable
-    JsonFeatures detectFeatures(AnnotationMetadata annotations);
+    public abstract JsonFeatures detectFeatures(AnnotationMetadata annotations);
 }

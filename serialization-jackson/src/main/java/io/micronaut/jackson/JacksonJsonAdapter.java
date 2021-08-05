@@ -15,7 +15,7 @@
  */
 package io.micronaut.jackson;
 
-import io.micronaut.json.ExtendedObjectCodec;
+import io.micronaut.json.MicronautObjectCodec;
 import io.micronaut.json.GenericJsonAdapter;
 
 /**
@@ -23,7 +23,7 @@ import io.micronaut.json.GenericJsonAdapter;
  */
 public class JacksonJsonAdapter implements GenericJsonAdapter {
     @Override
-    public ExtendedObjectCodec createObjectMapper() {
+    public MicronautObjectCodec createObjectMapper() {
         return new DatabindObjectCodec(new ObjectMapperFactory().objectMapper(null, null));
     }
 }

@@ -24,7 +24,7 @@ import io.micronaut.core.convert.exceptions.ConversionErrorException;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.core.util.StringUtils;
-import io.micronaut.json.ExtendedObjectCodec;
+import io.micronaut.json.MicronautObjectCodec;
 import io.micronaut.json.JsonConfiguration;
 import io.micronaut.json.tree.JsonNode;
 import io.micronaut.json.tree.MicronautTreeCodec;
@@ -43,14 +43,14 @@ import java.util.stream.Collectors;
 @Primary
 class JacksonBeanPropertyBinder implements BeanPropertyBinder {
 
-    private final ExtendedObjectCodec objectMapper;
+    private final MicronautObjectCodec objectMapper;
     private final int arraySizeThreshhold;
 
     /**
      * @param objectMapper  To read/write JSON
      * @param configuration The configuration for Jackson JSON parser
      */
-    JacksonBeanPropertyBinder(ExtendedObjectCodec objectMapper, JsonConfiguration configuration) {
+    JacksonBeanPropertyBinder(MicronautObjectCodec objectMapper, JsonConfiguration configuration) {
         this.objectMapper = objectMapper;
         this.arraySizeThreshhold = configuration.getArraySizeThreshold();
     }

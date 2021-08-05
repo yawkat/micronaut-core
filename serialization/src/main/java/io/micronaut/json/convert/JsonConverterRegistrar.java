@@ -25,9 +25,8 @@ import io.micronaut.core.convert.*;
 import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.naming.NameUtils;
 import io.micronaut.core.type.Argument;
-import io.micronaut.json.ExtendedObjectCodec;
+import io.micronaut.json.MicronautObjectCodec;
 import io.micronaut.json.tree.JsonArray;
-import io.micronaut.json.tree.JsonNode;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -36,13 +35,13 @@ import java.util.*;
 
 @Singleton
 public final class JsonConverterRegistrar implements TypeConverterRegistrar {
-    private final BeanProvider<ExtendedObjectCodec> objectCodec;
+    private final BeanProvider<MicronautObjectCodec> objectCodec;
     private final ConversionService<?> conversionService;
     private final BeanProvider<BeanPropertyBinder> beanPropertyBinder;
 
     @Inject
     public JsonConverterRegistrar(
-            BeanProvider<ExtendedObjectCodec> objectCodec,
+            BeanProvider<MicronautObjectCodec> objectCodec,
             ConversionService<?> conversionService,
             BeanProvider<BeanPropertyBinder> beanPropertyBinder
     ) {
@@ -120,7 +119,7 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
     public <ARR extends TreeNode> TypeConverter<ARR, Object[]> arrayNodeToObjectConverter() {
         return (node, targetType, context) -> {
             try {
-                ExtendedObjectCodec om = this.objectCodec.get();
+                MicronautObjectCodec om = this.objectCodec.get();
                 Object[] result = om.readValue(node.traverse(om.getObjectCodec()), targetType);
                 return Optional.of(result);
             } catch (IOException e) {
@@ -201,7 +200,7 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
                     if (node.isContainerNode() && context instanceof ArgumentConversionContext && targetType.getTypeParameters().length != 0) {
                         argument = ((ArgumentConversionContext<Object>) context).getArgument();
                     }
-                    ExtendedObjectCodec om = this.objectCodec.get();
+                    MicronautObjectCodec om = this.objectCodec.get();
                     JsonParser parser = node.traverse(om.getObjectCodec());
                     Object result;
                     if (argument != null) {

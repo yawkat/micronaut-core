@@ -26,7 +26,7 @@ public interface GenericJsonAdapter {
         return Helper.INSTANCE;
     }
 
-    ExtendedObjectCodec createObjectMapper();
+    MicronautObjectCodec createObjectMapper();
 }
 
 class Helper {
