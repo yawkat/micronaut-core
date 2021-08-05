@@ -23,6 +23,7 @@ import io.micronaut.http.server.netty.HttpContentProcessor;
 import io.micronaut.http.server.netty.HttpContentSubscriberFactory;
 import io.micronaut.http.server.netty.NettyHttpRequest;
 import io.micronaut.json.GenericDeserializationConfig;
+import io.micronaut.json.MicronautObjectCodec;
 import jakarta.inject.Singleton;
 
 /**
@@ -40,14 +41,14 @@ public class JsonHttpContentSubscriberFactory implements HttpContentSubscriberFa
     private final GenericDeserializationConfig deserializationConfig;
 
     /**
-     * @param deserializationConfig   The deserialization config
+     * @param objectCodec             The object codec to use configuration from
      * @param httpServerConfiguration The Http server configuration
      */
     public JsonHttpContentSubscriberFactory(
-            GenericDeserializationConfig deserializationConfig,
+            MicronautObjectCodec objectCodec,
             HttpServerConfiguration httpServerConfiguration) {
         this.httpServerConfiguration = httpServerConfiguration;
-        this.deserializationConfig = deserializationConfig;
+        this.deserializationConfig = objectCodec.getDeserializationConfig();
     }
 
     @Override

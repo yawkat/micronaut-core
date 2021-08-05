@@ -17,6 +17,8 @@ package io.micronaut.jackson;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.ObjectCodec;
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -81,7 +83,11 @@ public final class DatabindObjectCodec extends MicronautObjectCodec {
 
     @Override
     public GenericDeserializationConfig getDeserializationConfig() {
-        return DatabindUtil.toGenericConfig(objectMapper);
+        DeserializationConfig config = objectMapper.getDeserializationConfig();
+        return GenericDeserializationConfig.DEFAULT
+                .withUseBigDecimalForFloats(config.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS))
+                .withUseBigIntegerForInts(config.isEnabled(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS))
+                .withFactory(objectMapper.getFactory());
     }
 
     @Override

@@ -60,19 +60,6 @@ public abstract class JacksonMediaTypeCodec extends io.micronaut.json.codec.Jack
         throw new UnsupportedOperationException();
     }
 
-    @Override
-    public Collection<MediaType> getMediaTypes() {
-        List<MediaType> mediaTypes = new ArrayList<>();
-        mediaTypes.add(mediaType);
-        mediaTypes.addAll(additionalTypes);
-        return mediaTypes;
-    }
-
-    @Override
-    public boolean supportsType(Class<?> type) {
-        return !(CharSequence.class.isAssignableFrom(type));
-    }
-
     /**
      * Decodes the given JSON node.
      *
