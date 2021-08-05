@@ -1,11 +1,13 @@
 dependencies {
     annotationProcessor project(":inject-java")
 
-    api project(':context')
-    api project(":http")
+    api project(":serialization")
 
-    api("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
-    api("com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion")
+    compileOnly project(":management")
+    compileOnly project(":inject-java")
+
+    implementation "com.squareup:javapoet:$javapoetVersion"
+
 
     testAnnotationProcessor project(":inject-java")
     testImplementation project(":inject-java")
