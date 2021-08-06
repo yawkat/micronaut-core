@@ -3,7 +3,7 @@ package io.micronaut.json.generator.symbol;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.EnumElement;
-import io.micronaut.json.generator.JsonParseException;
+import io.micronaut.json.generated.JsonParseException;
 
 import java.util.List;
 import java.util.stream.Collectors;

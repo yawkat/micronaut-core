@@ -1,6 +1,6 @@
 package io.micronaut.json.generator.bean
 
-import io.micronaut.json.generator.JsonParseException
+import io.micronaut.json.generated.JsonParseException
 
 class InlineBeanSerializerSymbolSpec extends AbstractBeanSerializerSpec {
     void "simple bean"() {

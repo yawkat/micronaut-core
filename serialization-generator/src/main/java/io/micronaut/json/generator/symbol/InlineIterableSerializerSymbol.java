@@ -20,7 +20,7 @@ import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.json.Serializer;
-import io.micronaut.json.generator.JsonParseException;
+import io.micronaut.json.generated.JsonParseException;
 
 import java.util.ArrayList;
 

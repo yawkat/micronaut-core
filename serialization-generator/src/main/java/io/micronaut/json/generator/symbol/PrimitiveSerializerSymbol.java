@@ -19,7 +19,7 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.PrimitiveElement;
-import io.micronaut.json.generator.JsonParseException;
+import io.micronaut.json.generated.JsonParseException;
 
 import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;

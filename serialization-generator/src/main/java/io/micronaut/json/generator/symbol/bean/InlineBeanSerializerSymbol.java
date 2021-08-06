@@ -25,7 +25,7 @@ import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.ConstructorElement;
 import io.micronaut.inject.ast.PrimitiveElement;
 import io.micronaut.inject.visitor.VisitorContext;
-import io.micronaut.json.generator.JsonParseException;
+import io.micronaut.json.generated.JsonParseException;
 import io.micronaut.json.annotation.SerializableBean;
 import io.micronaut.json.generator.symbol.*;
 

@@ -2,7 +2,7 @@ package io.micronaut.json.generator.generator
 
 
 import io.micronaut.inject.ast.PrimitiveElement
-import io.micronaut.json.generator.JsonParseException
+import io.micronaut.json.generated.JsonParseException
 import io.micronaut.json.generator.symbol.PrimitiveSerializerSymbol
 
 class PrimitiveSymbolSpec extends AbstractSymbolSpec {
