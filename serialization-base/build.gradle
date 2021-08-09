@@ -1,0 +1,5 @@
+dependencies {
+    api project(':context')
+
+    api("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
+}

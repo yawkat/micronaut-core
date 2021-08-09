@@ -3,6 +3,7 @@ dependencies {
 
     api project(':context')
     api project(":http")
+    api project(":serialization-base")
 
     api("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
     api("com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion")
