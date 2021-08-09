@@ -23,6 +23,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.PrimitiveElement;
 
+import java.util.Arrays;
 import java.util.Map;
 
 @Internal
@@ -57,7 +58,9 @@ public final class PoetUtil {
                 throw new AssertionError("unknown primitive type " + clazz);
             }
         }
-        ClassName className = ClassName.get(clazz.getPackageName(), clazz.getSimpleName()); // TODO: nested types
+        // split for nested classes
+        String[] simpleNameParts = clazz.getSimpleName().split("\\$");
+        ClassName className = ClassName.get(clazz.getPackageName(), simpleNameParts[0], Arrays.copyOfRange(simpleNameParts, 1, simpleNameParts.length));
         Map<String, ClassElement> typeArguments = clazz.getTypeArguments();
         if (typeArguments.isEmpty()) {
             if (clazz.getName().equals("<any>")) {

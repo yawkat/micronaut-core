@@ -294,4 +294,23 @@ enum E {
         deserializeFromString(serializerA, '{"e":"A"}').e.name() == 'A'
         deserializeFromString(serializerA, '{"e":"B"}').e.name() == 'B'
     }
+
+    void "nested class"() {
+        given:
+        def compiled = buildClassLoader('example.Test', '''
+package example;
+
+class A {
+    @io.micronaut.json.annotation.SerializableBean
+    static class B {
+    }
+}
+''')
+
+        def b = compiled.loadClass('example.A$B').newInstance()
+        def serializerB = (Serializer<?>) compiled.loadClass('example.A$B$Serializer').newInstance()
+
+        expect:
+        serializeToString(serializerB, b) == '{}'
+    }
 }

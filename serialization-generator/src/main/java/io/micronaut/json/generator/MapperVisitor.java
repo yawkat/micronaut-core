@@ -22,7 +22,6 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.visitor.TypeElementVisitor;
 import io.micronaut.inject.visitor.VisitorContext;
-import io.micronaut.json.annotation.SerializableBean;
 import io.micronaut.json.generator.symbol.ProblemReporter;
 import io.micronaut.json.generator.symbol.SerializerLinker;
 import io.micronaut.json.generator.symbol.SingletonSerializerGenerator;
@@ -37,7 +36,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Internal
-public class MapperVisitor implements TypeElementVisitor<SerializableBean, SerializableBean> {
+// todo: we have to visit everything, because annotated nested classes aren't processed otherwise
+public class MapperVisitor implements TypeElementVisitor<Object, Object> {
     private final List<SingletonSerializerGenerator.GenerationResult> generated = new ArrayList<>();
 
     @Override
