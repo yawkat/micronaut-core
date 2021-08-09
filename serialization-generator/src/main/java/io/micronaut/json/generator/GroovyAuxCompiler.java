@@ -81,6 +81,13 @@ class GroovyAuxCompiler {
                     } catch (IOException e) {
                         throw new UncheckedIOException(e);
                     }
+                } else if (relative.startsWith(Paths.get("META-INF", "services"))) {
+                    String serviceName = p.getFileName().toString();
+                    for (String implementationName : Files.readAllLines(p)) {
+                        if (!implementationName.isEmpty()) {
+                            context.visitServiceDescriptor(serviceName, implementationName);
+                        }
+                    }
                 } else if (relative.startsWith("META-INF")) {
                     Optional<GeneratedFile> generatedFile = context.visitMetaInfFile(relative.subpath(1, relative.getNameCount()).toString(), Element.EMPTY_ELEMENT_ARRAY);
                     if (generatedFile.isPresent()) {
