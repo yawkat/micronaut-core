@@ -5,6 +5,7 @@ dependencies {
 
     compileOnly project(":management")
     compileOnly project(":inject-java")
+    compileOnly project(":inject-groovy")
 
     implementation "com.squareup:javapoet:$javapoetVersion"
 
@@ -13,6 +14,7 @@ dependencies {
     testImplementation project(":inject-java")
     testImplementation project(":inject-java-test")
     testImplementation project(":inject-groovy")
+    testImplementation project(":inject-groovy-test")
     if (!JavaVersion.current().isJava9Compatible()) {
         testImplementation files(org.gradle.internal.jvm.Jvm.current().toolsJar)
     }

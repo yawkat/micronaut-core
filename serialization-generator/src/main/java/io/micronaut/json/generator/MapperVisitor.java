@@ -16,6 +16,7 @@
 package io.micronaut.json.generator;
 
 import io.micronaut.annotation.processing.visitor.JavaVisitorContext;
+import io.micronaut.ast.groovy.visitor.GroovyVisitorContext;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.inject.ast.ClassElement;
@@ -29,13 +30,16 @@ import io.micronaut.json.generator.symbol.bean.DependencyGraphChecker;
 import io.micronaut.json.generator.symbol.bean.InlineBeanSerializerSymbol;
 
 import javax.annotation.processing.Filer;
-import javax.tools.JavaFileObject;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Internal
 public class MapperVisitor implements TypeElementVisitor<SerializableBean, SerializableBean> {
+    private final List<SingletonSerializerGenerator.GenerationResult> generated = new ArrayList<>();
+
     @Override
     public void visitClass(ClassElement element, VisitorContext context) {
         SerializerLinker linker = new SerializerLinker(context);
@@ -52,26 +56,48 @@ public class MapperVisitor implements TypeElementVisitor<SerializableBean, Seria
         SingletonSerializerGenerator.GenerationResult generationResult = SingletonSerializerGenerator.generate(problemReporter, element, inlineBeanSerializer);
 
         problemReporter.reportTo(context);
-        if (problemReporter.isFailed()) {
-            return;
+        if (!problemReporter.isFailed()) {
+            generated.add(generationResult);
         }
+    }
 
-        // todo: gen serviceloader
-        // todo: support groovy/kt
-        Filer filer = ((JavaVisitorContext) context).getProcessingEnv().getFiler();
-        try {
-            JavaFileObject sourceFile = filer.createSourceFile(generationResult.getSerializerClassName().reflectionName());
-            try (Writer writer = sourceFile.openWriter()) {
-                generationResult.getGeneratedFile().writeTo(writer);
+    @Override
+    public void finish(VisitorContext context) {
+        if (!generated.isEmpty()) {
+            if (context instanceof JavaVisitorContext) {
+                Filer filer = ((JavaVisitorContext) context).getProcessingEnv().getFiler();
+                try {
+                    for (SingletonSerializerGenerator.GenerationResult generationResult : generated) {
+                        generationResult.getGeneratedFile().writeTo(filer);
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            } else {
+                boolean groovyContext;
+                try {
+                    groovyContext = context instanceof GroovyVisitorContext;
+                } catch (NoClassDefFoundError e) {
+                    groovyContext = false;
+                }
+                if (groovyContext) {
+                    try {
+                        GroovyAuxCompiler.compile(
+                                (GroovyVisitorContext) context,
+                                generated.stream().map(SingletonSerializerGenerator.GenerationResult::getGeneratedFile).collect(Collectors.toList())
+                        );
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                }
             }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+            generated.clear();
         }
     }
 
     @Override
     @NonNull
     public VisitorKind getVisitorKind() {
-        return VisitorKind.ISOLATING;
+        return VisitorKind.AGGREGATING;
     }
 }
