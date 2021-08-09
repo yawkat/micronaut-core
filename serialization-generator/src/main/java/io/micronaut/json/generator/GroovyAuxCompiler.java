@@ -4,8 +4,10 @@ import com.squareup.javapoet.JavaFile;
 import io.micronaut.ast.groovy.utils.InMemoryByteCodeGroovyClassLoader;
 import io.micronaut.ast.groovy.utils.InMemoryClassWriterOutputVisitor;
 import io.micronaut.ast.groovy.visitor.GroovyVisitorContext;
+import io.micronaut.inject.ast.Element;
 import io.micronaut.inject.writer.ClassWriterOutputVisitor;
 import io.micronaut.inject.writer.DirectoryClassWriterOutputVisitor;
+import io.micronaut.inject.writer.GeneratedFile;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.tools.javac.JavaStubCompilationUnit;
@@ -24,6 +26,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -59,22 +62,36 @@ class GroovyAuxCompiler {
             compileToDir(context, outputClasses, files);
 
             // add generated classes to groovy output
-            Files.walk(outputClasses)
-                    .filter(p -> p.toString().endsWith(".class"))
-                    .forEach(p -> {
-                        StringBuilder className = new StringBuilder();
-                        for (Path dir : outputClasses.relativize(p).getParent()) {
-                            className.append(dir.toString()).append('.');
-                        }
-                        String fileName = p.getFileName().toString();
-                        className.append(fileName, 0, fileName.length() - ".class".length());
+            for (Path p : (Iterable<Path>) Files.walk(outputClasses)::iterator) {
+                if (Files.isDirectory(p)) {
+                    continue;
+                }
 
-                        try (OutputStream output = outputVisitor.visitClass(className.toString())) {
+                Path relative = outputClasses.relativize(p);
+                if (p.toString().endsWith(".class")) {
+                    StringBuilder className = new StringBuilder();
+                    for (Path dir : relative.getParent()) {
+                        className.append(dir.toString()).append('.');
+                    }
+                    String fileName = p.getFileName().toString();
+                    className.append(fileName, 0, fileName.length() - ".class".length());
+
+                    try (OutputStream output = outputVisitor.visitClass(className.toString())) {
+                        Files.copy(p, output);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                } else if (relative.startsWith("META-INF")) {
+                    Optional<GeneratedFile> generatedFile = context.visitMetaInfFile(relative.subpath(1, relative.getNameCount()).toString(), Element.EMPTY_ELEMENT_ARRAY);
+                    if (generatedFile.isPresent()) {
+                        try (OutputStream output = generatedFile.get().openOutputStream()) {
                             Files.copy(p, output);
                         } catch (IOException e) {
                             throw new UncheckedIOException(e);
                         }
-                    });
+                    }
+                }
+            }
         } finally {
             deleteRecursively(outputClasses);
         }
