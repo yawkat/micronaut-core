@@ -42,7 +42,7 @@ class AbstractBeanSerializerSpec extends AbstractTypeElementSpec implements Seri
         }
 
         def beanClass = classLoader.loadClass(classElement.name)
-        def serializerClass = classLoader.loadClass(classElement.name + '$Serializer')
+        def serializerClass = classLoader.loadClass(classElement.packageName + '.$' + classElement.simpleName + '$Serializer')
         def serializerInstance = (Serializer<?>) serializerClass.newInstance()
         return new CompiledBean(beanClass, serializerInstance)
     }

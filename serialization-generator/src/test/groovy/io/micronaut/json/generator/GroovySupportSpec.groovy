@@ -19,7 +19,7 @@ class Bean {
     String foo
 }
 ''')
-        def serializer = cl.loadClass('example.Bean$Serializer')
+        def serializer = cl.loadClass('example.$Bean$Serializer')
 
         then:
         Serializer.class.isAssignableFrom(serializer)

@@ -38,7 +38,7 @@ public final class SingletonSerializerGenerator {
     public static GenerationResult generate(ProblemReporter problemReporter, ClassElement clazz, SerializerSymbol symbol) {
         return generate(
                 problemReporter,
-                ClassName.get(clazz.getPackageName(), clazz.getSimpleName() + "$Serializer"),
+                ClassName.get(clazz.getPackageName(), '$' +clazz.getSimpleName() + "$Serializer"),
                 PoetUtil.toTypeName(clazz),
                 symbol,
                 clazz
