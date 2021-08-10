@@ -24,4 +24,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface SerializableBean {
     boolean inline() default false;
+
+    boolean allowDeserialization() default true;
+
+    boolean allowSerialization() default true;
 }

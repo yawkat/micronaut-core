@@ -313,4 +313,27 @@ class A {
         expect:
         serializeToString(serializerB, b) == '{}'
     }
+
+    void "interface"() {
+        given:
+        def compiled = buildClassLoader('example.Test', '''
+package example;
+
+@io.micronaut.json.annotation.SerializableBean(allowDeserialization = false)
+interface Test {
+    String getFoo();
+}
+''')
+        def testBean = ['getFoo': { Object[] args -> 'bar' }].asType(compiled.loadClass('example.Test'))
+        def serializer = compiled.loadClass('example.$Test$Serializer').newInstance()
+
+        expect:
+        serializeToString(serializer, testBean) == '{"foo":"bar"}'
+
+        when:
+        deserializeFromString(serializer, '{"foo":"bar"}')
+
+        then:
+        thrown UnsupportedOperationException
+    }
 }

@@ -73,11 +73,28 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
     }
 
     private boolean canSerialize(ClassElement type, boolean inlineRole) {
-        AnnotationValue<SerializableBean> annotation = ElementUtil.getAnnotation(SerializableBean.class, type, findAdditionalAnnotationSource(type));
+        AnnotationValue<SerializableBean> annotation = getAnnotation(type);
         if (annotation == null) {
             return false;
         }
         return annotation.get("inline", Boolean.class).orElse(false) == inlineRole;
+    }
+
+    @Nullable
+    private AnnotationValue<SerializableBean> getAnnotation(ClassElement type) {
+        return ElementUtil.getAnnotation(SerializableBean.class, type, findAdditionalAnnotationSource(type));
+    }
+
+    /**
+     * Returns {@code false} iff this direction is explicitly disabled (e.g. by
+     * {@link SerializableBean#allowDeserialization()}).
+     */
+    private boolean supportsDirection(ClassElement type, boolean serialization) {
+        AnnotationValue<SerializableBean> annotation = getAnnotation(type);
+        if (annotation == null) {
+            return true;
+        }
+        return annotation.booleanValue(serialization ? "allowSerialization" : "allowDeserialization").orElse(true);
     }
 
     @Override
@@ -88,6 +105,10 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
         // have to check both ser/deser, in case property types differ (e.g. when setters and getters have different types)
         // technically, this could lead to false positives for checking, since ser types will be considered in a subgraph that is only reachable through deser
         for (boolean ser : new boolean[]{true, false}) {
+            if (!supportsDirection(type, ser)) {
+                continue;
+            }
+
             ProblemReporter problemReporter = new ProblemReporter();
             BeanDefinition definition = introspect(problemReporter, type, ser);
             if (problemReporter.isFailed()) {
@@ -117,12 +138,15 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
 
     @Override
     public CodeBlock serialize(GeneratorContext generatorContext, ClassElement type, CodeBlock readExpression) {
+        if (!supportsDirection(type, true)) {
+            return CodeBlock.of("throw new $T(\"Serialization of this type is disabled\");\n", UnsupportedOperationException.class);
+        }
+
         BeanDefinition definition = introspect(generatorContext.getProblemReporter(), type, true);
         if (generatorContext.getProblemReporter().isFailed()) {
             // definition may be in an invalid state, so just skip codegen
             return CodeBlock.of("");
         }
-
 
         if (definition.valueProperty != null) {
             // @JsonValue
@@ -179,6 +203,10 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
 
     @Override
     public CodeBlock deserialize(GeneratorContext generatorContext, ClassElement type, Setter setter) {
+        if (!supportsDirection(type, false)) {
+            return CodeBlock.of("throw new $T(\"Deserialization of this type is disabled\");\n", UnsupportedOperationException.class);
+        }
+
         return new DeserGen(generatorContext, type).generate(setter);
     }
 
