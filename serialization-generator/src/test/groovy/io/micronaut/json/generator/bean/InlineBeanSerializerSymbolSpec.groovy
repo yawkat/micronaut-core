@@ -1,6 +1,7 @@
 package io.micronaut.json.generator.bean
 
 import io.micronaut.json.generated.JsonParseException
+import spock.lang.Ignore
 
 class InlineBeanSerializerSymbolSpec extends AbstractBeanSerializerSpec {
     void "simple bean"() {
@@ -435,6 +436,26 @@ class Test {
         serializeToString(compiled.serializer, testBean) == '{"foo":null}'
     }
 
+    @Ignore // todo: doesn't show up as a write-only property in getBeanProperties for some reason
+    void "nullable setter"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import io.micronaut.core.annotation.Nullable;
+class Test {
+    private String foo;
+    
+    public void setFoo(@Nullable String foo) {
+        this.foo = foo;
+    }
+}
+''')
+
+        expect:
+        deserializeFromString(compiled.serializer, '{"foo": null}').foo == null
+    }
+
     void "unwrapped"() {
         given:
         def compiled = buildSerializer('''
@@ -501,5 +522,54 @@ class Test {
         expect:
         deserializeFromString(compiled.serializer, '"bar"').foo == 'bar'
         serializeToString(compiled.serializer, testBean) == '"bar"'
+    }
+
+    void "optional"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import java.util.Optional;
+class Test {
+    public Optional<String> foo;
+}
+''')
+        def testBean = compiled.newInstance()
+        testBean.foo = Optional.of('bar')
+
+        expect:
+        deserializeFromString(compiled.serializer, '{"foo":"bar"}').foo.get() == 'bar'
+        !deserializeFromString(compiled.serializer, '{"foo":null}').foo.isPresent()
+        !deserializeFromString(compiled.serializer, '{}').foo.isPresent()
+        serializeToString(compiled.serializer, testBean) == '{"foo":"bar"}'
+    }
+
+    @Ignore // todo: setter is filtered out apparently, because it has a mismatched type
+    void "optional nullable mix"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import io.micronaut.core.annotation.Nullable;
+import java.util.Optional;
+class Test {
+    @Nullable
+    private String foo;
+    
+    public Optional<String> getFoo() {
+        return Optional.ofNullable(foo);
+    }
+    
+    public void setFoo(@Nullable String foo) {
+        this.foo = foo;
+    }
+}
+''')
+        def testBean = compiled.newInstance()
+        testBean.foo = 'bar'
+
+        expect:
+        deserializeFromString(compiled.serializer, '{"foo":"bar"}').foo == 'bar'
+        serializeToString(compiled.serializer, testBean) == '{"foo":"bar"}'
     }
 }

@@ -23,7 +23,6 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.ConstructorElement;
-import io.micronaut.inject.ast.PrimitiveElement;
 import io.micronaut.inject.visitor.VisitorContext;
 import io.micronaut.json.generated.JsonParseException;
 import io.micronaut.json.annotation.SerializableBean;
@@ -183,20 +182,6 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
         return new DeserGen(generatorContext, type).generate(setter);
     }
 
-    private static String getDefaultValueExpression(ClassElement clazz) {
-        if (clazz.isPrimitive() && !clazz.isArray()) {
-            if (clazz.equals(PrimitiveElement.VOID)) {
-                throw new UnsupportedOperationException("void cannot be assigned");
-            } else if (clazz.equals(PrimitiveElement.BOOLEAN)) {
-                return "false";
-            } else {
-                return "0";
-            }
-        } else {
-            return "null";
-        }
-    }
-
     private class DeserGen {
         private final GeneratorContext generatorContext;
         private final ClassElement rootType;
@@ -260,7 +245,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
 
             // create a local variable for each property
             for (BeanDefinition.Property prop : leafProperties) {
-                deserialize.addStatement("$T $N = $L", PoetUtil.toTypeName(prop.getType()), localVariableNames.get(prop), getDefaultValueExpression(prop.getType()));
+                deserialize.addStatement("$T $N = $L", PoetUtil.toTypeName(prop.getType()), localVariableNames.get(prop), findSymbol(prop).getDefaultExpression(prop.getType()));
             }
 
             // main parse loop

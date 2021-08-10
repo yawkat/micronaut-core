@@ -41,6 +41,7 @@ public final class SerializerLinker {
                 PrimitiveSerializerSymbol.INSTANCE,
                 StringSerializerSymbol.INSTANCE,
                 InlineEnumSerializerSymbol.INSTANCE,
+                new OptionalSerializerSymbol(this),
                 // for serializing beans inline (@SerializableBean(inline=true))
                 inlineBean,
                 new InjectingSerializerSymbol(this)

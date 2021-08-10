@@ -60,6 +60,15 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
                 .build();
     }
 
+    @Override
+    public CodeBlock getDefaultExpression(ClassElement type) {
+        if (type.equals(PrimitiveElement.BOOLEAN)) {
+            return CodeBlock.of("false");
+        } else {
+            return CodeBlock.of("0");
+        }
+    }
+
     private CodeBlock checkCorrectToken(GeneratorContext generatorContext, ClassElement type) {
         String tokenVar = generatorContext.newLocalVariable("token");
         if (type.equals(PrimitiveElement.BOOLEAN)) {

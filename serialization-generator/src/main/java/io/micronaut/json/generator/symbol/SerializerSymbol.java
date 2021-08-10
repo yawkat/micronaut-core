@@ -58,6 +58,13 @@ public interface SerializerSymbol {
      */
     CodeBlock deserialize(GeneratorContext generatorContext, ClassElement type, Setter setter);
 
+    /**
+     * Get an expression giving a default value for this type. Used when deserializing a bean and a property is missing.
+     */
+    default CodeBlock getDefaultExpression(ClassElement type) {
+        return CodeBlock.of("null");
+    }
+
     @FunctionalInterface
     interface Setter {
         /**
