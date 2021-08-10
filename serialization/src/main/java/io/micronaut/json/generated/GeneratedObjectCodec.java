@@ -176,7 +176,9 @@ public final class GeneratedObjectCodec extends MicronautObjectCodec {
 
         @Override
         public JsonFactory getFactory() {
-            return deserializationConfig.getFactory();
+            JsonFactory factory = deserializationConfig.getFactory();
+            factory.setCodec(this);
+            return factory;
         }
     }
 }
