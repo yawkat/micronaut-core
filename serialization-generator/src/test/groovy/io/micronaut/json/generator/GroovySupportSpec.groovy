@@ -61,4 +61,28 @@ class Test {
         then:
         Serializer.class.isAssignableFrom(serializer)
     }
+
+    def "json creator"() {
+        when:
+        def context = buildContext('''
+package example
+
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
+import io.micronaut.json.annotation.SerializableBean
+
+@SerializableBean
+class Bean {
+    String foo
+    
+    @JsonCreator
+    Bean(@JsonProperty("foo") String foo) {
+        this.foo = foo
+    }
+}
+''')
+
+        then:
+        context.findBean(Argument.of(Serializer.class, context.classLoader.loadClass("example.Bean"))).isPresent()
+    }
 }
