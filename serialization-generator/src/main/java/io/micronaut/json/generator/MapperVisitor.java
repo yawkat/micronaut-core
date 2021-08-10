@@ -64,13 +64,7 @@ public class MapperVisitor implements TypeElementVisitor<Object, Object> {
     @Override
     public void finish(VisitorContext context) {
         if (!generated.isEmpty()) {
-            boolean javaContext;
-            try {
-                javaContext = context instanceof JavaVisitorContext;
-            } catch (NoClassDefFoundError e) {
-                javaContext = false;
-            }
-            if (javaContext) {
+            if (context instanceof JavaVisitorContext) {
                 Filer filer = ((JavaVisitorContext) context).getProcessingEnv().getFiler();
                 try {
                     for (SingletonSerializerGenerator.GenerationResult generationResult : generated) {

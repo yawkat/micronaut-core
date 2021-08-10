@@ -2,12 +2,12 @@ dependencies {
     annotationProcessor project(":inject-java")
 
     api project(":serialization-base")
-
-    compileOnly project(":inject-java")
+    api project(":inject")
+    // inject-java is not optional, we need it for wiring the generated serializer beans
+    api project(":inject-java")
     compileOnly project(":inject-groovy")
 
-    implementation "com.squareup:javapoet:$javapoetVersion"
-
+    api "com.squareup:javapoet:$javapoetVersion"
     api "com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion"
 
     testAnnotationProcessor project(":inject-java")
