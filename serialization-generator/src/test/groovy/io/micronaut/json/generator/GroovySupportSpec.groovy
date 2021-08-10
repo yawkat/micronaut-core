@@ -41,4 +41,24 @@ class Bean {
         then:
         context.findBean(Argument.of(Serializer.class, context.classLoader.loadClass("example.Bean"))).isPresent()
     }
+
+    def nested() {
+        when:
+        def cl = buildClassLoader('''
+package example
+
+import io.micronaut.json.annotation.SerializableBean
+
+class Test {
+    @SerializableBean
+    static class Bean {
+        String foo
+    }
+}
+''')
+        def serializer = cl.loadClass('example.$Test$Bean$Serializer')
+
+        then:
+        Serializer.class.isAssignableFrom(serializer)
+    }
 }
