@@ -336,4 +336,27 @@ interface Test {
         then:
         thrown UnsupportedOperationException
     }
+
+    void "optional"() {
+        given:
+        def compiled = buildClassLoader('example.A', '''
+package example;
+
+@io.micronaut.json.annotation.SerializableBean
+class A {
+    java.util.Optional<B> b;
+}
+
+@io.micronaut.json.annotation.SerializableBean
+class B {
+}
+''')
+        def testBean = compiled.loadClass("example.A").newInstance()
+        testBean.b = Optional.of(compiled.loadClass("example.B").newInstance())
+        def serializer = compiled.loadClass('example.$A$Serializer').newInstance(compiled.loadClass('example.$B$Serializer').newInstance())
+
+        expect:
+        serializeToString(serializer, testBean) == '{"b":{}}'
+        deserializeFromString(serializer, '{"b":{}}').b.isPresent()
+    }
 }

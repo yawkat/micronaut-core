@@ -58,7 +58,7 @@ class OptionalSerializerSymbol implements SerializerSymbol {
         return CodeBlock.builder()
                 .addStatement("$T $N = $L", PoetUtil.toTypeName(type), variable, readExpression)
                 .beginControlFlow("if ($N.isPresent())", variable)
-                .add(getDelegateSerializer(delegateType.get()).serialize(generatorContext, type, CodeBlock.of("$N.get()", variable)))
+                .add(getDelegateSerializer(delegateType.get()).serialize(generatorContext, delegateType.get(), CodeBlock.of("$N.get()", variable)))
                 .nextControlFlow("else")
                 .addStatement("$N.writeNull()", Names.ENCODER)
                 .endControlFlow()
@@ -76,7 +76,7 @@ class OptionalSerializerSymbol implements SerializerSymbol {
                 .beginControlFlow("if ($N.currentToken() == $T.VALUE_NULL)", Names.DECODER, JsonToken.class)
                 .add(setter.createSetStatement(CodeBlock.of("$T.empty()", Optional.class)))
                 .nextControlFlow("else")
-                .add(getDelegateSerializer(delegateType.get()).deserialize(generatorContext, type, expr -> setter.createSetStatement(CodeBlock.of("$T.of($L)", Optional.class, expr))))
+                .add(getDelegateSerializer(delegateType.get()).deserialize(generatorContext, delegateType.get(), expr -> setter.createSetStatement(CodeBlock.of("$T.of($L)", Optional.class, expr))))
                 .endControlFlow()
                 .build();
     }
