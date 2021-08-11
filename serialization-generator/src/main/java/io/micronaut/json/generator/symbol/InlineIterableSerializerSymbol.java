@@ -145,7 +145,7 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
             if (type.getName().equals("java.util.Collection")) {
                 return type.getTypeArguments().get("E");
             }
-            if (type.getName().equals("java.util.Iterable")) {
+            if (type.getName().equals("java.lang.Iterable")) {
                 return type.getTypeArguments().get("T");
             }
 

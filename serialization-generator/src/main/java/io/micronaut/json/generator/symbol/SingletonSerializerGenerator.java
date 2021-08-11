@@ -52,7 +52,7 @@ public final class SingletonSerializerGenerator {
      * @param valueType      type to pass to the symbol for code generation. Usually identical to {@code valueName}, except for primitives
      * @return The generated serializer class
      */
-    static GenerationResult generate(
+    public static GenerationResult generate(
             ProblemReporter problemReporter,
             ClassName serializerName,
             TypeName valueName,
