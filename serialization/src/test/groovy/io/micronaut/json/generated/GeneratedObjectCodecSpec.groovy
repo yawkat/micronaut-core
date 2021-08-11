@@ -44,4 +44,34 @@ class GeneratedObjectCodecSpec extends Specification {
             this.foo = foo
         }
     }
+
+    def "super type serializable"() {
+        given:
+        def ctx = ApplicationContext.run()
+        def codec = new GeneratedObjectCodec(ctx)
+
+        def value = new Subclass()
+        value.foo = "42"
+        value.bar = "24"
+
+        when:
+        def bytes = codec.writeValueAsBytes(value)
+
+        // todo: which behavior do we want?
+
+        //then:"use the serializer for the base class"
+        //new String(bytes, StandardCharsets.UTF_8) == '{"foo":"42"}'
+
+        then:"to avoid confusion because of missing subclass properties, don't allow serialization"
+        thrown Exception
+    }
+
+    @SerializableBean
+    static class Base {
+        String foo
+    }
+
+    static class Subclass extends Base {
+        String bar
+    }
 }
