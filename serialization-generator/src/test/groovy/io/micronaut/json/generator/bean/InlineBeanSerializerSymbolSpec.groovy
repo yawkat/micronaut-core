@@ -436,7 +436,6 @@ class Test {
         serializeToString(compiled.serializer, testBean) == '{"foo":null}'
     }
 
-    @Ignore // todo: doesn't show up as a write-only property in getBeanProperties for some reason
     void "nullable setter"() {
         given:
         def compiled = buildSerializer('''
@@ -544,7 +543,6 @@ class Test {
         serializeToString(compiled.serializer, testBean) == '{"foo":"bar"}'
     }
 
-    @Ignore // todo: setter is filtered out apparently, because it has a mismatched type
     void "optional nullable mix"() {
         given:
         def compiled = buildSerializer('''
@@ -569,7 +567,7 @@ class Test {
         testBean.foo = 'bar'
 
         expect:
-        deserializeFromString(compiled.serializer, '{"foo":"bar"}').foo == 'bar'
+        deserializeFromString(compiled.serializer, '{"foo":"bar"}').foo.get() == 'bar'
         serializeToString(compiled.serializer, testBean) == '{"foo":"bar"}'
     }
 }

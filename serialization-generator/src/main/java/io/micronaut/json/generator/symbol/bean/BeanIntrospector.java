@@ -95,6 +95,13 @@ class BeanIntrospector {
         return beanDefinition;
     }
 
+    private static String decapitalize(String s) {
+        if (s.isEmpty()) {
+            return "";
+        }
+        return Character.toLowerCase(s.charAt(0)) + s.substring(1);
+    }
+
     /**
      * mostly follows jackson-jr AnnotationBasedIntrospector.
      */
@@ -218,17 +225,37 @@ class BeanIntrospector {
                 }
 
                 // if we have an explicit @JsonProperty, fall back to just the method name as the implicit name
+                // also handle getters/setters again, because getBeanProperties doesn't return all of them. todo
                 if (method.getParameters().length == 0) {
                     // getter
-                    if (getExplicitName(method) != null) {
-                        PropBuilder prop = getByImplicitName(method.getName());
-                        prop.getter = makeAccessor(method, method.getName());
+                    boolean consider = getExplicitName(method) != null;
+
+                    String implicitName = method.getName();
+                    if (implicitName.startsWith("get")) {
+                        implicitName = decapitalize(implicitName.substring(3));
+                        consider = true;
+                    } else if (implicitName.startsWith("is")) {
+                        implicitName = decapitalize(implicitName.substring(2));
+                        consider = true;
+                    }
+
+                    if (consider) {
+                        PropBuilder prop = getByImplicitName(implicitName);
+                        prop.getter = makeAccessor(method, implicitName);
                     }
                 } else if (method.getParameters().length == 1) {
                     // setter
-                    if (getExplicitName(method) != null) {
-                        PropBuilder prop = getByImplicitName(method.getName());
-                        prop.setter = makeAccessor(method, method.getName());
+                    boolean consider = getExplicitName(method) != null;
+
+                    String implicitName = method.getName();
+                    if (implicitName.startsWith("set")) {
+                        implicitName = decapitalize(implicitName.substring(3));
+                        consider = true;
+                    }
+
+                    if (consider) {
+                        PropBuilder prop = getByImplicitName(implicitName);
+                        prop.setter = makeAccessor(method, implicitName);
                     }
                 }
             }
@@ -447,7 +474,15 @@ class BeanIntrospector {
          * Get the elements for this property that should be scanned for annotations, in order of priority.
          */
         Stream<Element> annotatedElementsInOrder(boolean forSerialization) {
-            Stream<Element> stream = accessorsInOrder(forSerialization).map(a -> a.accessor);
+            Stream<Element> stream = accessorsInOrder(forSerialization).flatMap(a -> {
+                if (a == setter) {
+                    // the single parameter of the setter may also be annotated (e.g. as @Nullable)
+                    assert setter != null;
+                    return Stream.of(setter.accessor, setter.accessor.getParameters()[0]);
+                } else {
+                    return Stream.of(a.accessor);
+                }
+            });
             if (creatorParameter != null) {
                 if (forSerialization) {
                     stream = Stream.concat(stream, Stream.of(creatorParameter));
