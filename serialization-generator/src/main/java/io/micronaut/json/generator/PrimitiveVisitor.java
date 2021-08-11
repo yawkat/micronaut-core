@@ -15,7 +15,6 @@ import io.micronaut.json.annotation.$GeneratePrimitiveSerializers;
 import io.micronaut.json.generator.symbol.PoetUtil;
 import io.micronaut.json.generator.symbol.SerializerLinker;
 import io.micronaut.json.generator.symbol.SingletonSerializerGenerator;
-import org.apache.groovy.util.Maps;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import java.util.Arrays;
@@ -65,13 +64,15 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<$GeneratePrimitiv
         JavaElementFactory elementFactory = ((JavaVisitorContext) context).getElementFactory();
         ProcessingEnvironment env = ((JavaVisitorContext) context).getProcessingEnv();
 
+        Map<String, ClassElement> listObjectGenerics = new java.util.HashMap<>();
+        listObjectGenerics.put("T", elementFactory.newClassElement(
+                env.getElementUtils().getTypeElement(Object.class.getName()),
+                AnnotationMetadata.EMPTY_METADATA
+        ));
         ClassElement listObject = elementFactory.newClassElement(
                 env.getElementUtils().getTypeElement(Iterable.class.getName()),
                 AnnotationMetadata.EMPTY_METADATA,
-                Maps.of("T", elementFactory.newClassElement(
-                        env.getElementUtils().getTypeElement(Object.class.getName()),
-                        AnnotationMetadata.EMPTY_METADATA
-                ))
+                listObjectGenerics
         );
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.generate(
                 problemReporter,
@@ -81,19 +82,19 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<$GeneratePrimitiv
                 listObject
         ));
 
+        Map<String, ClassElement> mapStringObjectGenerics = new java.util.HashMap<>();
+        mapStringObjectGenerics.put("K", elementFactory.newClassElement(
+                env.getElementUtils().getTypeElement(String.class.getName()),
+                AnnotationMetadata.EMPTY_METADATA
+        ));
+        mapStringObjectGenerics.put("V", elementFactory.newClassElement(
+                env.getElementUtils().getTypeElement(Object.class.getName()),
+                AnnotationMetadata.EMPTY_METADATA
+        ));
         ClassElement mapStringObject = elementFactory.newClassElement(
                 env.getElementUtils().getTypeElement(Map.class.getName()),
                 AnnotationMetadata.EMPTY_METADATA,
-                Maps.of(
-                        "K", elementFactory.newClassElement(
-                                env.getElementUtils().getTypeElement(String.class.getName()),
-                                AnnotationMetadata.EMPTY_METADATA
-                        ),
-                        "V", elementFactory.newClassElement(
-                                env.getElementUtils().getTypeElement(Object.class.getName()),
-                                AnnotationMetadata.EMPTY_METADATA
-                        )
-                )
+                mapStringObjectGenerics
         );
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.generate(
                 problemReporter,
