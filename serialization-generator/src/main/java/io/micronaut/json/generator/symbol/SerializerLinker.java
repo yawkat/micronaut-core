@@ -30,6 +30,7 @@ public final class SerializerLinker {
 
     final InlineIterableSerializerSymbol.ArrayImpl array = new InlineIterableSerializerSymbol.ArrayImpl(this);
     final InlineIterableSerializerSymbol.ArrayListImpl arrayList = new InlineIterableSerializerSymbol.ArrayListImpl(this);
+    final InlineStringMapSerializerSymbol stringMap = new InlineStringMapSerializerSymbol(this);
 
     private final List<SerializerSymbol> symbolList;
 
@@ -38,6 +39,7 @@ public final class SerializerLinker {
         symbolList = Arrays.asList(
                 array,
                 arrayList,
+                stringMap,
                 PrimitiveSerializerSymbol.INSTANCE,
                 StringSerializerSymbol.INSTANCE,
                 InlineEnumSerializerSymbol.INSTANCE,

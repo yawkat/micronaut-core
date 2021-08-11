@@ -59,10 +59,11 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
     public CodeBlock serialize(GeneratorContext generatorContext, ClassElement type, CodeBlock readExpression) {
         ClassElement elementType = getElementType(type);
         SerializerSymbol elementSerializer = linker.findSymbol(elementType);
+        String itemName = generatorContext.newLocalVariable("item");
         return CodeBlock.builder()
                 .addStatement("$N.writeStartArray()", ENCODER)
-                .beginControlFlow("for ($T item : $L)", PoetUtil.toTypeName(elementType), readExpression)
-                .add(elementSerializer.serialize(generatorContext.withSubPath("[*]"), elementType, CodeBlock.of("item")))
+                .beginControlFlow("for ($T $N : $L)", PoetUtil.toTypeName(elementType), itemName, readExpression)
+                .add(elementSerializer.serialize(generatorContext.withSubPath("[*]"), elementType, CodeBlock.of("$N", itemName)))
                 .endControlFlow()
                 .addStatement("$N.writeEndArray()", ENCODER)
                 .build();
@@ -76,7 +77,7 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
         String intermediateVariable = generatorContext.newLocalVariable("intermediate");
 
         CodeBlock.Builder block = CodeBlock.builder();
-        block.add("if ($N.currentToken() != $T.START_ARRAY) throw $T.from($N, \"Unexpected token \" + $N.currentToken() + \", expected START_OBJECT\");\n", DECODER, JsonToken.class, JsonParseException.class, DECODER, DECODER);
+        block.add("if ($N.currentToken() != $T.START_ARRAY) throw $T.from($N, \"Unexpected token \" + $N.currentToken() + \", expected START_ARRAY\");\n", DECODER, JsonToken.class, JsonParseException.class, DECODER, DECODER);
         block.add(createIntermediate(elementType, intermediateVariable));
         block.beginControlFlow("while ($N.nextToken() != $T.END_ARRAY)", DECODER, JsonToken.class);
         block.add(elementDeserializer.deserialize(generatorContext, elementType, expr -> CodeBlock.of("$N.add($L);\n", intermediateVariable, expr)));
@@ -149,7 +150,7 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
             }
 
             // raw type? todo
-            throw new UnsupportedOperationException("raw type");
+            throw new UnsupportedOperationException("unsupported type");
         }
 
         @Override
