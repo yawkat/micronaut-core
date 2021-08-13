@@ -15,12 +15,12 @@
  */
 package io.micronaut.json.generator;
 
+import com.squareup.javapoet.ClassName;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.visitor.TypeElementVisitor;
 import io.micronaut.inject.visitor.VisitorContext;
-import io.micronaut.json.generator.symbol.SerializerLinker;
-import io.micronaut.json.generator.symbol.SingletonSerializerGenerator;
+import io.micronaut.json.generator.symbol.*;
 import io.micronaut.json.generator.symbol.bean.DependencyGraphChecker;
 import io.micronaut.json.generator.symbol.bean.InlineBeanSerializerSymbol;
 
@@ -40,6 +40,9 @@ public class MapperVisitor extends AbstractGeneratorVisitor<Object> implements T
         if (depChecker.hasAnyFailures()) {
             return;
         }
-        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.generate(problemReporter, element, inlineBeanSerializer));
+        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(element)
+                        .problemReporter(problemReporter)
+                        .symbol(inlineBeanSerializer)
+                        .generate());
     }
 }

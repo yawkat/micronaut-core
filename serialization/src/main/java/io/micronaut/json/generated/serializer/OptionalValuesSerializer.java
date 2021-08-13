@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Singleton
-class OptionalValuesSerializer<T extends OptionalValues<?>> implements Serializer<T> {
+class OptionalValuesSerializer implements Serializer<OptionalValues<?>> {
     private final boolean alwaysSerializeErrorsAsList;
 
     public OptionalValuesSerializer() {
@@ -29,13 +29,13 @@ class OptionalValuesSerializer<T extends OptionalValues<?>> implements Serialize
     }
 
     @Override
-    public T deserialize(JsonParser decoder) throws IOException {
+    public OptionalValues<?> deserialize(JsonParser decoder) throws IOException {
         // todo: is this right?
         throw JsonParseException.from(decoder, "Cannot deserialize OptionalValues");
     }
 
     @Override
-    public void serialize(JsonGenerator encoder, T value) throws IOException {
+    public void serialize(JsonGenerator encoder, OptionalValues<?> value) throws IOException {
         encoder.writeStartObject();
         for (CharSequence key : value) {
             Optional<?> opt = value.get(key);

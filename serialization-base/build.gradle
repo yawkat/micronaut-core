@@ -1,5 +1,5 @@
 dependencies {
-    api project(':context')
-
+    annotationProcessor project(":inject-java")
+    api project(":inject")
     api("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
 }

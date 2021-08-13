@@ -21,10 +21,16 @@ import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.PrimitiveElement;
 import io.micronaut.json.generated.JsonParseException;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
 import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;
 
 final class PrimitiveSerializerSymbol implements SerializerSymbol {
+    private static final String FQCN_BIG_DECIMAL = BigDecimal.class.getName();
+    private static final String FQCN_BIG_INTEGER = BigInteger.class.getName();
+
     static final PrimitiveSerializerSymbol INSTANCE = new PrimitiveSerializerSymbol();
 
     private PrimitiveSerializerSymbol() {
@@ -32,7 +38,8 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
 
     @Override
     public boolean canSerialize(ClassElement type) {
-        return type.isPrimitive() && !type.isArray() && !type.equals(PrimitiveElement.VOID);
+        return !type.isArray() && ((type.isPrimitive() && !type.equals(PrimitiveElement.VOID)) ||
+                type.getName().equals(FQCN_BIG_DECIMAL) || type.getName().equals(FQCN_BIG_INTEGER));
     }
 
     @Override
@@ -51,7 +58,7 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
 
     @Override
     public CodeBlock deserialize(GeneratorContext generatorContext, ClassElement type, Setter setter) {
-        if (!type.isPrimitive() || type.isArray()) {
+        if (!canSerialize(type)) {
             throw new UnsupportedOperationException("This symbol can only handle primitives");
         }
         return CodeBlock.builder()
@@ -64,8 +71,11 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
     public CodeBlock getDefaultExpression(ClassElement type) {
         if (type.equals(PrimitiveElement.BOOLEAN)) {
             return CodeBlock.of("false");
-        } else {
+        } else if (type.isPrimitive()) {
             return CodeBlock.of("0");
+        } else {
+            // bigdecimal, biginteger
+            return SerializerSymbol.super.getDefaultExpression(type);
         }
     }
 
@@ -114,6 +124,10 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
             return DECODER + ".getFloatValue()";
         } else if (type.equals(PrimitiveElement.DOUBLE)) {
             return DECODER + ".getDoubleValue()";
+        } else if (type.getName().equals(FQCN_BIG_INTEGER)) {
+            return DECODER + ".getBigIntegerValue()";
+        } else if (type.getName().equals(FQCN_BIG_DECIMAL)) {
+            return DECODER + ".getDecimalValue()";
         } else {
             throw new AssertionError("unknown primitive type " + type);
         }

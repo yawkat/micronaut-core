@@ -1,6 +1,6 @@
 package io.micronaut.json.generator.generator
 
-
+import io.micronaut.inject.ast.ClassElement
 import io.micronaut.inject.ast.PrimitiveElement
 import io.micronaut.json.generated.JsonParseException
 import io.micronaut.json.generator.symbol.PrimitiveSerializerSymbol
@@ -105,5 +105,23 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
         deserializeFromString(serializer, "true")
         then:
         thrown JsonParseException
+    }
+
+    def "big integer"() {
+        given:
+        def serializer = buildBasicSerializer(BigInteger.class, PrimitiveSerializerSymbol.INSTANCE, ClassElement.of(BigInteger.class))
+
+        expect:
+        deserializeFromString(serializer, "4.5") == BigInteger.valueOf(4)
+        serializeToString(serializer, BigInteger.valueOf(4)) == "4"
+    }
+
+    def "big decimal"() {
+        given:
+        def serializer = buildBasicSerializer(BigDecimal.class, PrimitiveSerializerSymbol.INSTANCE, ClassElement.of(BigDecimal.class))
+
+        expect:
+        deserializeFromString(serializer, "4.5") == BigDecimal.valueOf(4.5)
+        serializeToString(serializer, BigDecimal.valueOf(4.5)) == "4.5"
     }
 }

@@ -15,15 +15,15 @@
  */
 package io.micronaut.core.reflect;
 
+import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.ArrayUtils;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.io.Serializable;
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.function.Function;
 
 /**
  * Utility methods for dealing with generic types via reflection. Generally reflection is to be avoided in Micronaut. Hence
@@ -247,5 +247,319 @@ public class GenericTypeUtils {
             }
         }
         return typeArguments;
+    }
+
+    private static Type foldTypeVariables(Type into, Function<TypeVariable<?>, Type> fold) {
+        if (into instanceof GenericArrayType) {
+            Type component = foldTypeVariables(((GenericArrayType) into).getGenericComponentType(), fold);
+            if (component instanceof Class<?>) {
+                return Array.newInstance((Class<?>) component, 0).getClass();
+            } else {
+                return new GenericArrayTypeImpl(component);
+            }
+        } else if (into instanceof ParameterizedType) {
+            ParameterizedType t = (ParameterizedType) into;
+            Type owner = t.getOwnerType() == null ? null : foldTypeVariables(t.getOwnerType(), fold);
+            Type raw = foldTypeVariables(t.getRawType(), fold);
+            Type[] args = Arrays.stream(t.getActualTypeArguments()).map(arg -> foldTypeVariables(arg, fold)).toArray(Type[]::new);
+            return new ParameterizedTypeImpl(owner, (Class<?>) raw, args);
+        } else if (into instanceof TypeVariable<?>) {
+            return fold.apply((TypeVariable<?>) into);
+        } else if (into instanceof WildcardType) {
+            WildcardType t = (WildcardType) into;
+            Type[] lower = Arrays.stream(t.getLowerBounds()).map(arg -> foldTypeVariables(arg, fold)).toArray(Type[]::new);
+            Type[] upper = Arrays.stream(t.getUpperBounds()).map(arg -> foldTypeVariables(arg, fold)).toArray(Type[]::new);
+            return new WildcardTypeImpl(upper, lower);
+        } else if (into instanceof Class) {
+            return into;
+        } else {
+            throw new UnsupportedOperationException("Unsupported type for folding: " + into.getClass());
+        }
+    }
+
+    /**
+     * Find the parameterization of a raw type on a type. For example, if {@code on} is {@code List<String>}, and
+     * {@code of} is {@code Iterable.class}, this method will return a type corresponding to {@code Iterable<String>}.
+     *
+     * @param on The type to look on for the parameterization
+     * @param of The raw type to look for
+     * @return One of: A {@link ParameterizedType} with the raw type being {@code of}, the original value of {@code of}
+     * if {@code on} only implements {@code of} as a raw type, or {@code null} if {@code on} does not implement
+     * {@code of}.
+     */
+    @Nullable
+    public static Type findParameterization(Type on, Class<?> of) {
+        if (on instanceof GenericArrayType) {
+            return of == Object.class || of == Cloneable.class || of == Serializable.class ? of : null;
+        } else if (on instanceof ParameterizedType) {
+            ParameterizedType onT = (ParameterizedType) on;
+            Class<?> rawType = (Class<?>) onT.getRawType();
+            if (rawType == of) {
+                return onT;
+            } else {
+                Map<TypeVariable<?>, Type> typesToFold = new HashMap<>();
+                findFoldableTypes(typesToFold, onT);
+                return findParameterization(rawType, t -> foldTypeVariables(t, v -> typesToFold.getOrDefault(v, v)), of);
+            }
+        } else if (on instanceof TypeVariable<?>) {
+            throw new IllegalArgumentException("Type variables should not appear here");
+        } else if (on instanceof WildcardType) {
+            throw new IllegalArgumentException("Wildcard types should not appear here");
+        } else if (on instanceof Class<?>) {
+            if (on == of) {
+                return on;
+            } else {
+                return findParameterization((Class<?>) on, Function.identity(), of);
+            }
+        } else {
+            throw new UnsupportedOperationException("Unsupported type for resolution: " + on.getClass());
+        }
+    }
+
+    private static Type findParameterization(Class<?> on, Function<Type, Type> foldFunction, Class<?> of) {
+        if (of.isInterface()) {
+            for (Type itf : on.getGenericInterfaces()) {
+                Type parameterization = findParameterization(foldFunction.apply(itf), of);
+                if (parameterization != null) {
+                    return parameterization;
+                }
+            }
+        }
+        if (on.getGenericSuperclass() != null) {
+            return findParameterization(foldFunction.apply(on.getGenericSuperclass()), of);
+        } else {
+            return null;
+        }
+    }
+
+    private static void findFoldableTypes(Map<TypeVariable<?>, Type> typesToFold, ParameterizedType parameterizedType) {
+        TypeVariable<?>[] typeParameters = ((Class<?>) parameterizedType.getRawType()).getTypeParameters();
+        Type[] typeArguments = parameterizedType.getActualTypeArguments();
+        for (int i = 0; i < typeParameters.length; i++) {
+            typesToFold.put(typeParameters[i], typeArguments[i]);
+        }
+        if (parameterizedType.getOwnerType() instanceof ParameterizedType) {
+            findFoldableTypes(typesToFold, (ParameterizedType) parameterizedType.getOwnerType());
+        }
+    }
+
+    public static boolean typesEqual(@Nullable Type left, @Nullable Type right) {
+        if (left == right) {
+            return true;
+        } else if (left == null || right == null) {
+            return false;
+        } else if (left.equals(right)) {
+            return true;
+        } else if (left instanceof GenericArrayType) {
+            return right instanceof GenericArrayType &&
+                    typesEqual(((GenericArrayType) left).getGenericComponentType(), ((GenericArrayType) right).getGenericComponentType());
+        } else if (left instanceof ParameterizedType) {
+            if (right instanceof ParameterizedType) {
+                return typesEqual(((ParameterizedType) left).getOwnerType(), ((ParameterizedType) right).getOwnerType()) &&
+                        typesEqual(((ParameterizedType) left).getRawType(), ((ParameterizedType) right).getRawType()) &&
+                        typesEqual(((ParameterizedType) left).getActualTypeArguments(), ((ParameterizedType) right).getActualTypeArguments());
+            } else {
+                return false;
+            }
+        } else if (left instanceof TypeVariable<?> || left instanceof Class<?>) {
+            // covered in equals above
+            return false;
+        } else if (left instanceof WildcardType) {
+            if (right instanceof WildcardType) {
+                return typesEqual(((WildcardType) left).getLowerBounds(), ((WildcardType) right).getLowerBounds()) &&
+                        typesEqual(((WildcardType) left).getUpperBounds(), ((WildcardType) right).getUpperBounds());
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    private static boolean typesEqual(Type[] left, Type[] right) {
+        if (left.length != right.length) {
+            return false;
+        }
+        for (int i = 0; i < left.length; i++) {
+            if (!typesEqual(left[i], right[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static boolean isAssignableFrom(@NonNull Type to, @NonNull Type from) {
+        if (to instanceof GenericArrayType) {
+            return from instanceof GenericArrayType &&
+                    isAssignableFrom(((GenericArrayType) to).getGenericComponentType(), ((GenericArrayType) from).getGenericComponentType());
+        } else if (to instanceof ParameterizedType) {
+            ParameterizedType toT = (ParameterizedType) to;
+            Class<?> erasure = (Class<?>) toT.getRawType();
+            // find the parameterization of the same type, if any exists.
+            Type fromParameterization = findParameterization(from, erasure);
+            if (fromParameterization == null) {
+                // raw types aren't compatible
+                return false;
+            }
+            if (fromParameterization instanceof Class<?>) {
+                // from extends the raw type, automatic match
+                return true;
+            }
+            ParameterizedType fromParameterizationT = (ParameterizedType) fromParameterization;
+            if (toT.getOwnerType() != null) {
+                if (fromParameterizationT.getOwnerType() == null) {
+                    return false;
+                }
+                if (!isAssignableFrom(toT.getOwnerType(), fromParameterizationT.getOwnerType())) {
+                    return false;
+                }
+            }
+            Type[] toArgs = toT.getActualTypeArguments();
+            Type[] fromArgs = fromParameterizationT.getActualTypeArguments();
+            for (int i = 0; i < toArgs.length; i++) {
+                if (toArgs[i] instanceof WildcardType) {
+                    if (!contains((WildcardType) toArgs[i], fromArgs[i])) {
+                        return false;
+                    }
+                } else {
+                    if (!typesEqual(toArgs[i], fromArgs[i])) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        } else if (to instanceof Class<?>) {
+            // to is a raw type
+            return findParameterization(from, (Class<?>) to) != null;
+        } else {
+            throw new IllegalArgumentException("Not a valid assignment target: " + to);
+        }
+    }
+
+    private static boolean contains(WildcardType wildcard, Type type) {
+        for (Type upperBound : wildcard.getUpperBounds()) {
+            if (!isAssignableFrom(upperBound, type)) {
+                return false;
+            }
+        }
+        for (Type lowerBound : wildcard.getLowerBounds()) {
+            if (!isAssignableFrom(type, lowerBound)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static Type argumentToReflectType(Argument<?> argument) {
+        Class<?> rawType = argument.getType();
+        Map<String, Argument<?>> typeVariables = argument.getTypeVariables();
+        if (typeVariables.isEmpty()) {
+            return rawType;
+        } else {
+            return new ParameterizedTypeImpl(
+                    null,
+                    rawType,
+                    typeVariables.values().stream().map(GenericTypeUtils::argumentToReflectType).toArray(Type[]::new)
+            );
+        }
+    }
+
+    private static class WildcardTypeImpl implements WildcardType {
+        private final Type[] upper;
+        private final Type[] lower;
+
+        public WildcardTypeImpl(Type[] upper, Type[] lower) {
+            this.upper = upper;
+            this.lower = lower;
+        }
+
+        @Override
+        public Type[] getUpperBounds() {
+            return upper.clone();
+        }
+
+        @Override
+        public Type[] getLowerBounds() {
+            return lower.clone();
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder builder = new StringBuilder("?");
+            for (Type type : upper) {
+                if (type != Object.class) {
+                    builder.append(" extends ").append(type.getTypeName());
+                }
+            }
+            for (Type type : lower) {
+                builder.append(" super ").append(type.getTypeName());
+            }
+            return builder.toString();
+        }
+    }
+
+    private static class ParameterizedTypeImpl implements ParameterizedType {
+        private final Type owner;
+        private final Type raw;
+        private final Type[] args;
+
+        public ParameterizedTypeImpl(@Nullable Type owner, Class<?> raw, Type[] args) {
+            this.args = args;
+            this.raw = raw;
+            this.owner = owner;
+        }
+
+        @Override
+        public Type[] getActualTypeArguments() {
+            return args.clone();
+        }
+
+        @Override
+        public Type getRawType() {
+            return raw;
+        }
+
+        @Override
+        public Type getOwnerType() {
+            return owner;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder builder = new StringBuilder();
+            if (owner != null) {
+                builder.append(owner.getTypeName()).append('.');
+            }
+            builder.append(raw.getTypeName()).append('<');
+            for (int i = 0; i < args.length; i++) {
+                if (i != 0) {
+                    builder.append(", ");
+                }
+                builder.append(args[i].getTypeName());
+            }
+            builder.append('>');
+            return builder.toString();
+        }
+    }
+
+    private static class GenericArrayTypeImpl implements GenericArrayType {
+        private final Type component;
+
+        public GenericArrayTypeImpl(Type component) {
+            if (component instanceof Class<?>) {
+                throw new IllegalArgumentException("GenericArrayType of must not have a non-generic component type");
+            }
+            this.component = component;
+        }
+
+        @Override
+        public Type getGenericComponentType() {
+            return component;
+        }
+
+        @Override
+        public String toString() {
+            return component.getTypeName() + "[]";
+        }
     }
 }

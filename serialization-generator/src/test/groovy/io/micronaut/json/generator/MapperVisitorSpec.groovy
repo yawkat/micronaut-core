@@ -2,11 +2,23 @@ package io.micronaut.json.generator
 
 import io.micronaut.annotation.processing.test.AbstractTypeElementSpec
 import io.micronaut.context.BeanProvider
+import io.micronaut.core.type.Argument
+import io.micronaut.inject.BeanDefinitionReference
 import io.micronaut.json.Serializer
+import io.micronaut.json.generator.symbol.SingletonSerializerGenerator
+import jakarta.inject.Provider
 
 import java.lang.reflect.ParameterizedType
 
 class MapperVisitorSpec extends AbstractTypeElementSpec implements SerializerUtils {
+    def setupSpec() {
+        SingletonSerializerGenerator.generateDirectConstructor = true;
+    }
+
+    def cleanupSpec() {
+        SingletonSerializerGenerator.generateDirectConstructor = false;
+    }
+
     void "generator creates a serializer for jackson annotations"() {
         given:
         def compiled = buildClassLoader('example.Test', '''
@@ -121,7 +133,7 @@ class Test {
         def test = compiled.loadClass("example.Test").newInstance()
         test.foo = compiled.loadClass("example.Test").newInstance()
 
-        def provider = new BeanProvider() {
+        def provider = new Provider() {
             @Override
             Object get() {
                 return (Serializer<?>) compiled.loadClass('example.$Test$Serializer').newInstance(this)
@@ -382,5 +394,30 @@ class B {
         expect:
         serializeToString(serializer, testBean) == '{"b":{}}'
         deserializeFromString(serializer, '{"b":{}}').b.isPresent()
+    }
+
+    void "generic injection collision"() {
+        given:
+        def ctx = buildContext('example.A', '''
+package example;
+
+import io.micronaut.json.annotation.SerializableBean;
+
+@SerializableBean
+class A {
+}
+
+@SerializableBean
+class B extends A {
+}
+
+@SerializableBean
+class C {
+    A a;
+}
+''', true)
+
+        expect:
+        ctx.getBean(Argument.of(Serializer.class, ctx.classLoader.loadClass('example.C'))) instanceof Serializer
     }
 }

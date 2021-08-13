@@ -15,8 +15,24 @@
  */
 package io.micronaut.json;
 
+import jakarta.inject.Singleton;
+
 public interface JsonConfiguration {
     boolean isAlwaysSerializeErrorsAsList();
 
     int getArraySizeThreshold();
+
+    @Singleton
+    static class Impl implements JsonConfiguration {
+
+        @Override
+        public boolean isAlwaysSerializeErrorsAsList() {
+            return false;
+        }
+
+        @Override
+        public int getArraySizeThreshold() {
+            return Integer.MAX_VALUE;
+        }
+    }
 }

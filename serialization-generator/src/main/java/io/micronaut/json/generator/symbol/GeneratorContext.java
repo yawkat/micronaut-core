@@ -22,6 +22,7 @@ import io.micronaut.core.annotation.Internal;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @Internal
 public final class GeneratorContext {
@@ -35,13 +36,13 @@ public final class GeneratorContext {
     private final NameAllocator fields;
     private final NameAllocator localVariables;
 
-    private final Map<TypeName, Injected> injected;
+    private final Map<Injectable, Injected> injected;
 
     private GeneratorContext(
             ProblemReporter problemReporter, String readablePath,
             NameAllocator fields,
             NameAllocator localVariables,
-            Map<TypeName, Injected> injected) {
+            Map<Injectable, Injected> injected) {
         this.problemReporter = problemReporter;
         this.readablePath = readablePath;
         this.fields = fields;
@@ -87,14 +88,14 @@ public final class GeneratorContext {
         return localVariables.newName(nameHint);
     }
 
-    public Injected requestInjection(TypeName type) {
-        return injected.computeIfAbsent(type, t -> {
-            String fieldName = fields.newName(t.toString());
+    public Injected requestInjection(Injectable injectable) {
+        return injected.computeIfAbsent(injectable, t -> {
+            String fieldName = fields.newName(t.fieldType.toString());
             return new Injected(fieldName);
         });
     }
 
-    public Map<TypeName, Injected> getInjected() {
+    Map<Injectable, Injected> getInjected() {
         return injected;
     }
 
@@ -114,6 +115,48 @@ public final class GeneratorContext {
 
         public CodeBlock getAccessExpression() {
             return accessExpression;
+        }
+    }
+
+    /**
+     * An value that can be injected.
+     *
+     * Subclasses must implement equals/hashCode to avoid injecting duplicates.
+     */
+    public static abstract class Injectable {
+        final TypeName fieldType;
+        final TypeName parameterType;
+
+        /**
+         * @param fieldType     The type to use for the field to store the injected value in.
+         * @param parameterType The actual parameter type requested in the {@code @Inject} constructor.
+         */
+        public Injectable(TypeName fieldType, TypeName parameterType) {
+            this.fieldType = fieldType;
+            this.parameterType = parameterType;
+        }
+
+        /**
+         * Build the statement initializing the field from the parameter injection.
+         *
+         * @param parameterExpression The expression giving the injected parameter. Of type {@link #parameterType}.
+         * @param fieldSetter         The setter to write the field. Of type {@link #fieldType}.
+         */
+        protected abstract CodeBlock buildInitializationStatement(
+                CodeBlock parameterExpression,
+                SerializerSymbol.Setter fieldSetter
+        );
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof Injectable &&
+                    this.fieldType.equals(((Injectable) o).fieldType) &&
+                    this.parameterType.equals(((Injectable) o).parameterType);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(fieldType, parameterType);
         }
     }
 }

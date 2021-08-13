@@ -18,9 +18,15 @@ package io.micronaut.json.generator.symbol;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
 import io.micronaut.context.BeanProvider;
+import io.micronaut.core.reflect.GenericTypeToken;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.json.Serializer;
+import io.micronaut.json.SerializerLocator;
+import jakarta.inject.Provider;
+
+import java.util.Objects;
 
 final class InjectingSerializerSymbol implements SerializerSymbol {
     private final SerializerLinker linker;
@@ -66,14 +72,49 @@ final class InjectingSerializerSymbol implements SerializerSymbol {
     }
 
     private CodeBlock getSerializerAccess(GeneratorContext generatorContext, ClassElement type) {
-        ParameterizedTypeName serializerType = ParameterizedTypeName.get(ClassName.get(Serializer.class), PoetUtil.toTypeName(type));
-        if (provider) {
-            serializerType = ParameterizedTypeName.get(ClassName.get(BeanProvider.class), serializerType);
-        }
-        CodeBlock accessExpression = generatorContext.requestInjection(serializerType).getAccessExpression();
+        GeneratorContext.Injectable injectable = new OtherSerializerInjectable(PoetUtil.toTypeName(type), provider);
+        CodeBlock accessExpression = generatorContext.requestInjection(injectable).getAccessExpression();
         if (provider) {
             accessExpression = CodeBlock.of("$L.get()", accessExpression);
         }
         return accessExpression;
+    }
+
+    private static class OtherSerializerInjectable extends GeneratorContext.Injectable {
+        private final TypeName type;
+        private final boolean provider;
+
+        public OtherSerializerInjectable(TypeName type, boolean provider) {
+            super(
+                    provider ? ParameterizedTypeName.get(ClassName.get(Provider.class), ParameterizedTypeName.get(ClassName.get(Serializer.class), type)) :
+                            ParameterizedTypeName.get(ClassName.get(Serializer.class), type),
+                    ClassName.get(SerializerLocator.class)
+            );
+            this.type = type;
+            this.provider = provider;
+        }
+
+        @Override
+        protected CodeBlock buildInitializationStatement(CodeBlock parameterExpression, Setter fieldSetter) {
+            String methodName = provider ? "findInvariantSerializerProvider" : "findInvariantSerializer";
+            return fieldSetter.createSetStatement(CodeBlock.of("$L.$N(new $T<$T>() {});\n", parameterExpression, methodName, GenericTypeToken.class, type));
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            OtherSerializerInjectable that = (OtherSerializerInjectable) o;
+            return provider == that.provider && Objects.equals(type, that.type);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(type, provider);
+        }
     }
 }

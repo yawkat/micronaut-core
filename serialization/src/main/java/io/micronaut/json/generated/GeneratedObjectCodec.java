@@ -3,68 +3,75 @@ package io.micronaut.json.generated;
 import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.core.type.ResolvedType;
 import com.fasterxml.jackson.core.type.TypeReference;
-import io.micronaut.context.BeanLocator;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
+import io.micronaut.context.exceptions.NoSuchBeanException;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.reflect.GenericTypeUtils;
 import io.micronaut.core.type.Argument;
-import io.micronaut.json.GenericDeserializationConfig;
-import io.micronaut.json.JsonFeatures;
-import io.micronaut.json.MicronautObjectCodec;
-import io.micronaut.json.Serializer;
+import io.micronaut.json.*;
+import io.micronaut.json.generated.serializer.ObjectSerializer;
 import io.micronaut.json.tree.MicronautTreeCodec;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Type;
 import java.util.Iterator;
 
 @Internal
 @Singleton
 @BootstrapContextCompatible
 public final class GeneratedObjectCodec extends MicronautObjectCodec {
-    private final BeanLocator locator;
+    private final SerializerLocator locator;
     private final GenericDeserializationConfig deserializationConfig;
     private final MicronautTreeCodec treeCodec;
 
-    private GeneratedObjectCodec(BeanLocator locator, GenericDeserializationConfig deserializationConfig) {
+    private GeneratedObjectCodec(SerializerLocator locator, GenericDeserializationConfig deserializationConfig) {
         this.locator = locator;
         this.deserializationConfig = deserializationConfig;
         this.treeCodec = MicronautTreeCodec.getInstance().withConfig(deserializationConfig);
     }
 
     @Inject
-    GeneratedObjectCodec(BeanLocator locator) {
+    GeneratedObjectCodec(SerializerLocator locator) {
         this(locator, GenericDeserializationConfig.DEFAULT);
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> Serializer<T> findSerializer(Argument<T> type) {
-        return locator.getBean(Argument.of(Serializer.class, type));
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private void writeValue0(JsonGenerator gen, Object value) throws IOException {
+        writeValue0(gen, value, (Class) value.getClass());
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> Serializer<T> findSerializer(Class<T> type) {
-        return locator.getBean(Argument.of(Serializer.class, type));
+    // type-safe helper method
+    private <T> void writeValue0(JsonGenerator gen, T value, Class<T> type) throws IOException {
+        Serializer<? super T> serializer = locator.findContravariantSerializer(type);
+        if (serializer instanceof ObjectSerializer) {
+            // todo: custom exception
+            throw new NoSuchBeanException("No serializer for type " + type.getName()) {};
+        }
+        serializer.serialize(gen, value);
     }
 
-    private void moveToFirstToken(JsonParser parser) throws IOException {
+    @Override
+    public <T> T readValue(JsonParser parser, Argument<T> type) throws IOException {
+        return readValue0(parser, GenericTypeUtils.argumentToReflectType(type));
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private <T> T readValue0(JsonParser parser, Type type) throws IOException {
+        Serializer serializer = locator.findInvariantSerializer(type);
         if (!parser.hasCurrentToken()) {
             parser.nextToken();
         }
+        return (T) serializer.deserialize(parser);
     }
 
     @Override
     public ObjectCodec getObjectCodec() {
         return new ObjectCodecImpl();
-    }
-
-    @Override
-    public <T> T readValue(JsonParser parser, Argument<T> type) throws IOException {
-        moveToFirstToken(parser);
-        return findSerializer(type).deserialize(parser);
     }
 
     @Override
@@ -101,15 +108,12 @@ public final class GeneratedObjectCodec extends MicronautObjectCodec {
 
         @Override
         public <T> T readValue(JsonParser p, Class<T> valueType) throws IOException {
-            moveToFirstToken(p);
-            return findSerializer(valueType).deserialize(p);
+            return readValue0(p, valueType);
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         public <T> T readValue(JsonParser p, TypeReference<T> valueTypeRef) throws IOException {
-            moveToFirstToken(p);
-            return GeneratedObjectCodec.this.readValue(p, (Argument<T>) Argument.of(valueTypeRef.getType()));
+            return readValue0(p, valueTypeRef.getType());
         }
 
         @Override
@@ -132,10 +136,9 @@ public final class GeneratedObjectCodec extends MicronautObjectCodec {
             throw new UnsupportedOperationException();
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         public void writeValue(JsonGenerator gen, Object value) throws IOException {
-            ((Serializer<Object>) findSerializer(value.getClass())).serialize(gen, value);
+            writeValue0(gen, value);
         }
 
         @Override
