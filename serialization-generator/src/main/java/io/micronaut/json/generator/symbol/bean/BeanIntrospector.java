@@ -203,6 +203,7 @@ class BeanIntrospector {
 
             // used to avoid visiting a method twice, once in bean properties and once in the normal pass
             // todo: find a better solution
+            // maybe only compare names, should be fine for getters
             Set<MethodElementWrapper> visitedMethods = new HashSet<>();
 
             for (PropertyElement beanProperty : clazz.getBeanProperties()) {
@@ -218,6 +219,8 @@ class BeanIntrospector {
                 });
             }
 
+            // todo: filter by annotation?
+            // todo: more specific filters for get/set
             for (MethodElement method : clazz.getEnclosedElements(ElementQuery.ALL_METHODS.onlyInstance())) {
                 if (!visitedMethods.add(new MethodElementWrapper(method))) {
                     // skip methods we already visited for properties
@@ -248,6 +251,7 @@ class BeanIntrospector {
                     boolean consider = getExplicitName(method) != null;
 
                     String implicitName = method.getName();
+                    // todo: implement write-only property queries in ClassElement
                     if (implicitName.startsWith("set")) {
                         implicitName = decapitalize(implicitName.substring(3));
                         consider = true;

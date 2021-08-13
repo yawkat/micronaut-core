@@ -26,6 +26,7 @@ import io.micronaut.json.generator.symbol.bean.InlineBeanSerializerSymbol;
 
 @Internal
 // todo: we have to visit everything, because annotated nested classes aren't processed otherwise
+// todo: implement getSupported
 public class MapperVisitor extends AbstractGeneratorVisitor<Object> implements TypeElementVisitor<Object, Object> {
     @Override
     public void visitClass(ClassElement element, VisitorContext context) {

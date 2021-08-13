@@ -70,7 +70,7 @@ abstract class AbstractGeneratorVisitor<ANN> implements TypeElementVisitor<ANN, 
     @Override
     @NonNull
     public VisitorKind getVisitorKind() {
-        // todo: does this actually work? we could do ISOLATING in principle, but for perf we're still doing generation in finish().
-        return VisitorKind.ISOLATING;
+        // todo: pass in originating element -> then make ISOLATING
+        return VisitorKind.AGGREGATING;
     }
 }
