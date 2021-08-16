@@ -3,10 +3,10 @@ package io.micronaut.json;
 import io.micronaut.context.BeanContext;
 import io.micronaut.context.BeanLocator;
 import io.micronaut.context.Qualifier;
+import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.reflect.GenericTypeToken;
 import io.micronaut.core.reflect.GenericTypeUtils;
-import io.micronaut.core.type.Argument;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.BeanType;
 import jakarta.inject.Inject;
@@ -18,6 +18,7 @@ import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.stream.Stream;
 
+@BootstrapContextCompatible
 @Singleton
 public final class SerializerLocator {
     private final BeanContext context;

@@ -23,8 +23,10 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
+import io.micronaut.context.annotation.Primary;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.AnnotationValue;
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.type.Argument;
 import io.micronaut.jackson.codec.JacksonFeatures;
 import io.micronaut.json.MicronautObjectCodec;
@@ -34,7 +36,9 @@ import jakarta.inject.Singleton;
 
 import java.io.IOException;
 
+@Internal
 @Singleton
+@Primary
 @BootstrapContextCompatible
 public final class DatabindObjectCodec extends MicronautObjectCodec {
     private final ObjectMapper objectMapper;

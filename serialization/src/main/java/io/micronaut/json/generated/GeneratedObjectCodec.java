@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.*;
 import com.fasterxml.jackson.core.type.ResolvedType;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
+import io.micronaut.context.annotation.Secondary;
 import io.micronaut.context.exceptions.NoSuchBeanException;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
@@ -23,6 +24,7 @@ import java.util.Iterator;
 
 @Internal
 @Singleton
+@Secondary
 @BootstrapContextCompatible
 public final class GeneratedObjectCodec extends MicronautObjectCodec {
     private final SerializerLocator locator;

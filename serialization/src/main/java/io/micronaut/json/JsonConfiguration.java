@@ -15,6 +15,8 @@
  */
 package io.micronaut.json;
 
+import io.micronaut.context.annotation.Secondary;
+import io.micronaut.core.annotation.Internal;
 import jakarta.inject.Singleton;
 
 public interface JsonConfiguration {
@@ -22,8 +24,11 @@ public interface JsonConfiguration {
 
     int getArraySizeThreshold();
 
+    @Internal
+    @Secondary
     @Singleton
-    static class Impl implements JsonConfiguration {
+    // TODO: replace
+    class Impl implements JsonConfiguration {
 
         @Override
         public boolean isAlwaysSerializeErrorsAsList() {
