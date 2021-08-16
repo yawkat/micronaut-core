@@ -15,7 +15,19 @@ final class ElementUtil {
     }
 
     static boolean equals(ClassElement a, ClassElement b) {
+        return equals(a, b, 0);
+    }
+
+    private static boolean equals(ClassElement a, ClassElement b, int depth) {
         // todo: mn3 .equals
+
+        // todo: hack: some ClassElements will recursively return the same types, e.g. class X<T extends X>.
+        //  there does not seem to be a way to handle this case properly with current API – we can't check the "path"
+        //  to the current call, because that would require an equals impl, which we are implementing here :)
+        if (depth > 10) {
+            return true;
+        }
+
         if (!a.getName().equals(b.getName())) {
             return false;
         }
@@ -25,7 +37,7 @@ final class ElementUtil {
             return false;
         }
         for (String argument : aArgs.keySet()) {
-            if (!equals(aArgs.get(argument), bArgs.get(argument))) {
+            if (!equals(aArgs.get(argument), bArgs.get(argument), depth + 1)) {
                 return false;
             }
         }
