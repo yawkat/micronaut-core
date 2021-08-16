@@ -249,10 +249,14 @@ public class GenericTypeUtils {
         return typeArguments;
     }
 
-    private static Type foldTypeVariables(Type into, Function<TypeVariable<?>, Type> fold) {
+    @Nullable
+    private static Type foldTypeVariables(Type into, VariableFold fold) {
         if (into instanceof GenericArrayType) {
             Type component = foldTypeVariables(((GenericArrayType) into).getGenericComponentType(), fold);
-            if (component instanceof Class<?>) {
+            if (component == null) {
+                // erased type
+                return Object[].class;
+            } else if (component instanceof Class<?>) {
                 return Array.newInstance((Class<?>) component, 0).getClass();
             } else {
                 return new GenericArrayTypeImpl(component);
@@ -262,19 +266,41 @@ public class GenericTypeUtils {
             Type owner = t.getOwnerType() == null ? null : foldTypeVariables(t.getOwnerType(), fold);
             Type raw = foldTypeVariables(t.getRawType(), fold);
             Type[] args = Arrays.stream(t.getActualTypeArguments()).map(arg -> foldTypeVariables(arg, fold)).toArray(Type[]::new);
-            return new ParameterizedTypeImpl(owner, (Class<?>) raw, args);
+            if (Arrays.asList(args).contains(null)) {
+                // erased type
+                return raw;
+            } else {
+                return new ParameterizedTypeImpl(owner, (Class<?>) raw, args);
+            }
         } else if (into instanceof TypeVariable<?>) {
             return fold.apply((TypeVariable<?>) into);
         } else if (into instanceof WildcardType) {
             WildcardType t = (WildcardType) into;
             Type[] lower = Arrays.stream(t.getLowerBounds()).map(arg -> foldTypeVariables(arg, fold)).toArray(Type[]::new);
             Type[] upper = Arrays.stream(t.getUpperBounds()).map(arg -> foldTypeVariables(arg, fold)).toArray(Type[]::new);
-            return new WildcardTypeImpl(upper, lower);
+            if (Arrays.asList(lower).contains(null) || Arrays.asList(upper).contains(null)) {
+                // erase type
+                return null;
+            } else {
+                return new WildcardTypeImpl(upper, lower);
+            }
         } else if (into instanceof Class) {
             return into;
         } else {
             throw new UnsupportedOperationException("Unsupported type for folding: " + into.getClass());
         }
+    }
+
+    @FunctionalInterface
+    private interface VariableFold {
+        /**
+         * Fold the given type variable to a new type.
+         *
+         * @return The folded type, or {@code null} if the generic type this type variable was part of should be
+         * replaced by a raw type.
+         */
+        @Nullable
+        Type apply(@NonNull TypeVariable<?> variable);
     }
 
     /**
@@ -299,7 +325,7 @@ public class GenericTypeUtils {
             } else {
                 Map<TypeVariable<?>, Type> typesToFold = new HashMap<>();
                 findFoldableTypes(typesToFold, onT);
-                return findParameterization(rawType, t -> foldTypeVariables(t, v -> typesToFold.getOrDefault(v, v)), of);
+                return findParameterization(rawType, t -> foldTypeVariables(t, typesToFold::get), of);
             }
         } else if (on instanceof TypeVariable<?>) {
             throw new IllegalArgumentException("Type variables should not appear here");
@@ -309,7 +335,8 @@ public class GenericTypeUtils {
             if (on == of) {
                 return on;
             } else {
-                return findParameterization((Class<?>) on, Function.identity(), of);
+                // replace any type variables with raw types
+                return findParameterization((Class<?>) on, t -> foldTypeVariables(t, v -> null), of);
             }
         } else {
             throw new UnsupportedOperationException("Unsupported type for resolution: " + on.getClass());
@@ -473,7 +500,7 @@ public class GenericTypeUtils {
         private final Type[] upper;
         private final Type[] lower;
 
-        public WildcardTypeImpl(Type[] upper, Type[] lower) {
+        public WildcardTypeImpl(@NonNull Type[] upper, @NonNull Type[] lower) {
             this.upper = upper;
             this.lower = lower;
         }
@@ -550,7 +577,7 @@ public class GenericTypeUtils {
     private static class GenericArrayTypeImpl implements GenericArrayType {
         private final Type component;
 
-        public GenericArrayTypeImpl(Type component) {
+        public GenericArrayTypeImpl(@NonNull Type component) {
             if (component instanceof Class<?>) {
                 throw new IllegalArgumentException("GenericArrayType of must not have a non-generic component type");
             }

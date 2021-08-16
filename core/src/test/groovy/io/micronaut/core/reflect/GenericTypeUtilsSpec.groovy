@@ -53,6 +53,7 @@ class GenericTypeUtilsSpec extends Specification {
         GenericTypeUtils.findParameterization(String.class, Object.class) == Object.class
         GenericTypeUtils.findParameterization(CharSequence.class, Object.class) == Object.class
         GenericTypeUtils.findParameterization(int.class, Object.class) == null
+        GenericTypeUtils.findParameterization(ArrayList.class, List.class) == List.class // no unresolved type arguments are returned
     }
 
     void "test findParameterization simple"() {
