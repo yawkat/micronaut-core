@@ -317,6 +317,11 @@ public class GenericTypeUtils {
     }
 
     private static Type findParameterization(Class<?> on, Function<Type, Type> foldFunction, Class<?> of) {
+        // special case Object, because Object is also a supertype of interfaces but does not appear in
+        // getGenericSuperclass for those
+        if (of == Object.class && !on.isPrimitive()) {
+            return Object.class;
+        }
         if (of.isInterface()) {
             for (Type itf : on.getGenericInterfaces()) {
                 Type parameterization = findParameterization(foldFunction.apply(itf), of);

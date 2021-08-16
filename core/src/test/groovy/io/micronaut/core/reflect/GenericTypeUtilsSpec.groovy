@@ -48,6 +48,13 @@ class GenericTypeUtilsSpec extends Specification {
 
     static class B extends A<String> implements Iface<String> {}
 
+    void "test findParameterization base case"() {
+        expect:
+        GenericTypeUtils.findParameterization(String.class, Object.class) == Object.class
+        GenericTypeUtils.findParameterization(CharSequence.class, Object.class) == Object.class
+        GenericTypeUtils.findParameterization(int.class, Object.class) == null
+    }
+
     void "test findParameterization simple"() {
         expect:
         GenericTypeUtils.findParameterization(Simple.class, List.class).typeName == 'java.util.List<java.lang.String>'
