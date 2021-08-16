@@ -15,10 +15,7 @@
  */
 package io.micronaut.json.generator.symbol;
 
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.*;
 import io.micronaut.context.BeanProvider;
 import io.micronaut.core.reflect.GenericTypeToken;
 import io.micronaut.inject.ast.ClassElement;
@@ -63,16 +60,20 @@ final class InjectingSerializerSymbol implements SerializerSymbol {
 
     @Override
     public CodeBlock serialize(GeneratorContext generatorContext, ClassElement type, CodeBlock readExpression) {
-        return CodeBlock.of("$L.serialize($N, $L);\n", getSerializerAccess(generatorContext, type), Names.ENCODER, readExpression);
+        // todo: hack: because ClassElement does not expose wildcards, use add a raw type cast just in case.
+        if (!type.getTypeArguments().isEmpty()) {
+            readExpression = CodeBlock.of("($T) $L", PoetUtil.toTypeName(type), readExpression);
+        }
+        return CodeBlock.of("$L.serialize($N, $L);\n", getSerializerAccess(generatorContext, type, true), Names.ENCODER, readExpression);
     }
 
     @Override
     public CodeBlock deserialize(GeneratorContext generatorContext, ClassElement type, Setter setter) {
-        return setter.createSetStatement(CodeBlock.of("$L.deserialize($N)", getSerializerAccess(generatorContext, type), Names.DECODER));
+        return setter.createSetStatement(CodeBlock.of("$L.deserialize($N)", getSerializerAccess(generatorContext, type, false), Names.DECODER));
     }
 
-    private CodeBlock getSerializerAccess(GeneratorContext generatorContext, ClassElement type) {
-        GeneratorContext.Injectable injectable = new OtherSerializerInjectable(PoetUtil.toTypeName(type), provider);
+    private CodeBlock getSerializerAccess(GeneratorContext generatorContext, ClassElement type, boolean forSerialization) {
+        GeneratorContext.Injectable injectable = new OtherSerializerInjectable(PoetUtil.toTypeName(type), provider, forSerialization);
         CodeBlock accessExpression = generatorContext.requestInjection(injectable).getAccessExpression();
         if (provider) {
             accessExpression = CodeBlock.of("$L.get()", accessExpression);
@@ -83,20 +84,37 @@ final class InjectingSerializerSymbol implements SerializerSymbol {
     private static class OtherSerializerInjectable extends GeneratorContext.Injectable {
         private final TypeName type;
         private final boolean provider;
+        private final boolean forSerialization;
 
-        public OtherSerializerInjectable(TypeName type, boolean provider) {
-            super(
-                    provider ? ParameterizedTypeName.get(ClassName.get(Provider.class), ParameterizedTypeName.get(ClassName.get(Serializer.class), type)) :
-                            ParameterizedTypeName.get(ClassName.get(Serializer.class), type),
-                    ClassName.get(SerializerLocator.class)
-            );
+        public OtherSerializerInjectable(TypeName type, boolean provider, boolean forSerialization) {
+            super(fieldType(type, provider, forSerialization), ClassName.get(SerializerLocator.class));
             this.type = type;
             this.provider = provider;
+            this.forSerialization = forSerialization;
+        }
+
+        private static TypeName fieldType(TypeName type, boolean provider, boolean forSerialization) {
+            ParameterizedTypeName serType;
+            if (forSerialization) {
+                serType = ParameterizedTypeName.get(ClassName.get(Serializer.class), WildcardTypeName.supertypeOf(type));
+            } else {
+                serType = ParameterizedTypeName.get(ClassName.get(Serializer.class), WildcardTypeName.subtypeOf(type));
+            }
+            if (provider) {
+                serType = ParameterizedTypeName.get(ClassName.get(Provider.class), WildcardTypeName.subtypeOf(serType));
+            }
+            return serType;
         }
 
         @Override
         protected CodeBlock buildInitializationStatement(CodeBlock parameterExpression, Setter fieldSetter) {
-            String methodName = provider ? "findInvariantSerializerProvider" : "findInvariantSerializer";
+            // for deserialization, we stick to invariant serializers, because we don't want to deserialize an arbitrary
+            // subtype from the classpath for security. Contravariant lookup only exposes the supertypes (few), while
+            // covariant lookup would expose all subtypes (potentially unlimited).
+            String methodName = forSerialization ? "findContravariantSerializer" : "findInvariantSerializer";
+            if (provider) {
+                methodName += "Provider";
+            }
             return fieldSetter.createSetStatement(CodeBlock.of("$L.$N(new $T<$T>() {});\n", parameterExpression, methodName, GenericTypeToken.class, type));
         }
 
@@ -109,12 +127,12 @@ final class InjectingSerializerSymbol implements SerializerSymbol {
                 return false;
             }
             OtherSerializerInjectable that = (OtherSerializerInjectable) o;
-            return provider == that.provider && Objects.equals(type, that.type);
+            return provider == that.provider && forSerialization == that.forSerialization && Objects.equals(type, that.type);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(type, provider);
+            return Objects.hash(type, provider, forSerialization);
         }
     }
 }

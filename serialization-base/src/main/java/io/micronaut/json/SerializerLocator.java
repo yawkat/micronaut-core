@@ -59,6 +59,20 @@ public final class SerializerLocator {
         return findContravariantSerializer((Type) forType);
     }
 
+    public <T> Serializer<? super T> findContravariantSerializer(GenericTypeToken<T> typeToken) {
+        return findContravariantSerializer(typeToken.getType());
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public <T> Provider<Serializer<? super T>> findContravariantSerializerProvider(Type forType) {
+        BeanDefinition<Serializer> beanDefinition = context.getBeanDefinition(Serializer.class, new MostSpecificContravariantQualifier(forType));
+        return () -> context.getBean(beanDefinition);
+    }
+
+    public <T> Provider<Serializer<? super T>> findContravariantSerializerProvider(GenericTypeToken<T> typeToken) {
+        return findContravariantSerializerProvider(typeToken.getType());
+    }
+
     @Nullable
     private static Type getSerializerType(@SuppressWarnings("rawtypes") BeanType<Serializer> beanType) {
         Type parameterization = GenericTypeUtils.findParameterization(beanType.getBeanType(), Serializer.class);
