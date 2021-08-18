@@ -64,14 +64,17 @@ class B {
         b.foo = "456"
 
         def serializerB = (Serializer<?>) compiled.loadClass('example.$B$Serializer').newInstance()
-        def serializerA = (Serializer<?>) compiled.loadClass('example.$A$Serializer').newInstance(serializerB, serializerB)
+        def serializerA = (Serializer<?>) compiled.loadClass('example.$A$Serializer').newInstance(serializerB)
+
+        def deserializerB = (Deserializer<?>) compiled.loadClass('example.$B$Deserializer').newInstance()
+        def deserializerA = (Deserializer<?>) compiled.loadClass('example.$A$Deserializer').newInstance(deserializerB)
 
         expect:
         serializeToString(serializerB, b) == '{"foo":"456"}'
         serializeToString(serializerA, a) == '{"b":{"foo":"456"},"bar":"123"}'
-        deserializeFromString(serializerB, '{"foo":"456"}').foo == "456"
-        deserializeFromString(serializerA, '{"b":{"foo":"456"},"bar":"123"}').bar == "123"
-        deserializeFromString(serializerA, '{"b":{"foo":"456"},"bar":"123"}').b.foo == "456"
+        deserializeFromString(deserializerB, '{"foo":"456"}').foo == "456"
+        deserializeFromString(deserializerA, '{"b":{"foo":"456"},"bar":"123"}').bar == "123"
+        deserializeFromString(deserializerA, '{"b":{"foo":"456"},"bar":"123"}').b.foo == "456"
     }
 
     void "lists"() {
@@ -92,10 +95,11 @@ class Test {
         test.list = ['foo', 'bar']
 
         def serializer = (Serializer<?>) compiled.loadClass('example.$Test$Serializer').newInstance()
+        def deserializer = (Deserializer<?>) compiled.loadClass('example.$Test$Deserializer').newInstance()
 
         expect:
         serializeToString(serializer, test) == '{"list":["foo","bar"]}'
-        deserializeFromString(serializer, '{"list":["foo","bar"]}').list == ['foo', 'bar']
+        deserializeFromString(deserializer, '{"list":["foo","bar"]}').list == ['foo', 'bar']
     }
 
     void "maps"() {
@@ -116,10 +120,11 @@ class Test {
         test.map = ['foo': 'bar']
 
         def serializer = (Serializer<?>) compiled.loadClass('example.$Test$Serializer').newInstance()
+        def deserializer = (Deserializer<?>) compiled.loadClass('example.$Test$Deserializer').newInstance()
 
         expect:
         serializeToString(serializer, test) == '{"map":{"foo":"bar"}}'
-        deserializeFromString(serializer, '{"map":{"foo":"bar"}}').map == ['foo': 'bar']
+        deserializeFromString(deserializer, '{"map":{"foo":"bar"}}').map == ['foo': 'bar']
     }
 
     void "recursive with proper annotation"() {
@@ -127,7 +132,10 @@ class Test {
         def compiled = buildClassLoader('example.Test', '''
 package example;
 
-import io.micronaut.json.annotation.RecursiveSerialization;import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
+import io.micronaut.json.annotation.RecursiveSerialization;
+import io.micronaut.json.annotation.SerializableBean;
+
+@io.micronaut.json.annotation.SerializableBean
 class Test {
     @io.micronaut.json.annotation.RecursiveSerialization Test foo;
 }
@@ -136,17 +144,25 @@ class Test {
         def test = compiled.loadClass("example.Test").newInstance()
         test.foo = compiled.loadClass("example.Test").newInstance()
 
-        def provider = new Provider() {
+        def providerSer = new Provider() {
             @Override
             Object get() {
-                return (Serializer<?>) compiled.loadClass('example.$Test$Serializer').newInstance(this, this)
+                return compiled.loadClass('example.$Test$Serializer').newInstance(this)
             }
         }
-        def serializer = provider.get()
+        def serializer = providerSer.get()
+
+        def providerDes = new Provider() {
+            @Override
+            Object get() {
+                return compiled.loadClass('example.$Test$Deserializer').newInstance(this)
+            }
+        }
+        def deserializer = providerDes.get()
 
         expect:
         // serializeToString(serializer, test) == '{"list":["foo","bar"]}' todo: null support
-        deserializeFromString(serializer, '{"foo":{}}').foo.foo == null
+        deserializeFromString(deserializer, '{"foo":{}}').foo.foo == null
     }
 
     void "simple recursive without proper annotation gives error"() {
@@ -257,18 +273,29 @@ class C {
 
         def serializerC = (Serializer<?>) compiled.loadClass('example.$C$Serializer').newInstance()
         def serializerBClass = compiled.loadClass('example.$B_T_$Serializer')
-        def serializerB = (Serializer<?>) serializerBClass.newInstance(serializerC, serializerC)
-        def serializerA = (Serializer<?>) compiled.loadClass('example.$A$Serializer').newInstance(serializerB, serializerB)
+        def serializerB = (Serializer<?>) serializerBClass.newInstance(serializerC)
+        def serializerA = (Serializer<?>) compiled.loadClass('example.$A$Serializer').newInstance(serializerB)
 
-        def genericSerializerParam = serializerBClass.getDeclaredConstructor(Deserializer.class, Serializer.class).getGenericParameterTypes()[0]
+        def genericSerializerParam = serializerBClass.getDeclaredConstructor(Serializer.class).getGenericParameterTypes()[0]
+
+        def deserializerC = (Deserializer<?>) compiled.loadClass('example.$C$Deserializer').newInstance()
+        def deserializerBClass = compiled.loadClass('example.$B_T_$Deserializer')
+        def deserializerB = (Deserializer<?>) deserializerBClass.newInstance(deserializerC)
+        def deserializerA = (Deserializer<?>) compiled.loadClass('example.$A$Deserializer').newInstance(deserializerB)
+
+        def genericDeserializerParam = deserializerBClass.getDeclaredConstructor(Deserializer.class).getGenericParameterTypes()[0]
 
         expect:
         serializeToString(serializerA, a) == '{"b":{"foo":{"bar":"123"}}}'
-        deserializeFromString(serializerA, '{"b":{"foo":{"bar":"123"}}}').b.foo.bar == "123"
+        deserializeFromString(deserializerA, '{"b":{"foo":{"bar":"123"}}}').b.foo.bar == "123"
 
         genericSerializerParam instanceof ParameterizedType
         ((ParameterizedType) genericSerializerParam).actualTypeArguments[0] instanceof WildcardType
-        ((ParameterizedType) genericSerializerParam).actualTypeArguments[0].upperBounds[0] instanceof TypeVariable
+        ((ParameterizedType) genericSerializerParam).actualTypeArguments[0].lowerBounds[0] instanceof TypeVariable
+
+        genericDeserializerParam instanceof ParameterizedType
+        ((ParameterizedType) genericDeserializerParam).actualTypeArguments[0] instanceof WildcardType
+        ((ParameterizedType) genericDeserializerParam).actualTypeArguments[0].upperBounds[0] instanceof TypeVariable
     }
 
     void "nested generic inline"() {
@@ -301,11 +328,13 @@ class C {
         c.bar = "123"
 
         def serializerC = (Serializer<?>) compiled.loadClass('example.$C$Serializer').newInstance()
-        def serializerA = (Serializer<?>) compiled.loadClass('example.$A$Serializer').newInstance(serializerC, serializerC)
+        def serializerA = (Serializer<?>) compiled.loadClass('example.$A$Serializer').newInstance(serializerC)
+        def deserializerC = (Deserializer<?>) compiled.loadClass('example.$C$Deserializer').newInstance()
+        def deserializerA = (Deserializer<?>) compiled.loadClass('example.$A$Deserializer').newInstance(deserializerC)
 
         expect:
         serializeToString(serializerA, a) == '{"b":{"foo":{"bar":"123"}}}'
-        deserializeFromString(serializerA, '{"b":{"foo":{"bar":"123"}}}').b.foo.bar == "123"
+        deserializeFromString(deserializerA, '{"b":{"foo":{"bar":"123"}}}').b.foo.bar == "123"
     }
 
     void "enum"() {
@@ -327,11 +356,12 @@ enum E {
         a.e = compiled.loadClass("example.E").enumConstants[1]
 
         def serializerA = (Serializer<?>) compiled.loadClass('example.$A$Serializer').newInstance()
+        def deserializerA = (Deserializer<?>) compiled.loadClass('example.$A$Deserializer').newInstance()
 
         expect:
         serializeToString(serializerA, a) == '{"e":"B"}'
-        deserializeFromString(serializerA, '{"e":"A"}').e.name() == 'A'
-        deserializeFromString(serializerA, '{"e":"B"}').e.name() == 'B'
+        deserializeFromString(deserializerA, '{"e":"A"}').e.name() == 'A'
+        deserializeFromString(deserializerA, '{"e":"B"}').e.name() == 'B'
     }
 
     void "nested class"() {
@@ -365,12 +395,13 @@ interface Test {
 ''')
         def testBean = ['getFoo': { Object[] args -> 'bar' }].asType(compiled.loadClass('example.Test'))
         def serializer = compiled.loadClass('example.$Test$Serializer').newInstance()
+        def deserializer = compiled.loadClass('example.$Test$Deserializer').newInstance()
 
         expect:
         serializeToString(serializer, testBean) == '{"foo":"bar"}'
 
         when:
-        deserializeFromString(serializer, '{"foo":"bar"}')
+        deserializeFromString(deserializer, '{"foo":"bar"}')
 
         then:
         thrown UnsupportedOperationException
@@ -392,12 +423,16 @@ class B {
 ''')
         def testBean = compiled.loadClass("example.A").newInstance()
         testBean.b = Optional.of(compiled.loadClass("example.B").newInstance())
+
         def serializerB = compiled.loadClass('example.$B$Serializer').newInstance()
-        def serializer = compiled.loadClass('example.$A$Serializer').newInstance(serializerB, serializerB)
+        def serializer = compiled.loadClass('example.$A$Serializer').newInstance(serializerB)
+
+        def deserializerB = compiled.loadClass('example.$B$Deserializer').newInstance()
+        def deserializer = compiled.loadClass('example.$A$Deserializer').newInstance(deserializerB)
 
         expect:
         serializeToString(serializer, testBean) == '{"b":{}}'
-        deserializeFromString(serializer, '{"b":{}}').b.isPresent()
+        deserializeFromString(deserializer, '{"b":{}}').b.isPresent()
     }
 
     void "generic injection collision"() {

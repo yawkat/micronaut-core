@@ -29,7 +29,9 @@ import jakarta.inject.Inject;
 
 import javax.lang.model.element.Modifier;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static io.micronaut.json.generator.symbol.Names.DECODER;
@@ -46,12 +48,13 @@ public final class SingletonSerializerGenerator {
     private final GeneratorType valueType;
     @Nullable
     private ProblemReporter problemReporter = null;
+    private boolean checkProblemReporter = false;
     @Nullable
     private SerializerSymbol symbol = null;
     @Nullable
     private TypeName valueReferenceName = null;
     @Nullable
-    private ClassName generatedSerializerName = null;
+    private String packageName = null;
 
     private SingletonSerializerGenerator(GeneratorType valueType) {
         this.valueType = valueType;
@@ -91,15 +94,14 @@ public final class SingletonSerializerGenerator {
     }
 
     /**
-     * FQCN of the generated serializer class
+     * Package of the generated classes
      */
-    public SingletonSerializerGenerator generatedSerializerName(ClassName generatedSerializerName) {
-        this.generatedSerializerName = generatedSerializerName;
+    public SingletonSerializerGenerator packageName(String packageName) {
+        this.packageName = packageName;
         return this;
     }
 
-    public GenerationResult generate() {
-        boolean checkProblemReporter = false;
+    private void fillInMissingFields() {
         if (problemReporter == null) {
             problemReporter = new ProblemReporter();
             checkProblemReporter = true;
@@ -114,45 +116,65 @@ public final class SingletonSerializerGenerator {
         if (symbol == null) {
             throw new IllegalStateException("Must pass a symbol or a linker");
         }
-        if (generatedSerializerName == null) {
-            String pkg = valueType.getRawClass().getPackageName();
-            generatedSerializerName = ClassName.get(
-                    pkg,
-                    '$' + valueType.getRelativeTypeName(pkg).replaceAll("[. ?<>]", "_") + "$Serializer");
-            assert generatedSerializerName != null;
+        if (packageName == null) {
+            packageName = valueType.getRawClass().getPackageName();
         }
+    }
+
+    private String prefix() {
+        return '$' + valueType.getRelativeTypeName(packageName).replaceAll("[. ?<>,]", "_");
+    }
+
+    /**
+     * Generate this serializer as a single class implementing both the serializer and deserializer.
+     */
+    public GenerationResult generateSingle() {
+        fillInMissingFields();
+        assert valueReferenceName != null;
+        assert symbol != null;
+        assert packageName != null;
+        assert problemReporter != null;
+
+        return generateClass(true, true, ClassName.get(packageName, prefix() + "$Serializer"));
+    }
+
+    /**
+     * Generate this serializer as multiple classes.
+     */
+    public List<GenerationResult> generateMulti() {
+        fillInMissingFields();
+        assert valueReferenceName != null;
+        assert symbol != null;
+        assert packageName != null;
+        assert problemReporter != null;
+
+        return Arrays.asList(
+                generateClass(true, false, ClassName.get(packageName, prefix() + "$Serializer")),
+                generateClass(false, true, ClassName.get(packageName, prefix() + "$Deserializer"))
+        );
+    }
+
+    private GenerationResult generateClass(boolean serializer, boolean deserializer, ClassName generatedName) {
+        assert valueReferenceName != null;
 
         GeneratorContext classContext = GeneratorContext.create(problemReporter, valueReferenceName.toString());
 
-        MethodSpec deserialize = MethodSpec.methodBuilder("deserialize")
-                .addAnnotation(Override.class)
-                .addModifiers(Modifier.PUBLIC)
-                .addParameter(JsonParser.class, DECODER)
-                .returns(valueReferenceName)
-                .addException(IOException.class)
-                .addCode(symbol.deserialize(classContext.newMethodContext(DECODER), valueType, expr -> CodeBlock.of("return $L;\n", expr)))
-                .build();
-
-        MethodSpec serialize = MethodSpec.methodBuilder("serialize")
-                .addAnnotation(Override.class)
-                .addModifiers(Modifier.PUBLIC)
-                .addParameter(JsonGenerator.class, ENCODER)
-                .addParameter(valueReferenceName, "value")
-                .addException(IOException.class)
-                .addCode(symbol.serialize(classContext.newMethodContext("value", ENCODER), valueType, CodeBlock.of("value")))
-                .build();
-
-        TypeSpec.Builder serializer = TypeSpec.classBuilder(generatedSerializerName.simpleName())
+        TypeSpec.Builder builder = TypeSpec.classBuilder(generatedName.simpleName())
                 .addAnnotation(Secondary.class)
-                .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                .addSuperinterface(ParameterizedTypeName.get(ClassName.get(Serializer.class), valueReferenceName))
-                .addSuperinterface(ParameterizedTypeName.get(ClassName.get(Deserializer.class), valueReferenceName))
-                .addMethod(serialize)
-                .addMethod(deserialize);
+                .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
+
+        if (serializer) {
+            builder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(Serializer.class), valueReferenceName))
+                    .addMethod(generateSerialize(classContext));
+        }
+        if (deserializer) {
+            builder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(Deserializer.class), valueReferenceName))
+                    .addMethod(generateDeserialize(classContext));
+        }
 
         // add type parameters if necessary
         for (MnType.Variable typeVariable : valueType.getFreeVariables()) {
-            serializer.addTypeVariable(TypeVariableName.get(
+            builder.addTypeVariable(TypeVariableName.get(
                     typeVariable.getName(),
                     typeVariable.getBounds().stream().map(PoetUtil::toTypeName).toArray(TypeName[]::new)
             ));
@@ -170,12 +192,12 @@ public final class SingletonSerializerGenerator {
                 constructorBuilder.addParameter(t, name);
                 return name;
             });
-            serializer.addField(injectable.fieldType, injected.fieldName, Modifier.PRIVATE, Modifier.FINAL);
+            builder.addField(injectable.fieldType, injected.fieldName, Modifier.PRIVATE, Modifier.FINAL);
             SerializerSymbol.Setter fieldSetter = expr -> CodeBlock.of("this.$N = $L", injected.fieldName, expr);
             constructorCodeBuilder.add(injectable.buildInitializationStatement(CodeBlock.of("$N", paramName), fieldSetter));
         });
         constructorBuilder.addCode(constructorCodeBuilder.build());
-        serializer.addMethod(constructorBuilder.build());
+        builder.addMethod(constructorBuilder.build());
 
         if (generateDirectConstructor && !injectedParameters.isEmpty()) {
             MethodSpec.Builder directConstructor = MethodSpec.constructorBuilder();
@@ -185,16 +207,42 @@ public final class SingletonSerializerGenerator {
                 directConstructorCode.addStatement("this.$N = $N", injected.fieldName, injected.fieldName);
             });
             directConstructor.addCode(directConstructorCode.build());
-            serializer.addMethod(directConstructor.build());
+            builder.addMethod(directConstructor.build());
         }
 
-        JavaFile generatedFile = JavaFile.builder(generatedSerializerName.packageName(), serializer.build()).build();
+        JavaFile generatedFile = JavaFile.builder(generatedName.packageName(), builder.build()).build();
 
         if (checkProblemReporter) {
+            assert problemReporter != null;
             problemReporter.throwOnFailures();
         }
 
-        return new GenerationResult(generatedSerializerName, generatedFile);
+        return new GenerationResult(generatedName, generatedFile);
+    }
+
+    private MethodSpec generateSerialize(GeneratorContext classContext) {
+        assert symbol != null;
+        assert valueReferenceName != null;
+        return MethodSpec.methodBuilder("serialize")
+                .addAnnotation(Override.class)
+                .addModifiers(Modifier.PUBLIC)
+                .addParameter(JsonGenerator.class, ENCODER)
+                .addParameter(valueReferenceName, "value")
+                .addException(IOException.class)
+                .addCode(symbol.serialize(classContext.newMethodContext("value", ENCODER), valueType, CodeBlock.of("value")))
+                .build();
+    }
+
+    private MethodSpec generateDeserialize(GeneratorContext classContext) {
+        assert symbol != null;
+        return MethodSpec.methodBuilder("deserialize")
+                .addAnnotation(Override.class)
+                .addModifiers(Modifier.PUBLIC)
+                .addParameter(JsonParser.class, DECODER)
+                .returns(valueReferenceName)
+                .addException(IOException.class)
+                .addCode(symbol.deserialize(classContext.newMethodContext(DECODER), valueType, expr -> CodeBlock.of("return $L;\n", expr)))
+                .build();
     }
 
     public static final class GenerationResult {

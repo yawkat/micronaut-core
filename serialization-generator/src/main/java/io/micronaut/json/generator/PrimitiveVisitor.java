@@ -42,11 +42,11 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
                 PrimitiveElement.DOUBLE
         )) {
             generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofClass(prim))
-                            .problemReporter(problemReporter)
-                            .generatedSerializerName(ClassName.get(element.getPackageName(), "$PrimitiveSerializer$" + prim.getSimpleName()))
-                            .valueReferenceName(PoetUtil.toTypeName(prim).box())
-                            .linker(linker)
-                            .generate());
+                    .problemReporter(problemReporter)
+                    .packageName(element.getPackageName())
+                    .valueReferenceName(PoetUtil.toTypeName(prim).box())
+                    .linker(linker)
+                    .generateMulti());
         }
 
         for (Class<?> t : Arrays.asList(
@@ -56,21 +56,21 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
         )) {
             generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofClass(ClassElement.of(t)))
                     .problemReporter(problemReporter)
-                    .generatedSerializerName(ClassName.get(element.getPackageName(), "$Serializer$" + t.getSimpleName()))
+                    .packageName(element.getPackageName())
                     .linker(linker)
-                    .generate());
+                    .generateMulti());
         }
 
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(createGeneratorType(List.class, Object.class))
-                        .problemReporter(problemReporter)
-                        .generatedSerializerName(ClassName.get(element.getPackageName(), "$Serializer$List"))
-                        .linker(linker)
-                        .generate());
+                .problemReporter(problemReporter)
+                .packageName(element.getPackageName())
+                .linker(linker)
+                .generateMulti());
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(createGeneratorType(Map.class, String.class, Object.class))
-                        .problemReporter(problemReporter)
-                        .generatedSerializerName(ClassName.get(element.getPackageName(), "$Serializer$Map"))
-                        .linker(linker)
-                        .generate());
+                .problemReporter(problemReporter)
+                .packageName(element.getPackageName())
+                .linker(linker)
+                .generateMulti());
     }
 
     private static GeneratorType createGeneratorType(Class<?> rawType, Class<?>... args) {

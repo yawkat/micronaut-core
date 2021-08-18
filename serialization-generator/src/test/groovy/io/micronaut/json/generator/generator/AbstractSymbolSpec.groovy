@@ -16,9 +16,9 @@ class AbstractSymbolSpec extends AbstractTypeElementSpec implements SerializerUt
     public <T> Serializer<T> buildBasicSerializer(Type type, SerializerSymbol symbol, ClassElement classElement = ClassElement.of(type)) {
         def generationResult = SingletonSerializerGenerator.create(classElement)
                 .symbol(symbol)
-                .generatedSerializerName(ClassName.get("example", "SerializerImpl"))
+                .packageName('example')
                 .valueReferenceName(TypeName.get(type))
-                .generate()
+                .generateSingle()
 
         def loader = buildClassLoader(generationResult.serializerClassName.reflectionName(), generationResult.generatedFile.toString())
         def serializerClass = loader.loadClass(generationResult.serializerClassName.reflectionName())

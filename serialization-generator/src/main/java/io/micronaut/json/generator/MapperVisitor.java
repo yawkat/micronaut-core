@@ -43,6 +43,6 @@ public class MapperVisitor extends AbstractGeneratorVisitor<Object> implements T
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(generatorType)
                         .problemReporter(problemReporter)
                         .symbol(inlineBeanSerializer)
-                        .generate());
+                        .generateMulti());
     }
 }

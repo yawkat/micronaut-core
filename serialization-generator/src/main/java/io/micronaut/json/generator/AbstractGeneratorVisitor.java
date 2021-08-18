@@ -13,6 +13,7 @@ import javax.annotation.processing.Filer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -23,13 +24,13 @@ abstract class AbstractGeneratorVisitor<ANN> implements TypeElementVisitor<ANN, 
     @Override
     public abstract void visitClass(ClassElement element, VisitorContext context);
 
-    protected final void generateFromSymbol(VisitorContext context, Function<ProblemReporter, SingletonSerializerGenerator.GenerationResult> generate) {
+    protected final void generateFromSymbol(VisitorContext context, Function<ProblemReporter, Collection<SingletonSerializerGenerator.GenerationResult>> generate) {
         ProblemReporter problemReporter = new ProblemReporter();
-        SingletonSerializerGenerator.GenerationResult generationResult = generate.apply(problemReporter);
+        Collection<SingletonSerializerGenerator.GenerationResult> generationResult = generate.apply(problemReporter);
 
         problemReporter.reportTo(context);
         if (!problemReporter.isFailed()) {
-            generated.add(generationResult);
+            generated.addAll(generationResult);
         }
     }
 
