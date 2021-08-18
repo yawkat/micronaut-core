@@ -17,17 +17,17 @@ class InlineEnumSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public boolean canSerialize(ClassElement type) {
+    public boolean canSerialize(GeneratorType type) {
         return type.isEnum();
     }
 
     @Override
-    public void visitDependencies(DependencyVisitor visitor, ClassElement type) {
+    public void visitDependencies(DependencyVisitor visitor, GeneratorType type) {
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, ClassElement type, CodeBlock readExpression) {
-        EnumDefinition enumDefinition = new EnumDefinition((EnumElement) type);
+    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
+        EnumDefinition enumDefinition = new EnumDefinition((EnumElement) type.getClassElement());
 
         CodeBlock.Builder builder = CodeBlock.builder();
         builder.beginControlFlow("switch ($L)", readExpression);
@@ -52,8 +52,8 @@ class InlineEnumSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, ClassElement type, Setter setter) {
-        EnumDefinition enumDefinition = new EnumDefinition((EnumElement) type);
+    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
+        EnumDefinition enumDefinition = new EnumDefinition((EnumElement) type.getClassElement());
 
         return enumDefinition.valueSerializer.deserialize(generatorContext, type, expr -> {
             CodeBlock.Builder builder = CodeBlock.builder();
@@ -84,7 +84,7 @@ class InlineEnumSerializerSymbol implements SerializerSymbol {
         private final List<CodeBlock> serializedLiterals;
 
         private final SerializerSymbol valueSerializer;
-        private final ClassElement valueType;
+        private final GeneratorType valueType;
 
         EnumDefinition(EnumElement element) {
             // todo: support @JsonProperty
@@ -94,7 +94,7 @@ class InlineEnumSerializerSymbol implements SerializerSymbol {
                     .map(v -> CodeBlock.of("$S", v))
                     .collect(Collectors.toList());
             this.valueSerializer = StringSerializerSymbol.INSTANCE;
-            this.valueType = ClassElement.of(String.class);
+            this.valueType = GeneratorType.STRING;
         }
     }
 }

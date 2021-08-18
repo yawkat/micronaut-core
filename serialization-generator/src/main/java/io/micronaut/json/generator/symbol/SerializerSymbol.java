@@ -24,7 +24,7 @@ import io.micronaut.json.Serializer;
 
 @Internal
 public interface SerializerSymbol {
-    boolean canSerialize(ClassElement type);
+    boolean canSerialize(GeneratorType type);
 
     /**
      * @return a symbol equivalent to this one, but with the capability of dealing with recursive / circular serialization issues.
@@ -33,7 +33,7 @@ public interface SerializerSymbol {
         return this;
     }
 
-    void visitDependencies(DependencyVisitor visitor, ClassElement type);
+    void visitDependencies(DependencyVisitor visitor, GeneratorType type);
 
     /**
      * Generate code that writes the value returned by {@code readExpression} into {@link Names#ENCODER}.
@@ -43,7 +43,7 @@ public interface SerializerSymbol {
      * @param readExpression The expression that reads the value. Must only be evaluated once.
      * @return The code block containing statements that perform the serialization.
      */
-    CodeBlock serialize(GeneratorContext generatorContext, ClassElement type, CodeBlock readExpression);
+    CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression);
 
     /**
      * Generate code that reads a value from {@link Names#DECODER}.
@@ -56,12 +56,12 @@ public interface SerializerSymbol {
      * @param setter The setter to use to build the final return value.
      * @return The code that performs the deserialization.
      */
-    CodeBlock deserialize(GeneratorContext generatorContext, ClassElement type, Setter setter);
+    CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter);
 
     /**
      * Get an expression giving a default value for this type. Used when deserializing a bean and a property is missing.
      */
-    default CodeBlock getDefaultExpression(ClassElement type) {
+    default CodeBlock getDefaultExpression(GeneratorType type) {
         return CodeBlock.of("null");
     }
 
@@ -79,8 +79,8 @@ public interface SerializerSymbol {
          */
         boolean visitStructure();
 
-        void visitStructureElement(SerializerSymbol dependencySymbol, ClassElement dependencyType, @Nullable Element element);
+        void visitStructureElement(SerializerSymbol dependencySymbol, GeneratorType dependencyType, @Nullable Element element);
 
-        void visitInjected(ClassElement dependencyType, boolean provider);
+        void visitInjected(GeneratorType dependencyType, boolean provider);
     }
 }

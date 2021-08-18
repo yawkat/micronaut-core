@@ -3,7 +3,6 @@ package io.micronaut.json.generator.symbol;
 import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.inject.ast.ClassElement;
 
 @Internal
 public class NullableSerializerSymbol implements SerializerSymbol {
@@ -14,7 +13,7 @@ public class NullableSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public boolean canSerialize(ClassElement type) {
+    public boolean canSerialize(GeneratorType type) {
         throw new UnsupportedOperationException("Not part of the normal linker chain");
     }
 
@@ -24,12 +23,12 @@ public class NullableSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public void visitDependencies(DependencyVisitor visitor, ClassElement type) {
+    public void visitDependencies(DependencyVisitor visitor, GeneratorType type) {
         delegate.visitDependencies(visitor, type);
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, ClassElement type, CodeBlock readExpression) {
+    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
         String variable = generatorContext.newLocalVariable("tmp");
         return CodeBlock.builder()
                 .addStatement("$T $N = $L", PoetUtil.toTypeName(type), variable, readExpression)
@@ -42,7 +41,7 @@ public class NullableSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, ClassElement type, Setter setter) {
+    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
         return CodeBlock.builder()
                 .beginControlFlow("if ($N.currentToken() == $T.VALUE_NULL)", Names.DECODER, JsonToken.class)
                 .add(setter.createSetStatement(CodeBlock.of("null")))

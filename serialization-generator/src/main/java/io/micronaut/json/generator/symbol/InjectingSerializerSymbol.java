@@ -43,12 +43,12 @@ final class InjectingSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public void visitDependencies(DependencyVisitor visitor, ClassElement type) {
+    public void visitDependencies(DependencyVisitor visitor, GeneratorType type) {
         visitor.visitInjected(type, provider);
     }
 
     @Override
-    public boolean canSerialize(ClassElement type) {
+    public boolean canSerialize(GeneratorType type) {
         // no generics of primitive types!
         return type.isArray() || !type.isPrimitive();
     }
@@ -59,20 +59,16 @@ final class InjectingSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, ClassElement type, CodeBlock readExpression) {
-        // todo: hack: because ClassElement does not expose wildcards, use add a raw type cast just in case.
-        if (!type.getTypeArguments().isEmpty()) {
-            readExpression = CodeBlock.of("($T) $L", PoetUtil.toTypeName(type), readExpression);
-        }
+    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
         return CodeBlock.of("$L.serialize($N, $L);\n", getSerializerAccess(generatorContext, type, true), Names.ENCODER, readExpression);
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, ClassElement type, Setter setter) {
+    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
         return setter.createSetStatement(CodeBlock.of("$L.deserialize($N)", getSerializerAccess(generatorContext, type, false), Names.DECODER));
     }
 
-    private CodeBlock getSerializerAccess(GeneratorContext generatorContext, ClassElement type, boolean forSerialization) {
+    private CodeBlock getSerializerAccess(GeneratorContext generatorContext, GeneratorType type, boolean forSerialization) {
         GeneratorContext.Injectable injectable = new OtherSerializerInjectable(PoetUtil.toTypeName(type), provider, forSerialization);
         CodeBlock accessExpression = generatorContext.requestInjection(injectable).getAccessExpression();
         if (provider) {

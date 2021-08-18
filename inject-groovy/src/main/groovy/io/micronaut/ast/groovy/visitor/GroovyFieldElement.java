@@ -21,6 +21,7 @@ import io.micronaut.core.reflect.ClassUtils;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.ElementModifier;
 import io.micronaut.inject.ast.FieldElement;
+import io.micronaut.inject.ast.MnType;
 import org.codehaus.groovy.ast.*;
 import org.codehaus.groovy.control.SourceUnit;
 
@@ -54,6 +55,11 @@ public class GroovyFieldElement extends AbstractGroovyElement implements FieldEl
         super(visitorContext, annotatedNode, annotationMetadata);
         this.variable = variable;
         this.sourceUnit = visitorContext.getSourceUnit();
+    }
+
+    @Override
+    public MnType getMnType() {
+        return toMnType(visitorContext, variable.getType());
     }
 
     @Override

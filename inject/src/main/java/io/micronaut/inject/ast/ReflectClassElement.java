@@ -20,7 +20,10 @@ import io.micronaut.core.annotation.NonNull;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link ClassElement} backed by reflection.
@@ -34,10 +37,49 @@ class ReflectClassElement implements ClassElement {
 
     /**
      * Default constructor.
+     *
      * @param type The type
      */
     ReflectClassElement(Class<?> type) {
         this.type = type;
+    }
+
+    @Override
+    public MnType getRawMnType() {
+        if (type.isArray()) {
+            return fromArray().getRawMnType().getArrayType();
+        }
+        return new MnType.RawClass() {
+            @Override
+            public ClassElement getClassElement() {
+                return ReflectClassElement.this;
+            }
+
+            @Override
+            public List<? extends Variable> getTypeVariables() {
+                return Arrays.stream(type.getTypeParameters())
+                        .map(tp -> new Variable() {
+                            @NonNull
+                            @Override
+                            public Element getDeclaringElement() {
+                                return ReflectClassElement.this;
+                            }
+
+                            @NonNull
+                            @Override
+                            public String getName() {
+                                return tp.getName();
+                            }
+
+                            @NonNull
+                            @Override
+                            public List<? extends MnType> getBounds() {
+                                throw new UnsupportedOperationException();
+                            }
+                        })
+                        .collect(Collectors.toList());
+            }
+        };
     }
 
     @Override

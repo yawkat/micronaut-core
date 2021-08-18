@@ -32,6 +32,10 @@ public interface PropertyElement extends TypedElement, MemberElement {
     @Override
     ClassElement getType();
 
+    default MnType getMnType() {
+        throw new UnsupportedOperationException(getClass().getName() + ".getMnType");
+    }
+
     /**
      * Return true only if the property has a getter but no setter.
      *

@@ -16,6 +16,8 @@
 package io.micronaut.inject.ast;
 
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.annotation.Nullable;
+
 import java.util.Objects;
 
 /**
@@ -32,6 +34,10 @@ public interface ParameterElement extends TypedElement {
     @Override
     @NonNull
     ClassElement getType();
+
+    default MnType getMnType() {
+        throw new UnsupportedOperationException(getClass().getName() + ".getMnType");
+    }
 
     @NonNull
     @Override
@@ -51,8 +57,7 @@ public interface ParameterElement extends TypedElement {
      * @return The parameter element
      */
     static @NonNull ParameterElement of(@NonNull Class<?> type, @NonNull String name) {
-        Objects.requireNonNull(name, "Name cannot be null");
-        return new ReflectParameterElement(ClassElement.of(type), name);
+        return of(ClassElement.of(type), name);
     }
 
     /**
@@ -66,8 +71,15 @@ public interface ParameterElement extends TypedElement {
     static @NonNull ParameterElement of(
             @NonNull ClassElement type,
             @NonNull String name) {
+        return of(type, null, name);
+    }
+
+    static @NonNull ParameterElement of(
+            @NonNull ClassElement type,
+            @Nullable MnType mnType,
+            @NonNull String name) {
         Objects.requireNonNull(name, "Name cannot be null");
         Objects.requireNonNull(type, "Type cannot be null");
-        return new ReflectParameterElement(type, name);
+        return new ReflectParameterElement(type, mnType, name);
     }
 }

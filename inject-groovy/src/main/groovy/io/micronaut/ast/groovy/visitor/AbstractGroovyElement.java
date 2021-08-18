@@ -28,10 +28,7 @@ import io.micronaut.core.util.ArgumentUtils;
 import io.micronaut.core.util.ArrayUtils;
 import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.inject.annotation.AbstractAnnotationMetadataBuilder;
-import io.micronaut.inject.ast.ClassElement;
-import io.micronaut.inject.ast.Element;
-import io.micronaut.inject.ast.ElementModifier;
-import io.micronaut.inject.ast.MemberElement;
+import io.micronaut.inject.ast.*;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.MethodNode;
@@ -41,11 +38,14 @@ import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.SourceUnit;
 
 import io.micronaut.core.annotation.NonNull;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Abstract Groovy element.
@@ -412,6 +412,88 @@ public abstract class AbstractGroovyElement implements AnnotationMetadataDelegat
             modifiers.add(ElementModifier.FINAL);
         }
         return modifiers;
+    }
+
+    static MnType toMnType(GroovyVisitorContext visitorContext, GenericsType type) {
+        if (type.isWildcard()) {
+            return new MnType.Wildcard() {
+                @Override
+                public List<? extends MnType> getUpperBounds() {
+                    return (type.getUpperBounds() == null ? Stream.of(type.getType().redirect()) : Arrays.stream(type.getUpperBounds()))
+                            .map(cn -> toMnType(visitorContext, cn))
+                            .collect(Collectors.toList());
+                }
+
+                @Override
+                public List<? extends MnType> getLowerBounds() {
+                    if (type.getLowerBound() == null) {
+                        return Collections.emptyList();
+                    } else {
+                        return Collections.singletonList(toMnType(visitorContext, type.getLowerBound()));
+                    }
+                }
+            };
+        } else {
+            return toMnType(visitorContext, type.getType());
+        }
+    }
+
+    static MnType toMnType(GroovyVisitorContext visitorContext, ClassNode cn) {
+        if (cn.getComponentType() != null) {
+            // array
+            return toMnType(visitorContext, cn.getComponentType()).getArrayType();
+        } else if (cn.isGenericsPlaceHolder()) {
+            // type variable
+            return new MnType.Variable() {
+                @NonNull
+                @Override
+                public Element getDeclaringElement() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @NonNull
+                @Override
+                public String getName() {
+                    return cn.getUnresolvedName();
+                }
+
+                @NonNull
+                @Override
+                public List<? extends MnType> getBounds() {
+                    throw new UnsupportedOperationException();
+                }
+            };
+        } else {
+            ClassElement rawClassElement = visitorContext.getElementFactory().newClassElement(cn, AstAnnotationUtils.getAnnotationMetadata(visitorContext.getSourceUnit(), visitorContext.getCompilationUnit(), cn));
+            MnType raw = rawClassElement.getRawMnType();
+            if (cn.getGenericsTypes() != null && cn.getGenericsTypes().length != 0) {
+                return new MnType.Parameterized() {
+                    @Nullable
+                    @Override
+                    public MnType getOuter() {
+                        // todo
+                        return null;
+                    }
+
+                    @NonNull
+                    @Override
+                    public RawClass getRaw() {
+                        // can't be an array, this cast is fine
+                        return (RawClass) raw;
+                    }
+
+                    @NonNull
+                    @Override
+                    public List<? extends MnType> getParameters() {
+                        return Arrays.stream(cn.getGenericsTypes())
+                                .map(gt -> toMnType(visitorContext, gt))
+                                .collect(Collectors.toList());
+                    }
+                };
+            } else {
+                return raw;
+            }
+        }
     }
 }
 

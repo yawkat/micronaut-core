@@ -20,10 +20,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.util.ArrayUtils;
 import io.micronaut.core.util.CollectionUtils;
-import io.micronaut.inject.ast.ClassElement;
-import io.micronaut.inject.ast.MethodElement;
-import io.micronaut.inject.ast.ParameterElement;
-import io.micronaut.inject.ast.PrimitiveElement;
+import io.micronaut.inject.ast.*;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
@@ -180,6 +177,11 @@ public class JavaMethodElement extends AbstractJavaElement implements MethodElem
     @Override
     public ClassElement getOwningType() {
         return declaringClass;
+    }
+
+    @Override
+    public MnType getMnReturnType() {
+        return typeMirrorToMnType(executableElement.getReturnType());
     }
 
     /**

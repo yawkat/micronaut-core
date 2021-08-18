@@ -22,6 +22,7 @@ import io.micronaut.context.annotation.Secondary;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ClassElement;
+import io.micronaut.inject.ast.MnType;
 import io.micronaut.json.Serializer;
 import jakarta.inject.Inject;
 
@@ -41,7 +42,7 @@ public final class SingletonSerializerGenerator {
      */
     static boolean generateDirectConstructor = false;
 
-    private final ClassElement valueType;
+    private final GeneratorType valueType;
     @Nullable
     private ProblemReporter problemReporter = null;
     @Nullable
@@ -51,11 +52,15 @@ public final class SingletonSerializerGenerator {
     @Nullable
     private ClassName generatedSerializerName = null;
 
-    private SingletonSerializerGenerator(ClassElement valueType) {
+    private SingletonSerializerGenerator(GeneratorType valueType) {
         this.valueType = valueType;
     }
 
     public static SingletonSerializerGenerator create(ClassElement valueType) {
+        return create(GeneratorType.ofClass(valueType));
+    }
+
+    public static SingletonSerializerGenerator create(GeneratorType valueType) {
         return new SingletonSerializerGenerator(valueType);
     }
 
@@ -109,7 +114,10 @@ public final class SingletonSerializerGenerator {
             throw new IllegalStateException("Must pass a symbol or a linker");
         }
         if (generatedSerializerName == null) {
-            generatedSerializerName = ClassName.get(valueType.getPackageName(), '$' + valueType.getSimpleName() + "$Serializer");
+            String pkg = valueType.getRawClass().getPackageName();
+            generatedSerializerName = ClassName.get(
+                    pkg,
+                    '$' + valueType.getRelativeTypeName(pkg).replaceAll("[. ?<>]", "_") + "$Serializer");
             assert generatedSerializerName != null;
         }
 
@@ -139,6 +147,14 @@ public final class SingletonSerializerGenerator {
                 .addSuperinterface(ParameterizedTypeName.get(ClassName.get(Serializer.class), valueReferenceName))
                 .addMethod(serialize)
                 .addMethod(deserialize);
+
+        // add type parameters if necessary
+        for (MnType.Variable typeVariable : valueType.getFreeVariables()) {
+            serializer.addTypeVariable(TypeVariableName.get(
+                    typeVariable.getName(),
+                    typeVariable.getBounds().stream().map(PoetUtil::toTypeName).toArray(TypeName[]::new)
+            ));
+        }
 
         MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC)

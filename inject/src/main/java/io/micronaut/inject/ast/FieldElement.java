@@ -32,6 +32,10 @@ public interface FieldElement extends TypedElement, MemberElement {
         return getGenericType();
     }
 
+    default MnType getMnType() {
+        throw new UnsupportedOperationException(getClass().getName() + ".getMnType");
+    }
+
     @NonNull
     @Override
     default String getDescription(boolean simple) {

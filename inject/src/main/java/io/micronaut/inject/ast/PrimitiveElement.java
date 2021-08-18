@@ -18,6 +18,9 @@ package io.micronaut.inject.ast;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.AnnotationMetadata;
 
+import java.util.Collections;
+import java.util.List;
+
 public final class PrimitiveElement implements ArrayableClassElement {
 
     public static final PrimitiveElement VOID = new PrimitiveElement("void");
@@ -50,6 +53,21 @@ public final class PrimitiveElement implements ArrayableClassElement {
     private PrimitiveElement(String name, int arrayDimensions) {
         this.typeName = name;
         this.arrayDimensions = arrayDimensions;
+    }
+
+    @Override
+    public MnType getRawMnType() {
+        return new MnType.RawClass() {
+            @Override
+            public ClassElement getClassElement() {
+                return PrimitiveElement.this;
+            }
+
+            @Override
+            public List<? extends Variable> getTypeVariables() {
+                return Collections.emptyList();
+            }
+        };
     }
 
     @Override

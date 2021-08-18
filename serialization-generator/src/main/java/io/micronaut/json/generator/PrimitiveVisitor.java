@@ -1,7 +1,6 @@
 package io.micronaut.json.generator;
 
 import com.squareup.javapoet.ClassName;
-import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.PrimitiveElement;
@@ -9,7 +8,6 @@ import io.micronaut.inject.visitor.TypeElementVisitor;
 import io.micronaut.inject.visitor.VisitorContext;
 import io.micronaut.json.generator.symbol.*;
 
-import java.lang.reflect.TypeVariable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
@@ -43,7 +41,7 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
                 PrimitiveElement.FLOAT,
                 PrimitiveElement.DOUBLE
         )) {
-            generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(prim)
+            generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofClass(prim))
                             .problemReporter(problemReporter)
                             .generatedSerializerName(ClassName.get(element.getPackageName(), "$PrimitiveSerializer$" + prim.getSimpleName()))
                             .valueReferenceName(PoetUtil.toTypeName(prim).box())
@@ -56,35 +54,26 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
                 BigDecimal.class,
                 BigInteger.class
         )) {
-            generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(ClassElement.of(t))
+            generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofClass(ClassElement.of(t)))
                     .problemReporter(problemReporter)
                     .generatedSerializerName(ClassName.get(element.getPackageName(), "$Serializer$" + t.getSimpleName()))
                     .linker(linker)
                     .generate());
         }
 
-        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(createClassElement(List.class, Object.class))
+        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(createGeneratorType(List.class, Object.class))
                         .problemReporter(problemReporter)
                         .generatedSerializerName(ClassName.get(element.getPackageName(), "$Serializer$List"))
                         .linker(linker)
                         .generate());
-        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(createClassElement(Map.class, String.class, Object.class))
+        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(createGeneratorType(Map.class, String.class, Object.class))
                         .problemReporter(problemReporter)
                         .generatedSerializerName(ClassName.get(element.getPackageName(), "$Serializer$Map"))
                         .linker(linker)
                         .generate());
     }
 
-    private static ClassElement createClassElement(Class<?> rawType, Class<?>... args) {
-        return createClassElement(rawType, Arrays.stream(args).map(ClassElement::of).toArray(ClassElement[]::new));
-    }
-
-    private static ClassElement createClassElement(Class<?> rawType, ClassElement... args) {
-        Map<String, ClassElement> argMap = new LinkedHashMap<>();
-        TypeVariable<?>[] typeParameters = rawType.getTypeParameters();
-        for (int i = 0; i < typeParameters.length; i++) {
-            argMap.put(typeParameters[i].getName(), args[i]);
-        }
-        return ClassElement.of(rawType, AnnotationMetadata.EMPTY_METADATA, argMap);
+    private static GeneratorType createGeneratorType(Class<?> rawType, Class<?>... args) {
+        return GeneratorType.ofParameterized(rawType, args);
     }
 }

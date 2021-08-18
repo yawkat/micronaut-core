@@ -19,6 +19,7 @@ import io.micronaut.ast.groovy.utils.AstAnnotationUtils;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.ast.ClassElement;
+import io.micronaut.inject.ast.MnType;
 import io.micronaut.inject.ast.ParameterElement;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.control.SourceUnit;
@@ -54,6 +55,11 @@ public class GroovyParameterElement extends AbstractGroovyElement implements Par
         this.parameter = parameter;
         this.sourceUnit = visitorContext.getSourceUnit();
         this.methodElement = methodElement;
+    }
+
+    @Override
+    public MnType getMnType() {
+        return toMnType(visitorContext, parameter.getType());
     }
 
     @Override

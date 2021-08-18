@@ -50,7 +50,7 @@ public final class SerializerLinker {
         );
     }
 
-    public SerializerSymbol findSymbol(ClassElement type) {
+    public SerializerSymbol findSymbol(GeneratorType type) {
         for (SerializerSymbol serializerSymbol : symbolList) {
             if (serializerSymbol.canSerialize(type)) {
                 return serializerSymbol;

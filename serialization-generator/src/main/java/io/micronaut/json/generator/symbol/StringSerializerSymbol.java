@@ -17,7 +17,6 @@ package io.micronaut.json.generator.symbol;
 
 import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
-import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.json.generated.JsonParseException;
 
 import static io.micronaut.json.generator.symbol.Names.DECODER;
@@ -30,23 +29,23 @@ final class StringSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public boolean canSerialize(ClassElement type) {
-        return type.isAssignable(String.class);
+    public boolean canSerialize(GeneratorType type) {
+        return type.isRawTypeEquals(String.class) || type.isRawTypeEquals(CharSequence.class);
     }
 
     @Override
-    public void visitDependencies(DependencyVisitor visitor, ClassElement type) {
+    public void visitDependencies(DependencyVisitor visitor, GeneratorType type) {
         // scalar, no dependencies
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, ClassElement type, CodeBlock readExpression) {
+    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
         // todo: handle charsequence
         return CodeBlock.of("$N.writeString($L);\n", ENCODER, readExpression);
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, ClassElement type, Setter setter) {
+    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
         return CodeBlock.builder()
                 .addStatement(
                         "if ($N.currentToken() != $T.VALUE_STRING) throw $T.from($N, $S + $N.currentToken())",

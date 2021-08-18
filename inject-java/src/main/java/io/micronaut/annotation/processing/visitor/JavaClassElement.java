@@ -142,6 +142,27 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
     }
 
     @Override
+    public MnType getRawMnType() {
+        MnType type = new MnType.RawClass() {
+            @Override
+            public ClassElement getClassElement() {
+                return JavaClassElement.this;
+            }
+
+            @Override
+            public List<? extends Variable> getTypeVariables() {
+                return classElement.getTypeParameters().stream()
+                        .map(tpe -> new MnVariableImpl(visitorContext, tpe))
+                        .collect(Collectors.toList());
+            }
+        };
+        for (int i = 0; i < getArrayDimensions(); i++) {
+            type = type.getArrayType();
+        }
+        return type;
+    }
+
+    @Override
     public boolean isTypeVariable() {
         return isTypeVariable;
     }
@@ -284,6 +305,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
                                 BeanPropertyData beanPropertyData = new BeanPropertyData(propertyName);
                                 beanPropertyData.declaringType = JavaClassElement.this;
                                 beanPropertyData.type = mirrorToClassElement(element.asType(), visitorContext, genericTypeInfo, true);
+                                beanPropertyData.mnType = typeMirrorToMnType(element.asType());
                                 return beanPropertyData;
                             });
                         }
@@ -351,6 +373,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
                             BeanPropertyData beanPropertyData = props.computeIfAbsent(propertyName, BeanPropertyData::new);
                             configureDeclaringType(declaringTypeElement, beanPropertyData);
                             beanPropertyData.type = getterReturnType;
+                            beanPropertyData.mnType = typeMirrorToMnType(returnType);
                             beanPropertyData.getter = executableElement;
                             if (beanPropertyData.setter != null) {
                                 TypeMirror typeMirror = beanPropertyData.setter.getParameters().get(0).asType();
@@ -412,6 +435,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
                                 annotationMetadata,
                                 propertyName,
                                 value.type,
+                                value.mnType,
                                 value.setter == null,
                                 visitorContext) {
 
@@ -1002,6 +1026,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
      */
     private static class BeanPropertyData {
         ClassElement type;
+        MnType mnType;
         ClassElement declaringType;
         ExecutableElement getter;
         ExecutableElement setter;

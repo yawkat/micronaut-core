@@ -6,6 +6,7 @@ import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
 import io.micronaut.inject.visitor.VisitorContext;
 import io.micronaut.json.annotation.SerializableBean;
+import io.micronaut.json.generator.symbol.GeneratorType;
 import io.micronaut.json.generator.symbol.SerializerLinker;
 import io.micronaut.json.generator.symbol.SerializerSymbol;
 
@@ -23,7 +24,7 @@ public class DependencyGraphChecker {
         this.linker = linker;
     }
 
-    public void checkCircularDependencies(SerializerSymbol symbol, ClassElement type, Element rootElement) {
+    public void checkCircularDependencies(SerializerSymbol symbol, GeneratorType type, Element rootElement) {
         symbol.visitDependencies(new Node(null, type, rootElement), type);
     }
 
@@ -34,13 +35,13 @@ public class DependencyGraphChecker {
     private class Node implements SerializerSymbol.DependencyVisitor {
         @Nullable
         private final Node parent;
-        private final ClassElement type;
+        private final GeneratorType type;
         @Nullable
         private final Element debugElement;
 
         private boolean isStructureNode;
 
-        Node(Node parent, ClassElement type, Element debugElement) {
+        Node(Node parent, GeneratorType type, Element debugElement) {
             this.parent = parent;
             this.type = type;
             this.debugElement = debugElement;
@@ -49,7 +50,7 @@ public class DependencyGraphChecker {
         private boolean checkParent() {
             Node node = parent;
             while (node != null) {
-                if (node.isStructureNode && ElementUtil.equals(node.type, this.type)) {
+                if (node.isStructureNode && this.type.typeEquals(node.type)) {
                     // found a cycle!
                     break;
                 }
@@ -83,18 +84,18 @@ public class DependencyGraphChecker {
         }
 
         @Override
-        public void visitStructureElement(SerializerSymbol dependencySymbol, ClassElement dependencyType, @Nullable Element element) {
+        public void visitStructureElement(SerializerSymbol dependencySymbol, GeneratorType dependencyType, @Nullable Element element) {
             visitChild(dependencySymbol, dependencyType, element);
         }
 
         @Override
-        public void visitInjected(ClassElement dependencyType, boolean provider) {
+        public void visitInjected(GeneratorType dependencyType, boolean provider) {
             if (provider) {
                 // we don't care about recursion if it goes through a provider
                 return;
             }
 
-            Optional<ClassElement> classDecl = warningContext.getClassElement(dependencyType.getName());
+            Optional<ClassElement> classDecl = warningContext.getClassElement(dependencyType.getClassElement().getName());
             if (!classDecl.isPresent()) {
                 // just ignore the type, nothing we can do.
                 return;
@@ -105,7 +106,7 @@ public class DependencyGraphChecker {
             } // else, a custom serializer.
         }
 
-        private void visitChild(SerializerSymbol childSymbol, ClassElement dependencyType, Element element) {
+        private void visitChild(SerializerSymbol childSymbol, GeneratorType dependencyType, Element element) {
             Node childNode = new Node(this, dependencyType, element);
             childSymbol.visitDependencies(childNode, dependencyType);
         }

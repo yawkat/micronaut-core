@@ -21,6 +21,8 @@ import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.FieldElement;
 
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.inject.ast.MnType;
+
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -126,5 +128,10 @@ class JavaFieldElement extends AbstractJavaElement implements FieldElement {
             }
         }
         return resolvedDeclaringClass;
+    }
+
+    @Override
+    public MnType getMnType() {
+        return typeMirrorToMnType(variableElement.asType());
     }
 }

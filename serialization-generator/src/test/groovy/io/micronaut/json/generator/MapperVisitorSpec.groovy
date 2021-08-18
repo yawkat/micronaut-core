@@ -9,6 +9,8 @@ import io.micronaut.json.generator.symbol.SingletonSerializerGenerator
 import jakarta.inject.Provider
 
 import java.lang.reflect.ParameterizedType
+import java.lang.reflect.TypeVariable
+import java.lang.reflect.WildcardType
 
 class MapperVisitorSpec extends AbstractTypeElementSpec implements SerializerUtils {
     def setupSpec() {
@@ -253,7 +255,7 @@ class C {
         c.bar = "123"
 
         def serializerC = (Serializer<?>) compiled.loadClass('example.$C$Serializer').newInstance()
-        def serializerBClass = compiled.loadClass('example.$B$Serializer')
+        def serializerBClass = compiled.loadClass('example.$B_T_$Serializer')
         def serializerB = (Serializer<?>) serializerBClass.newInstance(serializerC, serializerC)
         def serializerA = (Serializer<?>) compiled.loadClass('example.$A$Serializer').newInstance(serializerB, serializerB)
 
@@ -264,8 +266,8 @@ class C {
         deserializeFromString(serializerA, '{"b":{"foo":{"bar":"123"}}}').b.foo.bar == "123"
 
         genericSerializerParam instanceof ParameterizedType
-        // todo: ideally, the Serializer<B> would be generic and accept a Serializer<T>. Otherwise, the @Inject will fail
-        // ((ParameterizedType) genericSerializerParam).actualTypeArguments[0] instanceof TypeVariable
+        ((ParameterizedType) genericSerializerParam).actualTypeArguments[0] instanceof WildcardType
+        ((ParameterizedType) genericSerializerParam).actualTypeArguments[0].upperBounds[0] instanceof TypeVariable
     }
 
     void "nested generic inline"() {

@@ -16,11 +16,13 @@
 package io.micronaut.json.generator.symbol.bean;
 
 import io.micronaut.inject.ast.*;
+import io.micronaut.json.generator.symbol.GeneratorType;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
 class BeanDefinition {
     boolean ignoreUnknownProperties;
@@ -86,15 +88,15 @@ class BeanDefinition {
             return new Property(name, field, getter, setter, creatorParameter, permitRecursiveSerialization, nullable, unwrapped, value);
         }
 
-        public ClassElement getType() {
+        public GeneratorType getType(Function<MnType, MnType> fold) {
             if (getter != null) {
-                return getter.getGenericReturnType();
+                return GeneratorType.methodReturnType(getter, fold);
             } else if (setter != null) {
-                return setter.getParameters()[0].getGenericType();
+                return GeneratorType.parameterType(setter.getParameters()[0], fold);
             } else if (field != null) {
-                return field.getGenericType();
+                return GeneratorType.fieldType(field, fold);
             } else if (creatorParameter != null) {
-                return creatorParameter.getGenericType();
+                return GeneratorType.parameterType(creatorParameter, fold);
             } else {
                 throw new AssertionError();
             }

@@ -15,7 +15,6 @@
  */
 package io.micronaut.json.generator;
 
-import com.squareup.javapoet.ClassName;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.visitor.TypeElementVisitor;
@@ -30,17 +29,18 @@ import io.micronaut.json.generator.symbol.bean.InlineBeanSerializerSymbol;
 public class MapperVisitor extends AbstractGeneratorVisitor<Object> implements TypeElementVisitor<Object, Object> {
     @Override
     public void visitClass(ClassElement element, VisitorContext context) {
+        GeneratorType generatorType = GeneratorType.ofClass(element);
         SerializerLinker linker = new SerializerLinker(context);
         InlineBeanSerializerSymbol inlineBeanSerializer = linker.inlineBean;
-        if (!inlineBeanSerializer.canSerializeStandalone(element)) {
+        if (!inlineBeanSerializer.canSerializeStandalone(generatorType)) {
             return;
         }
         DependencyGraphChecker depChecker = new DependencyGraphChecker(context, linker);
-        depChecker.checkCircularDependencies(inlineBeanSerializer, element, element);
+        depChecker.checkCircularDependencies(inlineBeanSerializer, generatorType, element);
         if (depChecker.hasAnyFailures()) {
             return;
         }
-        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(element)
+        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(generatorType)
                         .problemReporter(problemReporter)
                         .symbol(inlineBeanSerializer)
                         .generate());

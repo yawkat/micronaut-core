@@ -15,8 +15,10 @@
  */
 package io.micronaut.inject.ast;
 
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.AnnotationMetadata;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.ArrayUtils;
 import io.micronaut.inject.ast.beans.BeanElementBuilder;
 
@@ -109,6 +111,10 @@ public interface MethodElement extends MemberElement {
         return getReturnType();
     }
 
+    default MnType getMnReturnType() {
+        throw new UnsupportedOperationException(getClass().getName() + ".getMnReturnType");
+    }
+
     /**
      * Get the method description.
      * @param simple If simple type names are to be used
@@ -137,6 +143,18 @@ public interface MethodElement extends MemberElement {
             @NonNull ClassElement genericReturnType,
             @NonNull String name,
             ParameterElement...parameterElements) {
+        return of(declaredType, annotationMetadata, returnType, genericReturnType, null, name, parameterElements);
+    }
+
+    @Internal
+    static @NonNull MethodElement of(
+            @NonNull ClassElement declaredType,
+            @NonNull AnnotationMetadata annotationMetadata,
+            @NonNull ClassElement returnType,
+            @NonNull ClassElement genericReturnType,
+            @Nullable MnType mnReturnType,
+            @NonNull String name,
+            ParameterElement...parameterElements) {
         return new MethodElement() {
             @NonNull
             @Override
@@ -151,6 +169,14 @@ public interface MethodElement extends MemberElement {
             }
 
             @Override
+            public MnType getMnReturnType() {
+                if (mnReturnType == null) {
+                    throw new UnsupportedOperationException();
+                }
+                return mnReturnType;
+            }
+
+            @Override
             public ParameterElement[] getParameters() {
                 return parameterElements;
             }
@@ -162,6 +188,7 @@ public interface MethodElement extends MemberElement {
                         annotationMetadata,
                         returnType,
                         genericReturnType,
+                        mnReturnType,
                         name,
                         ArrayUtils.concat(parameterElements, newParameters)
                 );

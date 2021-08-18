@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterizedTypeName;
-import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.json.generated.JsonParseException;
 
 import java.util.HashMap;
@@ -23,19 +22,19 @@ final class InlineStringMapSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public boolean canSerialize(ClassElement type) {
-        return Stream.of(LinkedHashMap.class, HashMap.class, Map.class).anyMatch(c -> type.getName().equals(c.getName()))
-                && getType(type, "K").getName().equals("java.lang.String");
+    public boolean canSerialize(GeneratorType type) {
+        return Stream.of(LinkedHashMap.class, HashMap.class, Map.class).anyMatch(type::isRawTypeEquals)
+                && getType(type, "K").isRawTypeEquals(String.class);
     }
 
-    private ClassElement getType(ClassElement type, String varName) {
-        return type.getTypeArguments().get(varName);
+    private GeneratorType getType(GeneratorType type, String varName) {
+        return type.getTypeArgumentsExact().get(varName);
     }
 
     @Override
-    public void visitDependencies(DependencyVisitor visitor, ClassElement type) {
+    public void visitDependencies(DependencyVisitor visitor, GeneratorType type) {
         if (visitor.visitStructure()) {
-            ClassElement elementType = getType(type, "V");
+            GeneratorType elementType = getType(type, "V");
             visitor.visitStructureElement(linker.findSymbol(elementType), elementType, null);
         }
     }
@@ -47,8 +46,8 @@ final class InlineStringMapSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, ClassElement type, CodeBlock readExpression) {
-        ClassElement elementType = getType(type, "V");
+    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
+        GeneratorType elementType = getType(type, "V");
         SerializerSymbol elementSerializer = linker.findSymbol(elementType);
         String entryName = generatorContext.newLocalVariable("entry");
         return CodeBlock.builder()
@@ -70,8 +69,8 @@ final class InlineStringMapSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, ClassElement type, Setter setter) {
-        ClassElement elementType = getType(type, "V");
+    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
+        GeneratorType elementType = getType(type, "V");
         SerializerSymbol elementDeserializer = linker.findSymbol(elementType);
 
         String intermediateVariable = generatorContext.newLocalVariable("map");

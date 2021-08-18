@@ -18,6 +18,7 @@ package io.micronaut.annotation.processing.visitor;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.ast.ClassElement;
+import io.micronaut.inject.ast.MnType;
 import io.micronaut.inject.ast.ParameterElement;
 
 import io.micronaut.core.annotation.NonNull;
@@ -92,5 +93,10 @@ class JavaParameterElement extends AbstractJavaElement implements ParameterEleme
     @Override
     public VariableElement getNativeType() {
         return (VariableElement) super.getNativeType();
+    }
+
+    @Override
+    public MnType getMnType() {
+        return typeMirrorToMnType(getNativeType().asType());
     }
 }

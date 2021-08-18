@@ -20,8 +20,8 @@ class OptionalSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public boolean canSerialize(ClassElement type) {
-        return type.isOptional();
+    public boolean canSerialize(GeneratorType type) {
+        return type.isRawTypeEquals(Optional.class);
     }
 
     @Override
@@ -29,11 +29,11 @@ class OptionalSerializerSymbol implements SerializerSymbol {
         return new OptionalSerializerSymbol(linker, true);
     }
 
-    private Optional<ClassElement> findDelegateType(ClassElement type) {
-        return type.getFirstTypeArgument();
+    private Optional<GeneratorType> findDelegateType(GeneratorType type) {
+        return type.getTypeArgumentsExact(Optional.class).map(m -> m.get("T"));
     }
 
-    private SerializerSymbol getDelegateSerializer(ClassElement delegateType) {
+    private SerializerSymbol getDelegateSerializer(GeneratorType delegateType) {
         SerializerSymbol symbol = linker.findSymbol(delegateType);
         if (recursiveSerialization) {
             symbol = symbol.withRecursiveSerialization();
@@ -42,16 +42,16 @@ class OptionalSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public void visitDependencies(DependencyVisitor visitor, ClassElement type) {
+    public void visitDependencies(DependencyVisitor visitor, GeneratorType type) {
         findDelegateType(type).ifPresent(t -> getDelegateSerializer(t).visitDependencies(visitor, t));
         // else assume no dependencies
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, ClassElement type, CodeBlock readExpression) {
-        Optional<ClassElement> delegateType = findDelegateType(type);
+    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
+        Optional<GeneratorType> delegateType = findDelegateType(type);
         if (!delegateType.isPresent()) {
-            generatorContext.getProblemReporter().fail("Could not resolve optional type", type);
+            generatorContext.getProblemReporter().fail("Could not resolve optional type", null);
             return CodeBlock.of("");
         }
         String variable = generatorContext.newLocalVariable("tmp");
@@ -66,10 +66,10 @@ class OptionalSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, ClassElement type, Setter setter) {
-        Optional<ClassElement> delegateType = findDelegateType(type);
+    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
+        Optional<GeneratorType> delegateType = findDelegateType(type);
         if (!delegateType.isPresent()) {
-            generatorContext.getProblemReporter().fail("Could not resolve optional type", type);
+            generatorContext.getProblemReporter().fail("Could not resolve optional type", null);
             return CodeBlock.of("");
         }
         return CodeBlock.builder()
@@ -82,7 +82,7 @@ class OptionalSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock getDefaultExpression(ClassElement type) {
+    public CodeBlock getDefaultExpression(GeneratorType type) {
         return CodeBlock.of("$T.empty()", Optional.class);
     }
 }

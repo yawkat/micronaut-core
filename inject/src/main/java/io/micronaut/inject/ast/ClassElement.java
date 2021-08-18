@@ -36,6 +36,9 @@ import static io.micronaut.inject.writer.BeanDefinitionVisitor.PROXY_SUFFIX;
  * @since 1.0
  */
 public interface ClassElement extends TypedElement {
+    default MnType getRawMnType() {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Tests whether one type is assignable to another.

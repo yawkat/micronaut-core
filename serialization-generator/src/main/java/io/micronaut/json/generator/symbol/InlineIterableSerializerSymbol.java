@@ -18,11 +18,12 @@ package io.micronaut.json.generator.symbol;
 import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.NonNull;
-import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.generated.JsonParseException;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;
@@ -39,12 +40,12 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
     }
 
     @NonNull
-    protected abstract ClassElement getElementType(ClassElement type);
+    protected abstract GeneratorType getElementType(GeneratorType type);
 
     @Override
-    public void visitDependencies(DependencyVisitor visitor, ClassElement type) {
+    public void visitDependencies(DependencyVisitor visitor, GeneratorType type) {
         if (visitor.visitStructure()) {
-            ClassElement elementType = getElementType(type);
+            GeneratorType elementType = getElementType(type);
             visitor.visitStructureElement(linker.findSymbol(elementType), elementType, null);
         }
     }
@@ -56,8 +57,8 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, ClassElement type, CodeBlock readExpression) {
-        ClassElement elementType = getElementType(type);
+    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
+        GeneratorType elementType = getElementType(type);
         SerializerSymbol elementSerializer = linker.findSymbol(elementType);
         String itemName = generatorContext.newLocalVariable("item");
         return CodeBlock.builder()
@@ -70,8 +71,8 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, ClassElement type, Setter setter) {
-        ClassElement elementType = getElementType(type);
+    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
+        GeneratorType elementType = getElementType(type);
         SerializerSymbol elementDeserializer = linker.findSymbol(elementType);
 
         String intermediateVariable = generatorContext.newLocalVariable("intermediate");
@@ -86,11 +87,11 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
         return block.build();
     }
 
-    protected CodeBlock createIntermediate(ClassElement elementType, String intermediateVariable) {
+    protected CodeBlock createIntermediate(GeneratorType elementType, String intermediateVariable) {
         return CodeBlock.of("$T<$T> $N = new $T<>();\n", ArrayList.class, PoetUtil.toTypeName(elementType), intermediateVariable, ArrayList.class);
     }
 
-    protected abstract CodeBlock finishDeserialize(ClassElement elementType, String intermediateVariable);
+    protected abstract CodeBlock finishDeserialize(GeneratorType elementType, String intermediateVariable);
 
     static class ArrayImpl extends InlineIterableSerializerSymbol {
         ArrayImpl(SerializerLinker linker) {
@@ -98,18 +99,18 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
         }
 
         @Override
-        public boolean canSerialize(ClassElement type) {
+        public boolean canSerialize(GeneratorType type) {
             return type.isArray();
         }
 
         @Override
         @NonNull
-        protected ClassElement getElementType(ClassElement type) {
+        protected GeneratorType getElementType(GeneratorType type) {
             return type.fromArray();
         }
 
         @Override
-        protected CodeBlock finishDeserialize(ClassElement elementType, String intermediateVariable) {
+        protected CodeBlock finishDeserialize(GeneratorType elementType, String intermediateVariable) {
             return CodeBlock.of("$N.toArray(new $T[0])", intermediateVariable, PoetUtil.toTypeName(elementType));
         }
     }
@@ -123,38 +124,25 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
         }
 
         @Override
-        public boolean canSerialize(ClassElement type) {
-            return type.getName().equals("java.lang.Iterable") ||
-                    type.getName().equals("java.util.Collection") ||
-                    type.getName().equals("java.util.List") ||
-                    type.getName().equals("java.util.ArrayList");
+        public boolean canSerialize(GeneratorType type) {
+            return type.isRawTypeEquals(Iterable.class) || type.isRawTypeEquals(Collection.class) || type.isRawTypeEquals(List.class) || type.isRawTypeEquals(ArrayList.class);
         }
 
         @Override
         @NonNull
-        protected ClassElement getElementType(ClassElement type) {
+        protected GeneratorType getElementType(GeneratorType type) {
             /* todo: bug in getTypeArguments(class)? only returns java.lang.Object
             return type.getTypeArguments(Iterable.class).get("T");
             */
-            if (type.getName().equals("java.util.ArrayList")) {
-                return type.getTypeArguments().get("E");
-            }
-            if (type.getName().equals("java.util.List")) {
-                return type.getTypeArguments().get("E");
-            }
-            if (type.getName().equals("java.util.Collection")) {
-                return type.getTypeArguments().get("E");
-            }
-            if (type.getName().equals("java.lang.Iterable")) {
-                return type.getTypeArguments().get("T");
-            }
-
-            // raw type? todo
-            throw new UnsupportedOperationException("unsupported type");
+            return type.getTypeArgumentsExact(ArrayList.class).map(m -> m.get("E")).orElseGet(() ->
+                    type.getTypeArgumentsExact(List.class).map(m -> m.get("E")).orElseGet(() ->
+                            type.getTypeArgumentsExact(Collection.class).map(m -> m.get("E")).orElseGet(() ->
+                                    type.getTypeArgumentsExact(Iterable.class).map(m -> m.get("T")).orElseThrow(() ->
+                                            new UnsupportedOperationException("unsupported type")))));
         }
 
         @Override
-        protected CodeBlock finishDeserialize(ClassElement elementType, String intermediateVariable) {
+        protected CodeBlock finishDeserialize(GeneratorType elementType, String intermediateVariable) {
             return CodeBlock.of("$N", intermediateVariable);
         }
     }
