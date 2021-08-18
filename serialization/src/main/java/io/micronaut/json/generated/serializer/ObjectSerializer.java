@@ -7,11 +7,11 @@ import com.fasterxml.jackson.core.ObjectCodec;
 import io.micronaut.context.annotation.Secondary;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.reflect.GenericTypeToken;
+import io.micronaut.json.Deserializer;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
 import jakarta.inject.Inject;
 import jakarta.inject.Provider;
-import jakarta.inject.Singleton;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -32,30 +32,30 @@ import java.util.Map;
  */
 @Internal
 @Secondary
-public final class ObjectSerializer implements Serializer<Object> {
-    private final Provider<Serializer<Map<String, Object>>> map;
-    private final Provider<Serializer<List<Object>>> list;
-    private final Serializer<String> string;
-    private final Serializer<Integer> integer;
-    private final Serializer<Long> long_;
-    private final Serializer<Float> float_;
-    private final Serializer<Double> double_;
-    private final Serializer<BigInteger> bigInteger;
-    private final Serializer<BigDecimal> bigDecimal;
-    private final Serializer<Boolean> bool;
+public final class ObjectSerializer implements Serializer<Object>, Deserializer<Object> {
+    private final Provider<Deserializer<Map<String, Object>>> map;
+    private final Provider<Deserializer<List<Object>>> list;
+    private final Deserializer<String> string;
+    private final Deserializer<Integer> integer;
+    private final Deserializer<Long> long_;
+    private final Deserializer<Float> float_;
+    private final Deserializer<Double> double_;
+    private final Deserializer<BigInteger> bigInteger;
+    private final Deserializer<BigDecimal> bigDecimal;
+    private final Deserializer<Boolean> bool;
 
     @Inject
     ObjectSerializer(SerializerLocator locator) {
-        this.map = locator.findInvariantSerializerProvider(new GenericTypeToken<Map<String, Object>>() {});
-        this.list = locator.findInvariantSerializerProvider(new GenericTypeToken<List<Object>>() {});
-        this.string = locator.findInvariantSerializer(String.class);
-        this.integer = locator.findInvariantSerializer(Integer.class);
-        this.long_ = locator.findInvariantSerializer(Long.class);
-        this.float_ = locator.findInvariantSerializer(Float.class);
-        this.double_ = locator.findInvariantSerializer(Double.class);
-        this.bigInteger = locator.findInvariantSerializer(BigInteger.class);
-        this.bigDecimal = locator.findInvariantSerializer(BigDecimal.class);
-        this.bool = locator.findInvariantSerializer(Boolean.class);
+        this.map = locator.findInvariantDeserializerProvider(new GenericTypeToken<Map<String, Object>>() {});
+        this.list = locator.findInvariantDeserializerProvider(new GenericTypeToken<List<Object>>() {});
+        this.string = locator.findInvariantDeserializer(String.class);
+        this.integer = locator.findInvariantDeserializer(Integer.class);
+        this.long_ = locator.findInvariantDeserializer(Long.class);
+        this.float_ = locator.findInvariantDeserializer(Float.class);
+        this.double_ = locator.findInvariantDeserializer(Double.class);
+        this.bigInteger = locator.findInvariantDeserializer(BigInteger.class);
+        this.bigDecimal = locator.findInvariantDeserializer(BigDecimal.class);
+        this.bool = locator.findInvariantDeserializer(Boolean.class);
     }
 
     @Override

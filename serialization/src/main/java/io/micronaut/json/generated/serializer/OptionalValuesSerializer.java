@@ -26,12 +26,6 @@ class OptionalValuesSerializer implements Serializer<OptionalValues<?>> {
     }
 
     @Override
-    public OptionalValues<?> deserialize(JsonParser decoder) throws IOException {
-        // todo: is this right?
-        throw JsonParseException.from(decoder, "Cannot deserialize OptionalValues");
-    }
-
-    @Override
     public void serialize(JsonGenerator encoder, OptionalValues<?> value) throws IOException {
         encoder.writeStartObject();
         for (CharSequence key : value) {

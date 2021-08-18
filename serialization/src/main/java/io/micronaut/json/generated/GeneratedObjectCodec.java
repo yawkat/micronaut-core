@@ -64,11 +64,11 @@ public final class GeneratedObjectCodec extends MicronautObjectCodec {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private <T> T readValue0(JsonParser parser, Type type) throws IOException {
-        Serializer serializer = locator.findInvariantSerializer(type);
+        Deserializer deserializer = locator.findInvariantDeserializer(type);
         if (!parser.hasCurrentToken()) {
             parser.nextToken();
         }
-        return (T) serializer.deserialize(parser);
+        return (T) deserializer.deserialize(parser);
     }
 
     @Override

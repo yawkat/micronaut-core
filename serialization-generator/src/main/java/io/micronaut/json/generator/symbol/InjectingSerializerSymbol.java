@@ -19,6 +19,7 @@ import com.squareup.javapoet.*;
 import io.micronaut.context.BeanProvider;
 import io.micronaut.core.reflect.GenericTypeToken;
 import io.micronaut.inject.ast.ClassElement;
+import io.micronaut.json.Deserializer;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
 import jakarta.inject.Provider;
@@ -94,7 +95,7 @@ final class InjectingSerializerSymbol implements SerializerSymbol {
             if (forSerialization) {
                 serType = ParameterizedTypeName.get(ClassName.get(Serializer.class), WildcardTypeName.supertypeOf(type));
             } else {
-                serType = ParameterizedTypeName.get(ClassName.get(Serializer.class), WildcardTypeName.subtypeOf(type));
+                serType = ParameterizedTypeName.get(ClassName.get(Deserializer.class), WildcardTypeName.subtypeOf(type));
             }
             if (provider) {
                 serType = ParameterizedTypeName.get(ClassName.get(Provider.class), WildcardTypeName.subtypeOf(serType));
@@ -107,7 +108,7 @@ final class InjectingSerializerSymbol implements SerializerSymbol {
             // for deserialization, we stick to invariant serializers, because we don't want to deserialize an arbitrary
             // subtype from the classpath for security. Contravariant lookup only exposes the supertypes (few), while
             // covariant lookup would expose all subtypes (potentially unlimited).
-            String methodName = forSerialization ? "findContravariantSerializer" : "findInvariantSerializer";
+            String methodName = forSerialization ? "findContravariantSerializer" : "findInvariantDeserializer";
             if (provider) {
                 methodName += "Provider";
             }

@@ -4,6 +4,7 @@ import io.micronaut.annotation.processing.test.AbstractTypeElementSpec
 import io.micronaut.context.BeanProvider
 import io.micronaut.core.type.Argument
 import io.micronaut.inject.BeanDefinitionReference
+import io.micronaut.json.Deserializer
 import io.micronaut.json.Serializer
 import io.micronaut.json.generator.symbol.SingletonSerializerGenerator
 import jakarta.inject.Provider
@@ -259,7 +260,7 @@ class C {
         def serializerB = (Serializer<?>) serializerBClass.newInstance(serializerC, serializerC)
         def serializerA = (Serializer<?>) compiled.loadClass('example.$A$Serializer').newInstance(serializerB, serializerB)
 
-        def genericSerializerParam = serializerBClass.getDeclaredConstructor(Serializer.class, Serializer.class).getGenericParameterTypes()[0]
+        def genericSerializerParam = serializerBClass.getDeclaredConstructor(Deserializer.class, Serializer.class).getGenericParameterTypes()[0]
 
         expect:
         serializeToString(serializerA, a) == '{"b":{"foo":{"bar":"123"}}}'

@@ -23,6 +23,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.MnType;
+import io.micronaut.json.Deserializer;
 import io.micronaut.json.Serializer;
 import jakarta.inject.Inject;
 
@@ -145,6 +146,7 @@ public final class SingletonSerializerGenerator {
                 .addAnnotation(Secondary.class)
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
                 .addSuperinterface(ParameterizedTypeName.get(ClassName.get(Serializer.class), valueReferenceName))
+                .addSuperinterface(ParameterizedTypeName.get(ClassName.get(Deserializer.class), valueReferenceName))
                 .addMethod(serialize)
                 .addMethod(deserialize);
 

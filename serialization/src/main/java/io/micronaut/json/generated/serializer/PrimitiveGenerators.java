@@ -3,6 +3,7 @@ package io.micronaut.json.generated.serializer;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import io.micronaut.core.reflect.GenericTypeToken;
+import io.micronaut.json.Deserializer;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
 import jakarta.inject.Singleton;
@@ -29,43 +30,47 @@ class PrimitiveGenerators {
 
     @SuppressWarnings("rawtypes")
     @Singleton
-    static class RawList implements Serializer<List> {
-        private final Serializer<List<Object>> impl;
+    static class RawList implements Serializer<List>, Deserializer<List> {
+        private final Serializer implSer;
+        private final Deserializer implDes;
 
         RawList(SerializerLocator locator) {
-            this.impl = locator.findInvariantSerializer(new GenericTypeToken<List<Object>>() {});
+            this.implSer = locator.findContravariantSerializer(new GenericTypeToken<List<Object>>() {});
+            this.implDes = locator.findInvariantDeserializer(new GenericTypeToken<List<Object>>() {});
         }
 
         @Override
         public List deserialize(JsonParser decoder) throws IOException {
-            return impl.deserialize(decoder);
+            return (List) implDes.deserialize(decoder);
         }
 
+        @SuppressWarnings("unchecked")
         @Override
         public void serialize(JsonGenerator encoder, List value) throws IOException {
-            //noinspection unchecked
-            impl.serialize(encoder, value);
+            implSer.serialize(encoder, value);
         }
     }
 
     @SuppressWarnings("rawtypes")
     @Singleton
-    static class RawMap implements Serializer<Map> {
-        private final Serializer<Map<String, Object>> impl;
+    static class RawMap implements Serializer<Map>, Deserializer<Map> {
+        private final Serializer implSer;
+        private final Deserializer implDes;
 
         RawMap(SerializerLocator locator) {
-            this.impl = locator.findInvariantSerializer(new GenericTypeToken<Map<String, Object>>() {});
+            this.implSer = locator.findContravariantSerializer(new GenericTypeToken<Map<String, Object>>() {});
+            this.implDes = locator.findInvariantDeserializer(new GenericTypeToken<Map<String, Object>>() {});
         }
 
         @Override
         public Map deserialize(JsonParser decoder) throws IOException {
-            return impl.deserialize(decoder);
+            return (Map) implDes.deserialize(decoder);
         }
 
+        @SuppressWarnings("unchecked")
         @Override
         public void serialize(JsonGenerator encoder, Map value) throws IOException {
-            //noinspection unchecked
-            impl.serialize(encoder, value);
+            implSer.serialize(encoder, value);
         }
     }
 }

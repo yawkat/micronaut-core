@@ -1,7 +1,6 @@
 package io.micronaut.json;
 
 import io.micronaut.context.BeanContext;
-import io.micronaut.context.BeanLocator;
 import io.micronaut.context.Qualifier;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Nullable;
@@ -29,26 +28,26 @@ public final class SerializerLocator {
     }
 
     @SuppressWarnings({"unchecked"})
-    public <T> Serializer<T> findInvariantSerializer(Type forType) {
-        return context.getBean(Serializer.class, new ExactMatchQualifier(forType));
+    public <T> Deserializer<T> findInvariantDeserializer(Type forType) {
+        return context.getBean(Deserializer.class, new ExactMatchQualifier(forType));
     }
 
-    public <T> Serializer<T> findInvariantSerializer(Class<T> forType) {
-        return findInvariantSerializer((Type) forType);
+    public <T> Deserializer<T> findInvariantDeserializer(Class<T> forType) {
+        return findInvariantDeserializer((Type) forType);
     }
 
-    public <T> Serializer<T> findInvariantSerializer(GenericTypeToken<T> typeToken) {
-        return findInvariantSerializer(typeToken.getType());
+    public <T> Deserializer<T> findInvariantDeserializer(GenericTypeToken<T> typeToken) {
+        return findInvariantDeserializer(typeToken.getType());
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public <T> Provider<Serializer<T>> findInvariantSerializerProvider(Type forType) {
-        BeanDefinition<Serializer> beanDefinition = context.getBeanDefinition(Serializer.class, new ExactMatchQualifier(forType));
+    public <T> Provider<Deserializer<T>> findInvariantDeserializerProvider(Type forType) {
+        BeanDefinition<Deserializer> beanDefinition = context.getBeanDefinition(Deserializer.class, new ExactMatchQualifier(forType));
         return () -> context.getBean(beanDefinition);
     }
 
-    public <T> Provider<Serializer<T>> findInvariantSerializerProvider(GenericTypeToken<T> typeToken) {
-        return findInvariantSerializerProvider(typeToken.getType());
+    public <T> Provider<Deserializer<T>> findInvariantDeserializerProvider(GenericTypeToken<T> typeToken) {
+        return findInvariantDeserializerProvider(typeToken.getType());
     }
 
     @SuppressWarnings({"unchecked"})
@@ -75,8 +74,8 @@ public final class SerializerLocator {
     }
 
     @Nullable
-    private static Type getSerializerType(@SuppressWarnings("rawtypes") BeanType<Serializer> beanType) {
-        Type parameterization = GenericTypeUtils.findParameterization(beanType.getBeanType(), Serializer.class);
+    private static <T> Type getSerializerType(BeanType<? extends T> beanType, Class<T> target) {
+        Type parameterization = GenericTypeUtils.findParameterization(beanType.getBeanType(), target);
         if (parameterization instanceof ParameterizedType) {
             return ((ParameterizedType) parameterization).getActualTypeArguments()[0];
         } else {
@@ -86,7 +85,7 @@ public final class SerializerLocator {
     }
 
     @SuppressWarnings("rawtypes")
-    private static class ExactMatchQualifier implements Qualifier<Serializer> {
+    private static class ExactMatchQualifier implements Qualifier<Deserializer> {
         private final Type type;
 
         ExactMatchQualifier(Type type) {
@@ -94,8 +93,8 @@ public final class SerializerLocator {
         }
 
         @Override
-        public <BT extends BeanType<Serializer>> Stream<BT> reduce(Class<Serializer> beanType, Stream<BT> candidates) {
-            return candidates.filter(candidate -> GenericTypeUtils.typesEqual(getSerializerType(candidate), type));
+        public <BT extends BeanType<Deserializer>> Stream<BT> reduce(Class<Deserializer> beanType, Stream<BT> candidates) {
+            return candidates.filter(candidate -> GenericTypeUtils.typesEqual(getSerializerType(candidate, Deserializer.class), type));
         }
 
         @Override
@@ -130,7 +129,7 @@ public final class SerializerLocator {
             for (Iterator<BT> itr = candidates.iterator(); itr.hasNext(); ) {
                 BT here = itr.next();
                 // the type that this BeanType can serialize, or null if this is a raw class
-                Type hereType = getSerializerType(here);
+                Type hereType = getSerializerType(here, Serializer.class);
                 if (hereType == null || GenericTypeUtils.isAssignableFrom(hereType, type)) {
                     // hereType :> type
 

@@ -141,6 +141,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
     @Override
     public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
         if (!supportsDirection(type, true)) {
+            // todo: don't implement Serializer at all
             return CodeBlock.of("throw new $T(\"Serialization of this type is disabled\");\n", UnsupportedOperationException.class);
         }
 
@@ -213,6 +214,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
     @Override
     public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
         if (!supportsDirection(type, false)) {
+            // todo: don't implement Serializer at all
             return CodeBlock.of("throw new $T(\"Deserialization of this type is disabled\");\n", UnsupportedOperationException.class);
         }
 
