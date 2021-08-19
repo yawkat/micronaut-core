@@ -72,4 +72,24 @@ class GeneratedObjectCodecSpec extends Specification {
     static class Subclass extends Base {
         String bar
     }
+
+    def "generic bean"() {
+        given:
+        def ctx = ApplicationContext.run()
+        def codec = ctx.getBean(GeneratedObjectCodec)
+        def factory = codec.objectCodec.factory
+
+        when:
+        def parsed = codec.readValue(factory.createParser('{"naked":"foo","list":["bar"]}'), Argument.of(GenericBean.class, String.class))
+
+        then:
+        parsed.naked == 'foo'
+        parsed.list == ['bar']
+    }
+
+    @SerializableBean
+    static class GenericBean<T> {
+        T naked
+        List<T> list
+    }
 }

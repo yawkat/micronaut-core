@@ -3,6 +3,7 @@ package io.micronaut.json;
 import io.micronaut.context.BeanContext;
 import io.micronaut.context.Qualifier;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
+import io.micronaut.context.exceptions.NoSuchBeanException;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.reflect.GenericTypeToken;
 import io.micronaut.core.reflect.GenericTypeUtils;
@@ -12,9 +13,9 @@ import jakarta.inject.Inject;
 import jakarta.inject.Provider;
 import jakarta.inject.Singleton;
 
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.Iterator;
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @BootstrapContextCompatible
@@ -27,9 +28,8 @@ public final class SerializerLocator {
         this.context = context;
     }
 
-    @SuppressWarnings({"unchecked"})
     public <T> Deserializer<T> findInvariantDeserializer(Type forType) {
-        return context.getBean(Deserializer.class, new ExactMatchQualifier(forType));
+        return this.<T>findInvariantDeserializerProvider(forType).get();
     }
 
     public <T> Deserializer<T> findInvariantDeserializer(Class<T> forType) {
@@ -42,17 +42,83 @@ public final class SerializerLocator {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> Provider<Deserializer<T>> findInvariantDeserializerProvider(Type forType) {
-        BeanDefinition<Deserializer> beanDefinition = context.getBeanDefinition(Deserializer.class, new ExactMatchQualifier(forType));
-        return () -> context.getBean(beanDefinition);
+        Collection<BeanDefinition<Deserializer>> allDeserializers = context.getBeanDefinitions(Deserializer.class);
+        for (BeanDefinition<? extends Deserializer> def : allDeserializers) {
+            Type serializerType = getSerializerType(def, Deserializer.class);
+            if (serializerType != null) {
+                Map<TypeVariable<?>, Type> inferred = TypeInference.inferExact(serializerType, forType);
+                if (inferred != null) {
+                    if (inferred.isEmpty()) {
+                        return () -> context.getBean(def);
+                    } else {
+                        return this.inferenceFactory((Class<? extends Deserializer<T>>) def.getBeanType(), inferred);
+                    }
+                }
+            }
+        }
+        // TODO
+        throw new NoSuchBeanException(forType.getTypeName()) {};
+    }
+
+    private <T> Provider<T> inferenceFactory(Class<? extends T> on, Map<TypeVariable<?>, Type> inferredTypes) {
+        Constructor<?> constructor = Arrays.stream(on.getConstructors())
+                .filter(c -> Arrays.stream(c.getParameterTypes()).allMatch(param -> param == Serializer.class || param == Deserializer.class || param == Provider.class))
+                .findAny()
+                .orElseThrow(() -> new IllegalStateException("Missing constructor for generic serializer"));
+        GenericTypeUtils.VariableFold fold = var -> {
+            Type inferredType = inferredTypes.get(var);
+            if (inferredType == null) {
+                throw new IllegalArgumentException("Missing inferred variable " + var);
+            }
+            return inferredType;
+        };
+        List<Provider<?>> parameterProviders = Arrays.stream(constructor.getGenericParameterTypes())
+                .map(t -> GenericTypeUtils.foldTypeVariables(t, fold))
+                .map(this::requestParameter)
+                .collect(Collectors.toList());
+        return () -> {
+            try {
+                //noinspection unchecked
+                return (T) constructor.newInstance(parameterProviders.stream().map(Provider::get).toArray(Object[]::new));
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
+        };
+    }
+
+    private Provider<?> requestParameter(Type type) {
+        if (!(type instanceof ParameterizedType)) {
+            throw new IllegalArgumentException("Must be parameterized type");
+        }
+        Type rawType = ((ParameterizedType) type).getRawType();
+        if (rawType == Provider.class) {
+            Provider<?> actualSupplier = requestParameter(((ParameterizedType) type).getActualTypeArguments()[0]);
+            return () -> actualSupplier;
+        } else if (rawType == Serializer.class) {
+            Type parameter = ((ParameterizedType) type).getActualTypeArguments()[0];
+            if (!(parameter instanceof WildcardType) || ((WildcardType) parameter).getLowerBounds().length != 1) {
+                throw new IllegalStateException("Serializer must be contravariant wildcard");
+            }
+            return findContravariantSerializerProvider(((WildcardType) parameter).getLowerBounds()[0]);
+        } else if (rawType == Deserializer.class) {
+            Type parameter = ((ParameterizedType) type).getActualTypeArguments()[0];
+            if (!(parameter instanceof WildcardType) || ((WildcardType) parameter).getLowerBounds().length != 0) {
+                throw new IllegalStateException("Deserializer must be covariant wildcard");
+            }
+            // exact match, even though the param is covariant.
+            return findInvariantDeserializerProvider(((WildcardType) parameter).getUpperBounds()[0]);
+        } else {
+            // checked above
+            throw new AssertionError(rawType);
+        }
     }
 
     public <T> Provider<Deserializer<T>> findInvariantDeserializerProvider(GenericTypeToken<T> typeToken) {
         return findInvariantDeserializerProvider(typeToken.getType());
     }
 
-    @SuppressWarnings({"unchecked"})
     public <T> Serializer<? super T> findContravariantSerializer(Type forType) {
-        return context.getBean(Serializer.class, new MostSpecificContravariantQualifier(forType));
+        return findContravariantSerializerProvider(forType).get();
     }
 
     public <T> Serializer<? super T> findContravariantSerializer(Class<T> forType) {
@@ -75,7 +141,7 @@ public final class SerializerLocator {
 
     @Nullable
     private static <T> Type getSerializerType(BeanType<? extends T> beanType, Class<T> target) {
-        Type parameterization = GenericTypeUtils.findParameterization(beanType.getBeanType(), target);
+        Type parameterization = GenericTypeUtils.findParameterization(GenericTypeUtils.parameterizeWithFreeVariables(beanType.getBeanType()), target);
         if (parameterization instanceof ParameterizedType) {
             return ((ParameterizedType) parameterization).getActualTypeArguments()[0];
         } else {

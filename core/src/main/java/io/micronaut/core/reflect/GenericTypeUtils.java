@@ -15,6 +15,7 @@
  */
 package io.micronaut.core.reflect;
 
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
@@ -33,6 +34,17 @@ import java.util.function.Function;
  * @since 1.0
  */
 public class GenericTypeUtils {
+    private static final Class<?> RECORD_CLASS;
+
+    static {
+        Class<?> cl;
+        try {
+            cl = Class.forName("java.lang.Record");
+        } catch (ClassNotFoundException e) {
+            cl = null;
+        }
+        RECORD_CLASS = cl;
+    }
 
     /**
      * Resolves a single generic type argument for the given field.
@@ -249,8 +261,9 @@ public class GenericTypeUtils {
         return typeArguments;
     }
 
+    @Internal
     @Nullable
-    private static Type foldTypeVariables(Type into, VariableFold fold) {
+    public static Type foldTypeVariables(Type into, VariableFold fold) {
         if (into instanceof GenericArrayType) {
             Type component = foldTypeVariables(((GenericArrayType) into).getGenericComponentType(), fold);
             if (component == null) {
@@ -291,8 +304,9 @@ public class GenericTypeUtils {
         }
     }
 
+    @Internal
     @FunctionalInterface
-    private interface VariableFold {
+    public interface VariableFold {
         /**
          * Fold the given type variable to a new type.
          *
@@ -387,7 +401,7 @@ public class GenericTypeUtils {
                     typesEqual(((GenericArrayType) left).getGenericComponentType(), ((GenericArrayType) right).getGenericComponentType());
         } else if (left instanceof ParameterizedType) {
             if (right instanceof ParameterizedType) {
-                return typesEqual(((ParameterizedType) left).getOwnerType(), ((ParameterizedType) right).getOwnerType()) &&
+                return (!isInnerClass((Class<?>) ((ParameterizedType) left).getRawType()) || typesEqual(((ParameterizedType) left).getOwnerType(), ((ParameterizedType) right).getOwnerType())) &&
                         typesEqual(((ParameterizedType) left).getRawType(), ((ParameterizedType) right).getRawType()) &&
                         typesEqual(((ParameterizedType) left).getActualTypeArguments(), ((ParameterizedType) right).getActualTypeArguments());
             } else {
@@ -438,7 +452,7 @@ public class GenericTypeUtils {
                 return true;
             }
             ParameterizedType fromParameterizationT = (ParameterizedType) fromParameterization;
-            if (toT.getOwnerType() != null) {
+            if (toT.getOwnerType() != null && isInnerClass(erasure)) {
                 if (fromParameterizationT.getOwnerType() == null) {
                     return false;
                 }
@@ -530,6 +544,29 @@ public class GenericTypeUtils {
         }
     }
 
+    public static boolean isInnerClass(Class<?> cls) {
+        Class<?> enclosingClass = cls.getEnclosingClass();
+        return enclosingClass != null &&
+                !Modifier.isStatic(cls.getModifiers()) &&
+                !cls.isInterface() &&
+                !cls.isEnum() &&
+                !enclosingClass.isInterface() &&
+                // can't use isRecord, but this check should do at least for valid java code
+                // isRecord does additional checks
+                cls.getSuperclass() != RECORD_CLASS;
+    }
+
+    @Internal
+    public static Type parameterizeWithFreeVariables(Class<?> cl) {
+        Type owner = isInnerClass(cl) ? parameterizeWithFreeVariables(cl.getEnclosingClass()) : null;
+        TypeVariable<? extends Class<?>>[] typeParameters = cl.getTypeParameters();
+        if ((owner == null || owner instanceof Class) && typeParameters.length == 0) {
+            return cl;
+        } else {
+            return new ParameterizedTypeImpl(owner, cl, typeParameters);
+        }
+    }
+
     private static class ParameterizedTypeImpl implements ParameterizedType {
         private final Type owner;
         private final Type raw;
@@ -538,7 +575,7 @@ public class GenericTypeUtils {
         public ParameterizedTypeImpl(@Nullable Type owner, Class<?> raw, Type[] args) {
             this.args = args;
             this.raw = raw;
-            this.owner = owner;
+            this.owner = owner == null ? raw.getEnclosingClass() : owner;
         }
 
         @Override

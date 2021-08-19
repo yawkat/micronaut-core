@@ -29,10 +29,7 @@ import jakarta.inject.Inject;
 
 import javax.lang.model.element.Modifier;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;
@@ -173,7 +170,8 @@ public final class SingletonSerializerGenerator {
         }
 
         // add type parameters if necessary
-        for (MnType.Variable typeVariable : valueType.getFreeVariables()) {
+        Set<MnType.Variable> freeVariables = valueType.getFreeVariables();
+        for (MnType.Variable typeVariable : freeVariables) {
             builder.addTypeVariable(TypeVariableName.get(
                     typeVariable.getName(),
                     typeVariable.getBounds().stream().map(PoetUtil::toTypeName).toArray(TypeName[]::new)
@@ -199,8 +197,10 @@ public final class SingletonSerializerGenerator {
         constructorBuilder.addCode(constructorCodeBuilder.build());
         builder.addMethod(constructorBuilder.build());
 
-        if (generateDirectConstructor && !injectedParameters.isEmpty()) {
-            MethodSpec.Builder directConstructor = MethodSpec.constructorBuilder();
+        // if we have free type variables, we need a constructor SerializerLocator can use
+        if ((generateDirectConstructor || !freeVariables.isEmpty()) && !injectedParameters.isEmpty()) {
+            MethodSpec.Builder directConstructor = MethodSpec.constructorBuilder()
+                    .addModifiers(Modifier.PUBLIC);
             CodeBlock.Builder directConstructorCode = CodeBlock.builder();
             classContext.getInjected().forEach((injectable, injected) -> {
                 directConstructor.addParameter(injectable.fieldType, injected.fieldName);

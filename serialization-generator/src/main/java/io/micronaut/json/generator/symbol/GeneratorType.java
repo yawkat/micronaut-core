@@ -192,9 +192,11 @@ public class GeneratorType {
             List<? extends MnType> arguments = ((MnType.Parameterized) fullType).getParameters();
             return type -> {
                 if (type instanceof MnType.Variable) {
-                    int i = variables.indexOf(type);
-                    if (i != -1) {
-                        return arguments.get(i);
+                    // note: for groovy, MnType.Variable.equals breaks, so we just compare names
+                    for (int i = 0; i < variables.size(); i++) {
+                        if (variables.get(i).getName().equals(((MnType.Variable) type).getName())) {
+                            return arguments.get(i);
+                        }
                     }
                 }
                 return type;
