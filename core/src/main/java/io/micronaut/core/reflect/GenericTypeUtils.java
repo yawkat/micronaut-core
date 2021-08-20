@@ -342,9 +342,21 @@ public class GenericTypeUtils {
                 return findParameterization(rawType, t -> foldTypeVariables(t, typesToFold::get), of);
             }
         } else if (on instanceof TypeVariable<?>) {
-            throw new IllegalArgumentException("Type variables should not appear here");
+            for (Type bound : ((TypeVariable<?>) on).getBounds()) {
+                Type boundParameterization = findParameterization(bound, of);
+                if (boundParameterization != null) {
+                    return boundParameterization;
+                }
+            }
+            return null;
         } else if (on instanceof WildcardType) {
-            throw new IllegalArgumentException("Wildcard types should not appear here");
+            for (Type upperBound : ((WildcardType) on).getUpperBounds()) {
+                Type boundParameterization = findParameterization(upperBound, of);
+                if (boundParameterization != null) {
+                    return boundParameterization;
+                }
+            }
+            return null;
         } else if (on instanceof Class<?>) {
             if (on == of) {
                 return on;
