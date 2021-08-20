@@ -7,7 +7,7 @@ public abstract class GenericTypeToken<T> {
     private final Type type;
 
     protected GenericTypeToken() {
-        Type parameterization = GenericTypeUtils.findParameterization(getClass(), GenericTypeToken.class);
+        Type parameterization = GenericTypeUtils.findParameterization(GenericTypeUtils.parameterizeWithFreeVariables(getClass()), GenericTypeToken.class);
         assert parameterization != null;
         this.type = ((ParameterizedType) parameterization).getActualTypeArguments()[0];
     }
