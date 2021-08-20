@@ -38,7 +38,8 @@ public final class GeneratedObjectCodec extends MicronautObjectCodec {
     }
 
     @Inject
-    GeneratedObjectCodec(SerializerLocator locator) {
+    @Internal
+    public GeneratedObjectCodec(SerializerLocator locator) {
         this(locator, GenericDeserializationConfig.DEFAULT);
     }
 

@@ -15,8 +15,11 @@
  */
 package io.micronaut.json;
 
+import io.micronaut.context.ApplicationContext;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.json.generated.GeneratedObjectCodec;
 
+import java.util.Iterator;
 import java.util.ServiceLoader;
 
 // todo: would be nice to remove this
@@ -30,5 +33,15 @@ public interface GenericJsonAdapter {
 }
 
 class Helper {
-    static final GenericJsonAdapter INSTANCE = ServiceLoader.load(GenericJsonAdapter.class).iterator().next();
+    static final GenericJsonAdapter INSTANCE;
+
+    static {
+        Iterator<GenericJsonAdapter> iterator = ServiceLoader.load(GenericJsonAdapter.class).iterator();
+        if (iterator.hasNext()) {
+            INSTANCE = iterator.next();
+        } else {
+            // TODO: don't ApplicationContext.run...
+            INSTANCE = () -> new GeneratedObjectCodec(new SerializerLocator(ApplicationContext.run()));
+        }
+    }
 }
