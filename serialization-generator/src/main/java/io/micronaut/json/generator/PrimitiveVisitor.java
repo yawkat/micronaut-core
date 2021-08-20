@@ -1,6 +1,5 @@
 package io.micronaut.json.generator;
 
-import com.squareup.javapoet.ClassName;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.PrimitiveElement;
@@ -61,19 +60,17 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
                     .generateMulti());
         }
 
-        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(createGeneratorType(List.class, Object.class))
+        // Serializer<List<E>>, Serializer<Map<String, V>>
+        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofParameterized(List.class, (Class<?>) null))
                 .problemReporter(problemReporter)
                 .packageName(element.getPackageName())
                 .linker(linker)
                 .generateMulti());
-        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(createGeneratorType(Map.class, String.class, Object.class))
+        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofParameterized(Map.class, String.class, null))
                 .problemReporter(problemReporter)
                 .packageName(element.getPackageName())
                 .linker(linker)
                 .generateMulti());
     }
 
-    private static GeneratorType createGeneratorType(Class<?> rawType, Class<?>... args) {
-        return GeneratorType.ofParameterized(rawType, args);
-    }
 }

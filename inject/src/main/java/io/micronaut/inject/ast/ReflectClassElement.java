@@ -74,7 +74,13 @@ class ReflectClassElement implements ClassElement {
                             @NonNull
                             @Override
                             public List<? extends MnType> getBounds() {
-                                throw new UnsupportedOperationException();
+                                return Arrays.stream(tp.getBounds()).map(bound -> {
+                                    if (bound instanceof Class) {
+                                        return ClassElement.of((Class<?>) bound).getRawMnType();
+                                    } else {
+                                        throw new UnsupportedOperationException();
+                                    }
+                                }).collect(Collectors.toList());
                             }
                         })
                         .collect(Collectors.toList());

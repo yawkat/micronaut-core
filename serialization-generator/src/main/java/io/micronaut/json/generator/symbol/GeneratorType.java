@@ -33,66 +33,68 @@ public class GeneratorType {
             // List -> List<E>
             List<? extends MnType.Variable> typeVariables = ((MnType.RawClass) rawMn).getTypeVariables();
             if (!typeVariables.isEmpty()) {
-                return new GeneratorType(raw, new MnType.Parameterized() {
-                    @Nullable
-                    @Override
-                    public MnType getOuter() {
-                        return null;
-                    }
-
-                    @NonNull
-                    @Override
-                    public RawClass getRaw() {
-                        return (RawClass) rawMn;
-                    }
-
-                    @NonNull
-                    @Override
-                    public List<? extends MnType> getParameters() {
-                        return typeVariables;
-                    }
-                });
+                return new GeneratorType(raw, new ParameterizedImpl((MnType.RawClass) rawMn, typeVariables));
             }
         }
         return new GeneratorType(raw, rawMn);
     }
 
     public static GeneratorType ofParameterized(Class<?> raw, Class<?>... params) {
+        // null elements in the params array are allowed, those are treated as free variables
+
         if (params.length == 0) {
             ClassElement ele = ClassElement.of(raw);
             return new GeneratorType(ele, ele.getRawMnType());
         }
 
-        List<ClassElement> paramElements = Arrays.stream(params).map(ClassElement::of).collect(Collectors.toList());
+        MnType.RawClass mnRaw = (MnType.RawClass) ClassElement.of(raw).getRawMnType();
 
+        List<MnType> mnArgs = new ArrayList<>();
         Map<String, ClassElement> argMap = new LinkedHashMap<>();
-        TypeVariable<?>[] typeParameters = raw.getTypeParameters();
-        for (int i = 0; i < typeParameters.length; i++) {
-            argMap.put(typeParameters[i].getName(), paramElements.get(i));
+        List<? extends MnType.Variable> typeVariables = mnRaw.getTypeVariables();
+        for (int i = 0; i < typeVariables.size(); i++) {
+            MnType.Variable variable = typeVariables.get(i);
+            if (params[i] != null) {
+                // concrete type
+                ClassElement element = ClassElement.of(params[i]);
+                argMap.put(variable.getName(), element);
+                mnArgs.add(element.getRawMnType());
+            } else {
+                // type variable
+                argMap.put(variable.getName(), variable.getBounds().get(0).getErasureElement());
+                mnArgs.add(variable);
+            }
         }
         ClassElement classElement = ClassElement.of(raw, AnnotationMetadata.EMPTY_METADATA, argMap);
-        return new GeneratorType(
-                classElement,
-                new MnType.Parameterized() {
-                    @Nullable
-                    @Override
-                    public MnType getOuter() {
-                        return null;
-                    }
+        return new GeneratorType(classElement, new ParameterizedImpl((MnType.RawClass) classElement.getRawMnType(), mnArgs));
+    }
 
-                    @NonNull
-                    @Override
-                    public RawClass getRaw() {
-                        return (RawClass) classElement.getRawMnType();
-                    }
+    private static class ParameterizedImpl extends MnType.Parameterized {
+        private final RawClass raw;
+        private final List<? extends MnType> parameters;
 
-                    @NonNull
-                    @Override
-                    public List<? extends MnType> getParameters() {
-                        return paramElements.stream().map(ClassElement::getRawMnType).collect(Collectors.toList());
-                    }
-                }
-        );
+        ParameterizedImpl(RawClass raw, List<? extends MnType> parameters) {
+            this.raw = raw;
+            this.parameters = parameters;
+        }
+
+        @Nullable
+        @Override
+        public MnType getOuter() {
+            return null;
+        }
+
+        @NonNull
+        @Override
+        public RawClass getRaw() {
+            return raw;
+        }
+
+        @NonNull
+        @Override
+        public List<? extends MnType> getParameters() {
+            return parameters;
+        }
     }
 
     public static GeneratorType fieldType(FieldElement element, Function<MnType, MnType> fold) {
