@@ -447,9 +447,26 @@ public class GenericTypeUtils {
     }
 
     public static boolean isAssignableFrom(@NonNull Type to, @NonNull Type from) {
+        return isAssignableFrom(to, from, false);
+    }
+
+    /**
+     * @param antisymmetric If true, the relation of this method must be <i>antisymmetric</i>, meaning that there are
+     *                      no two distinct types S, T so that {@code S <: T} and {@code T <: S}. Normal java assignment
+     *                      rules are not antisymmetric, e.g. {@code List} and {@code List<String>} are assignable in
+     *                      both directions.
+     */
+    @Internal
+    public static boolean isAssignableFrom(@NonNull Type to, @NonNull Type from, boolean antisymmetric) {
         if (to instanceof GenericArrayType) {
-            return from instanceof GenericArrayType &&
-                    isAssignableFrom(((GenericArrayType) to).getGenericComponentType(), ((GenericArrayType) from).getGenericComponentType());
+            // antisymmetry invariant is maintained by the recursive call.
+            if (from instanceof Class<?>) {
+                return ((Class<?>) from).isArray() &&
+                        isAssignableFrom(((GenericArrayType) to).getGenericComponentType(), ((Class<?>) from).getComponentType(), antisymmetric);
+            } else {
+                return from instanceof GenericArrayType &&
+                        isAssignableFrom(((GenericArrayType) to).getGenericComponentType(), ((GenericArrayType) from).getGenericComponentType(), antisymmetric);
+            }
         } else if (to instanceof ParameterizedType) {
             ParameterizedType toT = (ParameterizedType) to;
             Class<?> erasure = (Class<?>) toT.getRawType();
@@ -460,15 +477,16 @@ public class GenericTypeUtils {
                 return false;
             }
             if (fromParameterization instanceof Class<?>) {
-                // from extends the raw type, automatic match
-                return true;
+                // in normal java rules, raw types are assignable to parameterized types
+                // if we need antisymmetry, we don't allow assignment in this direction
+                return !antisymmetric;
             }
             ParameterizedType fromParameterizationT = (ParameterizedType) fromParameterization;
             if (toT.getOwnerType() != null && isInnerClass(erasure)) {
                 if (fromParameterizationT.getOwnerType() == null) {
                     return false;
                 }
-                if (!isAssignableFrom(toT.getOwnerType(), fromParameterizationT.getOwnerType())) {
+                if (!isAssignableFrom(toT.getOwnerType(), fromParameterizationT.getOwnerType(), antisymmetric)) {
                     return false;
                 }
             }
@@ -488,6 +506,7 @@ public class GenericTypeUtils {
             return true;
         } else if (to instanceof Class<?>) {
             // to is a raw type
+            // wrt antisymmetry, if `from` is parameterized, we consider it assignable to `to`.
             return findParameterization(from, (Class<?>) to) != null;
         } else {
             throw new IllegalArgumentException("Not a valid assignment target: " + to);

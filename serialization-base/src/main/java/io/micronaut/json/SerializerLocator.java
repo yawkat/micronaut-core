@@ -199,7 +199,7 @@ public final class SerializerLocator {
                 if (hereType == null || GenericTypeUtils.isAssignableFrom(hereType, type)) {
                     // hereType :> type
 
-                    if (found != null && foundType != null && hereType != null && GenericTypeUtils.isAssignableFrom(hereType, foundType)) {
+                    if (found != null && foundType != null && hereType != null && GenericTypeUtils.isAssignableFrom(hereType, foundType, true)) {
                         // hereType :> foundType :> type, foundType is the better choice
                         break;
                     }

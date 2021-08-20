@@ -92,4 +92,23 @@ class GeneratedObjectCodecSpec extends Specification {
         T naked
         List<T> list
     }
+
+    def "raw map"() {
+        given:
+        def ctx = ApplicationContext.run()
+        def codec = ctx.getBean(GeneratedObjectCodec)
+        def factory = codec.objectCodec.factory
+
+        when:
+        def parsed = codec.readValue(factory.createParser('{"string":"foo","list":["bar"]}'), Map.class)
+
+        then:
+        parsed == [string: 'foo', list: ['bar']]
+
+        when:
+        def json = new String(codec.writeValueAsBytes([string: 'foo', list: ['bar']]), StandardCharsets.UTF_8)
+
+        then:
+        json == '{"string":"foo","list":["bar"]}'
+    }
 }
