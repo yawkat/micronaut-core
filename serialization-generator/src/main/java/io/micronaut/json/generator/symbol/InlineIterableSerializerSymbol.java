@@ -32,11 +32,14 @@ import static io.micronaut.json.generator.symbol.Names.ENCODER;
  * {@link SerializerSymbol} that deserializes iterables (and arrays) inline, i.e. without a separate
  * {@link Serializer} implementation.
  */
-abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
-    private final SerializerLinker linker;
+abstract class InlineIterableSerializerSymbol extends AbstractInlineContainerSerializerSymbol implements SerializerSymbol {
 
     InlineIterableSerializerSymbol(SerializerLinker linker) {
-        this.linker = linker;
+        super(linker);
+    }
+
+    private InlineIterableSerializerSymbol(InlineIterableSerializerSymbol original, boolean recursiveSerialization) {
+        super(original, recursiveSerialization);
     }
 
     @NonNull
@@ -46,20 +49,14 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
     public void visitDependencies(DependencyVisitor visitor, GeneratorType type) {
         if (visitor.visitStructure()) {
             GeneratorType elementType = getElementType(type);
-            visitor.visitStructureElement(linker.findSymbol(elementType), elementType, null);
+            visitor.visitStructureElement(getElementSymbol(elementType), elementType, null);
         }
-    }
-
-    @Override
-    public SerializerSymbol withRecursiveSerialization() {
-        // TODO
-        return SerializerSymbol.super.withRecursiveSerialization();
     }
 
     @Override
     public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
         GeneratorType elementType = getElementType(type);
-        SerializerSymbol elementSerializer = linker.findSymbol(elementType);
+        SerializerSymbol elementSerializer = getElementSymbol(elementType);
         String itemName = generatorContext.newLocalVariable("item");
         return CodeBlock.builder()
                 .addStatement("$N.writeStartArray()", ENCODER)
@@ -73,7 +70,7 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
     @Override
     public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
         GeneratorType elementType = getElementType(type);
-        SerializerSymbol elementDeserializer = linker.findSymbol(elementType);
+        SerializerSymbol elementDeserializer = getElementSymbol(elementType);
 
         String intermediateVariable = generatorContext.newLocalVariable("intermediate");
 
@@ -96,6 +93,15 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
     static class ArrayImpl extends InlineIterableSerializerSymbol {
         ArrayImpl(SerializerLinker linker) {
             super(linker);
+        }
+
+        private ArrayImpl(ArrayImpl original, boolean recursiveSerialization) {
+            super(original, recursiveSerialization);
+        }
+
+        @Override
+        public SerializerSymbol withRecursiveSerialization() {
+            return new ArrayImpl(this, true);
         }
 
         @Override
@@ -121,6 +127,15 @@ abstract class InlineIterableSerializerSymbol implements SerializerSymbol {
     static class ArrayListImpl extends InlineIterableSerializerSymbol {
         ArrayListImpl(SerializerLinker linker) {
             super(linker);
+        }
+
+        private ArrayListImpl(ArrayListImpl original, boolean recursiveSerialization) {
+            super(original, recursiveSerialization);
+        }
+
+        @Override
+        public SerializerSymbol withRecursiveSerialization() {
+            return new ArrayListImpl(this, true);
         }
 
         @Override

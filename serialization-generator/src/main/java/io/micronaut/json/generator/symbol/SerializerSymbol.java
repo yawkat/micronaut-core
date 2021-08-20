@@ -33,6 +33,10 @@ public interface SerializerSymbol {
         return this;
     }
 
+    default boolean supportsNullDeserialization() {
+        return false;
+    }
+
     void visitDependencies(DependencyVisitor visitor, GeneratorType type);
 
     /**

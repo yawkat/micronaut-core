@@ -127,6 +127,31 @@ class Test {
         deserializeFromString(deserializer, '{"map":{"foo":"bar"}}').map == ['foo': 'bar']
     }
 
+    void "null map values"() {
+        given:
+        def compiled = buildClassLoader('example.Test', '''
+package example;
+
+import io.micronaut.json.annotation.SerializableBean;
+import java.util.Map;
+
+@io.micronaut.json.annotation.SerializableBean
+class Test {
+    Map<String, String> map;
+}
+''')
+
+        def test = compiled.loadClass("example.Test").newInstance()
+        test.map = ['foo': null]
+
+        def serializer = (Serializer<?>) compiled.loadClass('example.$Test$Serializer').newInstance()
+        def deserializer = (Deserializer<?>) compiled.loadClass('example.$Test$Deserializer').newInstance()
+
+        expect:
+        serializeToString(serializer, test) == '{"map":{"foo":null}}'
+        deserializeFromString(deserializer, '{"map":{"foo":null}}').map == ['foo': null]
+    }
+
     void "recursive with proper annotation"() {
         given:
         def compiled = buildClassLoader('example.Test', '''

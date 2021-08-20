@@ -23,6 +23,11 @@ public class NullableSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
+    public boolean supportsNullDeserialization() {
+        return true;
+    }
+
+    @Override
     public void visitDependencies(DependencyVisitor visitor, GeneratorType type) {
         delegate.visitDependencies(visitor, type);
     }

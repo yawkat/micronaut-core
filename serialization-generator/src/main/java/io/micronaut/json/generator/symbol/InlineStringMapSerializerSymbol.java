@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterizedTypeName;
-import io.micronaut.core.annotation.NonNull;
 import io.micronaut.json.generated.JsonParseException;
 
 import java.util.HashMap;
@@ -15,17 +14,13 @@ import java.util.stream.Stream;
 import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;
 
-final class InlineStringMapSerializerSymbol implements SerializerSymbol {
-    private final SerializerLinker linker;
-    private final boolean recursiveSerialization;
-
+final class InlineStringMapSerializerSymbol extends AbstractInlineContainerSerializerSymbol implements SerializerSymbol {
     InlineStringMapSerializerSymbol(SerializerLinker linker) {
-        this(linker, false);
+        super(linker);
     }
 
-    private InlineStringMapSerializerSymbol(SerializerLinker linker, boolean recursiveSerialization) {
-        this.linker = linker;
-        this.recursiveSerialization = recursiveSerialization;
+    private InlineStringMapSerializerSymbol(InlineStringMapSerializerSymbol original, boolean recursiveSerialization) {
+        super(original, recursiveSerialization);
     }
 
     @Override
@@ -42,28 +37,19 @@ final class InlineStringMapSerializerSymbol implements SerializerSymbol {
     public void visitDependencies(DependencyVisitor visitor, GeneratorType type) {
         if (visitor.visitStructure()) {
             GeneratorType elementType = getType(type, "V");
-            visitor.visitStructureElement(getSymbol(elementType), elementType, null);
+            visitor.visitStructureElement(getElementSymbol(elementType), elementType, null);
         }
     }
 
     @Override
     public SerializerSymbol withRecursiveSerialization() {
-        return new InlineStringMapSerializerSymbol(linker, true);
-    }
-
-    @NonNull
-    private SerializerSymbol getSymbol(GeneratorType elementType) {
-        SerializerSymbol symbol = linker.findSymbol(elementType);
-        if (recursiveSerialization) {
-            symbol = symbol.withRecursiveSerialization();
-        }
-        return symbol;
+        return new InlineStringMapSerializerSymbol(this, true);
     }
 
     @Override
     public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
         GeneratorType elementType = getType(type, "V");
-        SerializerSymbol elementSerializer = getSymbol(elementType);
+        SerializerSymbol elementSerializer = getElementSymbol(elementType);
         String entryName = generatorContext.newLocalVariable("entry");
         return CodeBlock.builder()
                 .addStatement("$N.writeStartObject()", ENCODER)
@@ -86,7 +72,7 @@ final class InlineStringMapSerializerSymbol implements SerializerSymbol {
     @Override
     public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
         GeneratorType elementType = getType(type, "V");
-        SerializerSymbol elementDeserializer = getSymbol(elementType);
+        SerializerSymbol elementDeserializer = getElementSymbol(elementType);
 
         String intermediateVariable = generatorContext.newLocalVariable("map");
 

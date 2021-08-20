@@ -29,6 +29,11 @@ class OptionalSerializerSymbol implements SerializerSymbol {
         return new OptionalSerializerSymbol(linker, true);
     }
 
+    @Override
+    public boolean supportsNullDeserialization() {
+        return true;
+    }
+
     private Optional<GeneratorType> findDelegateType(GeneratorType type) {
         return type.getTypeArgumentsExact(Optional.class).map(m -> m.get("T"));
     }
