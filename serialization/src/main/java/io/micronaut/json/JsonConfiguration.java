@@ -32,7 +32,7 @@ public interface JsonConfiguration {
 
         @Override
         public boolean isAlwaysSerializeErrorsAsList() {
-            return false;
+            return true;
         }
 
         @Override
