@@ -54,6 +54,10 @@ class TypeInference {
                     inferRecursive(inferred, ((WildcardType) generic).getUpperBounds(), ((WildcardType) target).getUpperBounds()) &&
                     inferRecursive(inferred, ((WildcardType) generic).getLowerBounds(), ((WildcardType) target).getLowerBounds());
         } else if (generic instanceof GenericArrayType) {
+            if (target instanceof Class<?> && ((Class<?>) target).isArray()) {
+                return inferRecursive(inferred, ((GenericArrayType) generic).getGenericComponentType(), ((Class<?>) target).getComponentType());
+            }
+
             return target instanceof GenericArrayType &&
                     inferRecursive(inferred, ((GenericArrayType) generic).getGenericComponentType(), ((GenericArrayType) target).getGenericComponentType());
         } else if (generic instanceof Class<?>) {

@@ -133,7 +133,7 @@ public final class SingletonSerializerGenerator {
     }
 
     private String prefix() {
-        return '$' + valueType.getRelativeTypeName(packageName).replaceAll("[. ?<>,]", "_");
+        return '$' + valueType.getRelativeTypeName(packageName).replaceAll("[. ?<>,\\[\\]]", "_");
     }
 
     /**

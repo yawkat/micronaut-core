@@ -18,6 +18,34 @@ public class GeneratorType {
 
     static final GeneratorType STRING = ofClass(ClassElement.of(String.class));
 
+    /**
+     * the type T[]
+     */
+    @Internal
+    public static final GeneratorType GENERIC_ARRAY = new GeneratorType(
+            ClassElement.of(Object[].class),
+            new MnType.Variable() {
+                @NonNull
+                @Override
+                public Element getDeclaringElement() {
+                    // well...
+                    return ClassElement.of(Object[].class);
+                }
+
+                @NonNull
+                @Override
+                public String getName() {
+                    return "T";
+                }
+
+                @NonNull
+                @Override
+                public List<? extends MnType> getBounds() {
+                    return Collections.singletonList(ClassElement.of(Object.class).getRawMnType());
+                }
+            }.getArrayType()
+    );
+
     private final ClassElement classElement;
     private final MnType fullType;
 

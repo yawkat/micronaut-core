@@ -117,7 +117,8 @@ abstract class InlineIterableSerializerSymbol extends AbstractInlineContainerSer
 
         @Override
         protected CodeBlock finishDeserialize(GeneratorType elementType, String intermediateVariable) {
-            return CodeBlock.of("$N.toArray(new $T[0])", intermediateVariable, PoetUtil.toTypeName(elementType));
+            // cast for generic arrays
+            return CodeBlock.of("$N.toArray(($T[]) new $T[0])", intermediateVariable, PoetUtil.toTypeName(elementType), PoetUtil.toTypeName(elementType.getRawClass()));
         }
     }
 

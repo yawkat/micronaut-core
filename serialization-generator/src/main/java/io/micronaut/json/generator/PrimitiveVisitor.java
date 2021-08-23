@@ -76,6 +76,13 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
                 .packageName(element.getPackageName())
                 .linker(linker)
                 .generateMulti());
+
+        // Serializer<T[]>
+        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.GENERIC_ARRAY)
+                .problemReporter(problemReporter)
+                .packageName(element.getPackageName())
+                .linker(linker)
+                .generateMulti());
     }
 
 }

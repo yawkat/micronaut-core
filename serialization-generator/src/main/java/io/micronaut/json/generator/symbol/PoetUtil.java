@@ -50,7 +50,7 @@ public final class PoetUtil {
 
     static TypeName toTypeNameRaw(ClassElement clazz) {
         if (clazz.isArray()) {
-            return ArrayTypeName.of(toTypeName(clazz.fromArray()));
+            return ArrayTypeName.of(toTypeNameRaw(clazz.fromArray()));
         }
         if (clazz.isPrimitive()) {
             if (clazz.equals(PrimitiveElement.BYTE)) {
