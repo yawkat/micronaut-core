@@ -60,13 +60,18 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
                     .generateMulti());
         }
 
-        // Serializer<List<E>>, Serializer<Map<String, V>>
+        // Serializer<List<E>>, Serializer<Map<String, V>>, Serializer<Optional<T>>
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofParameterized(List.class, (Class<?>) null))
                 .problemReporter(problemReporter)
                 .packageName(element.getPackageName())
                 .linker(linker)
                 .generateMulti());
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofParameterized(Map.class, String.class, null))
+                .problemReporter(problemReporter)
+                .packageName(element.getPackageName())
+                .linker(linker)
+                .generateMulti());
+        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofParameterized(Optional.class, (Class<?>) null))
                 .problemReporter(problemReporter)
                 .packageName(element.getPackageName())
                 .linker(linker)

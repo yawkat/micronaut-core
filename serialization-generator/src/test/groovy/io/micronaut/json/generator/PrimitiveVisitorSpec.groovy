@@ -44,5 +44,6 @@ class MockObjectSerializer implements Serializer<Object>, Deserializer<Object> {
         locator.findInvariantDeserializer(String) != null
         locator.findInvariantDeserializer(new GenericTypeToken<List<Object>>() {}) != null
         locator.findInvariantDeserializer(new GenericTypeToken<Map<String, Object>>() {}) != null
+        locator.findInvariantDeserializer(new GenericTypeToken<Optional<Object>>() {}) != null
     }
 }
