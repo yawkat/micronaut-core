@@ -314,7 +314,7 @@ public final class TreeGenerator extends JsonGenerator {
 
     @Override
     public void writeObject(Object pojo) throws IOException {
-        throw new UnsupportedOperationException("Embedded objects are not supported");
+        getCodec().writeValue(this, pojo);
     }
 
     @Override
