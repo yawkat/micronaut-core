@@ -56,9 +56,15 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
         if (!canSerialize(type)) {
             throw new UnsupportedOperationException("This symbol can only handle primitives");
         }
+        String tokenVar = generatorContext.newLocalVariable("token");
         return CodeBlock.builder()
-                .add(checkCorrectToken(generatorContext, type))
+                .addStatement("$T $N = $N.currentToken()", JsonToken.class, tokenVar, DECODER)
+                .beginControlFlow("if ($N == $T.VALUE_STRING)", tokenVar, JsonToken.class)
+                .add(setter.createSetStatement(coerceFromString(type, CodeBlock.of("$N.getText()", DECODER))))
+                .nextControlFlow("else")
+                .add(checkCorrectToken(generatorContext, type, tokenVar))
                 .add(setter.createSetStatement(CodeBlock.of(deserializeExpression(type))))
+                .endControlFlow()
                 .build();
     }
 
@@ -74,11 +80,9 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
         }
     }
 
-    private CodeBlock checkCorrectToken(GeneratorContext generatorContext, GeneratorType type) {
-        String tokenVar = generatorContext.newLocalVariable("token");
+    private CodeBlock checkCorrectToken(GeneratorContext generatorContext, GeneratorType type, String tokenVar) {
         if (type.isRawTypeEquals(boolean.class)) {
             return CodeBlock.builder()
-                    .addStatement("$T $N = $N.currentToken()", JsonToken.class, tokenVar, DECODER)
                     .addStatement(
                             "if ($N != $T.VALUE_TRUE && $N != $T.VALUE_FALSE) throw $T.from($N, $S + $N)",
                             tokenVar, JsonToken.class,
@@ -90,7 +94,6 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
         } else {
             // for numbers, we accept floats and ints interchangeably, because json makes no distinction. Other serialization formats might, though.
             return CodeBlock.builder()
-                    .addStatement("$T $N = $N.currentToken()", JsonToken.class, tokenVar, DECODER)
                     .addStatement(
                             "if ($N != $T.VALUE_NUMBER_INT && $N != $T.VALUE_NUMBER_FLOAT) throw $T.from($N, $S + $N)",
                             tokenVar, JsonToken.class,
@@ -123,6 +126,34 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
             return DECODER + ".getBigIntegerValue()";
         } else if (type.isRawTypeEquals(BigDecimal.class)) {
             return DECODER + ".getDecimalValue()";
+        } else {
+            throw new AssertionError("unknown primitive type " + type);
+        }
+    }
+
+    private CodeBlock coerceFromString(GeneratorType type, CodeBlock expression) {
+        // todo: make coercion configurable
+
+        if (type.isRawTypeEquals(boolean.class)) {
+            return CodeBlock.of("$L.equalsIgnoreCase(\"true\")", expression);
+        } else if (type.isRawTypeEquals(byte.class)) {
+            return CodeBlock.of("(byte) $T.parseLong($L)", Long.class, expression);
+        } else if (type.isRawTypeEquals(short.class)) {
+            return CodeBlock.of("(short) $T.parseLong($L)", Long.class, expression);
+        } else if (type.isRawTypeEquals(char.class)) {
+            return CodeBlock.of("(char) $T.parseLong($L)", Long.class, expression);
+        } else if (type.isRawTypeEquals(int.class)) {
+            return CodeBlock.of("(int) $T.parseLong($L)", Long.class, expression);
+        } else if (type.isRawTypeEquals(long.class)) {
+            return CodeBlock.of("$T.parseLong($L)", Long.class, expression);
+        } else if (type.isRawTypeEquals(float.class)) {
+            return CodeBlock.of("$T.parseFloat($L)", Float.class, expression);
+        } else if (type.isRawTypeEquals(double.class)) {
+            return CodeBlock.of("$T.parseDouble($L)", Double.class, expression);
+        }  else if (type.isRawTypeEquals(BigInteger.class)) {
+            return CodeBlock.of("new $T($L)", BigInteger.class, expression);
+        } else if (type.isRawTypeEquals(BigDecimal.class)) {
+            return CodeBlock.of("new $T($L)", BigDecimal.class, expression);
         } else {
             throw new AssertionError("unknown primitive type " + type);
         }

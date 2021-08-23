@@ -14,6 +14,9 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
         expect:
         deserializeFromString(serializer, "true") == true
         deserializeFromString(serializer, "false") == false
+        deserializeFromString(serializer, '"true"') == true
+        deserializeFromString(serializer, '"false"') == false
+        deserializeFromString(serializer, '"bla"') == false
         serializeToString(serializer, true) == "true"
         serializeToString(serializer, false) == "false"
     }
@@ -25,6 +28,7 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
         expect:
         deserializeFromString(serializer, "5") == (byte) 5
         deserializeFromString(serializer, "-4") == (byte) -4
+        deserializeFromString(serializer, '"-4"') == (byte) -4
         serializeToString(serializer, (byte) 5) == "5"
         serializeToString(serializer, (byte) -4) == "-4"
     }
@@ -36,6 +40,7 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
         expect:
         deserializeFromString(serializer, "512") == (short) 512
         deserializeFromString(serializer, "-4674") == (short) -4674
+        deserializeFromString(serializer, '"-4674"') == (short) -4674
         serializeToString(serializer, (short) 512) == "512"
         serializeToString(serializer, (short) -4674) == "-4674"
     }
@@ -46,6 +51,7 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
 
         expect:
         deserializeFromString(serializer, "512") == (char) 512
+        deserializeFromString(serializer, '"512"') == (char) 512
         serializeToString(serializer, (char) 512) == "512"
     }
 
@@ -56,6 +62,7 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
         expect:
         deserializeFromString(serializer, "1874651") == 1874651
         deserializeFromString(serializer, "-1874651") == -1874651
+        deserializeFromString(serializer, '"-1874651"') == -1874651
         serializeToString(serializer, 1874651) == "1874651"
         serializeToString(serializer, -1874651) == "-1874651"
     }
@@ -67,6 +74,7 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
         expect:
         deserializeFromString(serializer, "187465149261113196") == 187465149261113196L
         deserializeFromString(serializer, "-187465149261113196") == -187465149261113196
+        deserializeFromString(serializer, '"-187465149261113196"') == -187465149261113196
         serializeToString(serializer, 187465149261113196) == "187465149261113196"
         serializeToString(serializer, -187465149261113196) == "-187465149261113196"
     }
@@ -77,6 +85,7 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
 
         expect:
         deserializeFromString(serializer, "4.5") == 4.5F
+        deserializeFromString(serializer, '"4.5"') == 4.5F
         serializeToString(serializer, 4.5F) == "4.5"
     }
 
@@ -86,6 +95,7 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
 
         expect:
         deserializeFromString(serializer, "4.5") == 4.5D
+        deserializeFromString(serializer, '"4.5"') == 4.5D
         serializeToString(serializer, 4.5D) == "4.5"
     }
 
@@ -113,6 +123,7 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
 
         expect:
         deserializeFromString(serializer, "4.5") == BigInteger.valueOf(4)
+        deserializeFromString(serializer, '"4"') == BigInteger.valueOf(4)
         serializeToString(serializer, BigInteger.valueOf(4)) == "4"
     }
 
@@ -121,7 +132,8 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
         def serializer = buildBasicSerializer(BigDecimal.class, PrimitiveSerializerSymbol.INSTANCE, ClassElement.of(BigDecimal.class))
 
         expect:
-        deserializeFromString(serializer, "4.5") == BigDecimal.valueOf(4.5)
+        deserializeFromString(serializer, '4.5') == BigDecimal.valueOf(4.5)
+        deserializeFromString(serializer, '"4.5"') == BigDecimal.valueOf(4.5)
         serializeToString(serializer, BigDecimal.valueOf(4.5)) == "4.5"
     }
 }
