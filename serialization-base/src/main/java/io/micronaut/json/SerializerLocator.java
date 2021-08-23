@@ -6,6 +6,7 @@ import io.micronaut.context.exceptions.NoSuchBeanException;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.reflect.GenericTypeToken;
 import io.micronaut.core.reflect.GenericTypeUtils;
+import io.micronaut.core.reflect.ReflectionUtils;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.BeanType;
 import jakarta.inject.Inject;
@@ -40,6 +41,8 @@ public final class SerializerLocator {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> Provider<Deserializer<T>> findInvariantDeserializerProvider(Type forType) {
+        forType = normalizePrimitiveType(forType);
+
         Collection<BeanDefinition<Deserializer>> allDeserializers = context.getBeanDefinitions(Deserializer.class);
         for (BeanDefinition<? extends Deserializer> def : allDeserializers) {
             Type serializerType = getSerializerType(def, Deserializer.class);
@@ -137,6 +140,8 @@ public final class SerializerLocator {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> Provider<Serializer<? super T>> findContravariantSerializerProvider(Type forType) {
+        forType = normalizePrimitiveType(forType);
+
         Collection<BeanDefinition<Serializer>> allSerializers = context.getBeanDefinitions(Serializer.class);
         Provider<Serializer<? super T>> found = null;
         Type foundType = null;
@@ -185,6 +190,14 @@ public final class SerializerLocator {
             // raw type, would be eligible for any serializer
             return null;
         }
+    }
+
+    private static Type normalizePrimitiveType(Type t) {
+         if (t instanceof Class<?>) {
+             return ReflectionUtils.getWrapperType((Class) t);
+         } else {
+             return t;
+         }
     }
 
     /*
