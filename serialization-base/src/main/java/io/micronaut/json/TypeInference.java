@@ -2,7 +2,6 @@ package io.micronaut.json;
 
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.reflect.GenericTypeUtils;
-import io.micronaut.core.reflect.ReflectionUtils;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -19,7 +18,7 @@ class TypeInference {
 
     @Nullable
     static Map<TypeVariable<?>, Type> inferContravariant(Type freeType, Type targetType) {
-        Type parameterization = GenericTypeUtils.findParameterization(targetType, getErasure(freeType));
+        Type parameterization = GenericTypeUtils.findParameterization(targetType, GenericTypeUtils.getErasure(freeType));
         if (parameterization == null) {
             return null;
         }
@@ -67,19 +66,4 @@ class TypeInference {
         }
     }
 
-    private static Class<?> getErasure(Type type) {
-        if (type instanceof Class) {
-            return (Class<?>) type;
-        } else if (type instanceof GenericArrayType) {
-            return Array.newInstance(getErasure(((GenericArrayType) type).getGenericComponentType()), 0).getClass();
-        } else if (type instanceof ParameterizedType) {
-            return getErasure(((ParameterizedType) type).getRawType());
-        } else if (type instanceof WildcardType) {
-            return getErasure(((WildcardType) type).getUpperBounds()[0]);
-        } else if (type instanceof TypeVariable) {
-            return getErasure(((TypeVariable<?>) type).getBounds()[0]);
-        } else {
-            throw new UnsupportedOperationException(type.getClass().getName());
-        }
-    }
 }

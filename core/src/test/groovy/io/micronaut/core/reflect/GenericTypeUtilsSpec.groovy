@@ -106,5 +106,23 @@ class GenericTypeUtilsSpec extends Specification {
         !GenericTypeUtils.isAssignableFrom(InnerOuter.INCOMPATIBLE_TYPE, InnerOuter.InnerExt.class)
         !GenericTypeUtils.isAssignableFrom(new GenericTypeToken<Map<String, Long>>() {}.type, InnerOuter.InnerExt.class)
     }
+
+    void "test findParameterization generic type var array"() {
+        given:
+        def genericArrayType = new GenericArrayToken().getType()
+
+        expect:
+        GenericTypeUtils.findParameterization(genericArrayType, Object[]) != null
+        GenericTypeUtils.findParameterization(genericArrayType, CharSequence[]) != null
+        GenericTypeUtils.findParameterization(genericArrayType, String[]) != null
+        GenericTypeUtils.findParameterization(genericArrayType, Serializable) != null
+    }
+
+    static class GenericArrayToken<T extends String> extends GenericTypeToken<T[]> {}
+
+    void "test findParameterization parameterized type array"() {
+        expect:
+        GenericTypeUtils.findParameterization(new GenericTypeToken<List<String>[]>() {}.getType(), Iterable[]).typeName == 'java.lang.Iterable<java.lang.String>[]'
+    }
 }
 

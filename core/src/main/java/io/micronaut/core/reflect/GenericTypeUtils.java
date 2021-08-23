@@ -304,6 +304,22 @@ public class GenericTypeUtils {
         }
     }
 
+    public static Class<?> getErasure(Type type) {
+        if (type instanceof Class) {
+            return (Class<?>) type;
+        } else if (type instanceof GenericArrayType) {
+            return Array.newInstance(getErasure(((GenericArrayType) type).getGenericComponentType()), 0).getClass();
+        } else if (type instanceof ParameterizedType) {
+            return getErasure(((ParameterizedType) type).getRawType());
+        } else if (type instanceof WildcardType) {
+            return getErasure(((WildcardType) type).getUpperBounds()[0]);
+        } else if (type instanceof TypeVariable) {
+            return getErasure(((TypeVariable<?>) type).getBounds()[0]);
+        } else {
+            throw new UnsupportedOperationException(type.getClass().getName());
+        }
+    }
+
     @Internal
     @FunctionalInterface
     public interface VariableFold {
@@ -330,7 +346,23 @@ public class GenericTypeUtils {
     @Nullable
     public static Type findParameterization(Type on, Class<?> of) {
         if (on instanceof GenericArrayType) {
-            return of == Object.class || of == Cloneable.class || of == Serializable.class ? of : null;
+            if (of == Object.class || of == Cloneable.class || of == Serializable.class) {
+                return of;
+            }
+            if (!of.isArray()) {
+                return null;
+            }
+            Type componentType = ((GenericArrayType) on).getGenericComponentType();
+            if (componentType instanceof TypeVariable) {
+                if (isAssignableFrom(of.getComponentType(), componentType)) {
+                    return on;
+                } else {
+                    return null;
+                }
+            } else {
+                Type componentParameterization = findParameterization(componentType, of.getComponentType());
+                return componentParameterization == null ? null : new GenericArrayTypeImpl(componentParameterization);
+            }
         } else if (on instanceof ParameterizedType) {
             ParameterizedType onT = (ParameterizedType) on;
             Class<?> rawType = (Class<?>) onT.getRawType();
