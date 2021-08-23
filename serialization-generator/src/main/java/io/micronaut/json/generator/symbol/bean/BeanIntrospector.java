@@ -189,7 +189,8 @@ class BeanIntrospector {
         void scan(ClassElement clazz, Collection<AnnotatedElement> additionalAnnotationSource) {
             AnnotationValue<JsonIgnoreProperties> jsonIgnoreProperties = ElementUtil.getAnnotation(JsonIgnoreProperties.class, clazz, additionalAnnotationSource);
             if (jsonIgnoreProperties != null) {
-                ignoreUnknownProperties = jsonIgnoreProperties.get("ignoreUnknown", Boolean.class).orElse(false);
+                // todo: do we really want to ignoreUnknown by default?
+                ignoreUnknownProperties = jsonIgnoreProperties.get("ignoreUnknown", Boolean.class).orElse(true);
             }
 
             // todo: check we don't have another candidate when replacing properties of the definition
