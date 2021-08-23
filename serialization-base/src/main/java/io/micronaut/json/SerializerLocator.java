@@ -1,7 +1,6 @@
 package io.micronaut.json;
 
 import io.micronaut.context.BeanContext;
-import io.micronaut.context.Qualifier;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.context.exceptions.NoSuchBeanException;
 import io.micronaut.core.annotation.Nullable;
@@ -16,7 +15,6 @@ import jakarta.inject.Singleton;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @BootstrapContextCompatible
 @Singleton
@@ -60,11 +58,7 @@ public final class SerializerLocator {
         throw new NoSuchBeanException(forType.getTypeName()) {};
     }
 
-    private <T> Provider<T> inferenceFactory(Class<? extends T> on, Map<TypeVariable<?>, Type> inferredTypes) {
-        Constructor<?> constructor = Arrays.stream(on.getConstructors())
-                .filter(c -> Arrays.stream(c.getParameterTypes()).allMatch(param -> param == Serializer.class || param == Deserializer.class || param == Provider.class))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("Missing constructor for generic serializer"));
+    private Type foldInferred(Type into, Map<TypeVariable<?>, Type> inferredTypes) {
         GenericTypeUtils.VariableFold fold = var -> {
             Type inferredType = inferredTypes.get(var);
             if (inferredType == null) {
@@ -72,8 +66,16 @@ public final class SerializerLocator {
             }
             return inferredType;
         };
+        return GenericTypeUtils.foldTypeVariables(into, fold);
+    }
+
+    private <T> Provider<T> inferenceFactory(Class<? extends T> on, Map<TypeVariable<?>, Type> inferredTypes) {
+        Constructor<?> constructor = Arrays.stream(on.getConstructors())
+                .filter(c -> Arrays.stream(c.getParameterTypes()).allMatch(param -> param == Serializer.class || param == Deserializer.class || param == Provider.class))
+                .findAny()
+                .orElseThrow(() -> new IllegalStateException("Missing constructor for generic serializer"));
         List<Provider<?>> parameterProviders = Arrays.stream(constructor.getGenericParameterTypes())
-                .map(t -> GenericTypeUtils.foldTypeVariables(t, fold))
+                .map(t -> foldInferred(t, inferredTypes))
                 .map(this::requestParameter)
                 .collect(Collectors.toList());
         return () -> {
@@ -131,8 +133,39 @@ public final class SerializerLocator {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> Provider<Serializer<? super T>> findContravariantSerializerProvider(Type forType) {
-        BeanDefinition<Serializer> beanDefinition = context.getBeanDefinition(Serializer.class, new MostSpecificContravariantQualifier(forType));
-        return () -> context.getBean(beanDefinition);
+        Collection<BeanDefinition<Serializer>> allSerializers = context.getBeanDefinitions(Serializer.class);
+        Provider<Serializer<? super T>> found = null;
+        Type foundType = null;
+        for (BeanDefinition<? extends Serializer> def : allSerializers) {
+            Type serializerType = getSerializerType(def, Serializer.class);
+            if (serializerType != null) {
+                Map<TypeVariable<?>, Type> inferred = TypeInference.inferContravariant(serializerType, forType);
+                if (inferred != null) {
+                    Type hereType;
+                    if (inferred.isEmpty()) {
+                        hereType = serializerType;
+                    } else {
+                        hereType = foldInferred(serializerType, inferred);
+                    }
+                    if (found != null && foundType != null && hereType != null && GenericTypeUtils.isAssignableFrom(hereType, foundType, true)) {
+                        // hereType :> foundType :> type, foundType is the better choice
+                        continue;
+                    }
+
+                    foundType = hereType;
+                    if (inferred.isEmpty()) {
+                        found = () -> context.getBean(def);
+                    } else {
+                        found = this.inferenceFactory((Class<? extends Serializer<T>>) def.getBeanType(), inferred);
+                    }
+                }
+            }
+        }
+        if (found != null) {
+            return found;
+        }
+        // TODO
+        throw new NoSuchBeanException(forType.getTypeName()) {};
     }
 
     public <T> Provider<Serializer<? super T>> findContravariantSerializerProvider(GenericTypeToken<T> typeToken) {
@@ -150,6 +183,7 @@ public final class SerializerLocator {
         }
     }
 
+    /*
     @SuppressWarnings("rawtypes")
     private static class ExactMatchQualifier implements Qualifier<Deserializer> {
         private final Type type;
@@ -170,6 +204,7 @@ public final class SerializerLocator {
                     '}';
         }
     }
+    */
 
     // note: JLS §4.10 notation:
     // S :> T       S is a supertype of T, T is assignable to S
@@ -180,6 +215,7 @@ public final class SerializerLocator {
      * {@code serializerType :> type} holds. Raw types are treated as {@link Object}. Behavior when there are multiple
      * most specific serializers is implementation-defined.
      */
+    /*
     @SuppressWarnings("rawtypes")
     private static class MostSpecificContravariantQualifier implements Qualifier<Serializer> {
         private final Type type;
@@ -222,4 +258,5 @@ public final class SerializerLocator {
                     '}';
         }
     }
+    */
 }

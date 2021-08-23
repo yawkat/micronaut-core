@@ -19,8 +19,7 @@ class TypeInference {
 
     @Nullable
     static Map<TypeVariable<?>, Type> inferContravariant(Type freeType, Type targetType) {
-        Class<?> targetErasure = getErasure(targetType);
-        Type parameterization = GenericTypeUtils.findParameterization(freeType, targetErasure);
+        Type parameterization = GenericTypeUtils.findParameterization(targetType, getErasure(freeType));
         if (parameterization == null) {
             return null;
         }

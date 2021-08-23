@@ -2,6 +2,7 @@ package io.micronaut.json.generated
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonValue
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.type.TypeReference
 import io.micronaut.context.ApplicationContext
@@ -73,7 +74,7 @@ class GeneratedObjectCodecSpec extends Specification {
         String bar
     }
 
-    def "generic bean"() {
+    def "generic bean deser"() {
         given:
         def ctx = ApplicationContext.run()
         def codec = ctx.getBean(GeneratedObjectCodec)
@@ -87,10 +88,36 @@ class GeneratedObjectCodecSpec extends Specification {
         parsed.list == ['bar']
     }
 
+    def "generic bean ser"() {
+        given:
+        def ctx = ApplicationContext.run()
+        def codec = ctx.getBean(GeneratedObjectCodec)
+        def factory = codec.objectCodec.factory
+
+        def bean = new GenericBean<String>()
+        bean.naked = "foo"
+        bean.list = ["bar"]
+        def wrapper = new GenericBeanWrapper()
+        wrapper.bean = bean
+
+        when:
+        // there's currently no way to pass the type to write, and because of type erasure the framework can't know that
+        // bean is a GenericBean<String>, so we use a wrapper (with @JsonValue) that has the full type.
+        def json = new String(codec.writeValueAsBytes(wrapper), StandardCharsets.UTF_8)
+
+        then:
+        json == '{"naked":"foo","list":["bar"]}'
+    }
+
     @SerializableBean
     static class GenericBean<T> {
         T naked
         List<T> list
+    }
+
+    @SerializableBean
+    static class GenericBeanWrapper {
+        @JsonValue GenericBean<String> bean;
     }
 
     def "raw map"() {
