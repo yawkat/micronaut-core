@@ -31,6 +31,7 @@ public abstract class MicronautObjectCodec {
 
     public final JsonNode valueToTree(Object value) {
         TreeGenerator generator = new TreeGenerator();
+        generator.setCodec(getObjectCodec());
         try {
             getObjectCodec().writeValue(generator, value);
         } catch (IOException e) {
