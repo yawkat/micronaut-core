@@ -188,20 +188,22 @@ public final class SingletonSerializerGenerator {
         if (freeVariables.isEmpty()) {
             MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder()
                     .addModifiers(Modifier.PUBLIC)
-                    .addAnnotation(Inject.class)
-                    .addParameter(TypeName.get(SerializerLocator.class), "locator");
-            CodeBlock.Builder constructorCodeBuilder = CodeBlock.builder();
-            classContext.getInjected().forEach((injectable, injected) -> {
-                // for deserialization, we stick to invariant serializers, because we don't want to deserialize an arbitrary
-                // subtype from the classpath for security. Contravariant lookup only exposes the supertypes (few), while
-                // covariant lookup would expose all subtypes (potentially unlimited).
-                String methodName = injectable.forSerialization ? "findContravariantSerializer" : "findInvariantDeserializer";
-                if (injectable.provider) {
-                    methodName += "Provider";
-                }
-                constructorCodeBuilder.addStatement("this.$N = locator.$N(new $T<$T>() {});\n", injected.fieldName, methodName, GenericTypeToken.class, injectable.type);
-            });
-            constructorBuilder.addCode(constructorCodeBuilder.build());
+                    .addAnnotation(Inject.class);
+            if (!classContext.getInjected().isEmpty()) {
+                constructorBuilder.addParameter(TypeName.get(SerializerLocator.class), "locator");
+                CodeBlock.Builder constructorCodeBuilder = CodeBlock.builder();
+                classContext.getInjected().forEach((injectable, injected) -> {
+                    // for deserialization, we stick to invariant serializers, because we don't want to deserialize an arbitrary
+                    // subtype from the classpath for security. Contravariant lookup only exposes the supertypes (few), while
+                    // covariant lookup would expose all subtypes (potentially unlimited).
+                    String methodName = injectable.forSerialization ? "findContravariantSerializer" : "findInvariantDeserializer";
+                    if (injectable.provider) {
+                        methodName += "Provider";
+                    }
+                    constructorCodeBuilder.addStatement("this.$N = locator.$N(new $T<$T>() {});\n", injected.fieldName, methodName, GenericTypeToken.class, injectable.type);
+                });
+                constructorBuilder.addCode(constructorCodeBuilder.build());
+            }
             builder.addMethod(constructorBuilder.build());
         }
 
