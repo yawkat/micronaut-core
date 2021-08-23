@@ -21,10 +21,12 @@ import com.squareup.javapoet.*;
 import io.micronaut.context.annotation.Secondary;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.reflect.GenericTypeToken;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.MnType;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Serializer;
+import io.micronaut.json.SerializerLocator;
 import jakarta.inject.Inject;
 
 import javax.lang.model.element.Modifier;
@@ -178,27 +180,33 @@ public final class SingletonSerializerGenerator {
             ));
         }
 
-        MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder()
-                .addModifiers(Modifier.PUBLIC)
-                .addAnnotation(Inject.class);
-        CodeBlock.Builder constructorCodeBuilder = CodeBlock.builder();
-        NameAllocator paramNameAllocator = new NameAllocator();
-        Map<TypeName, String> injectedParameters = new HashMap<>();
-        classContext.getInjected().forEach((injectable, injected) -> {
-            String paramName = injectedParameters.computeIfAbsent(injectable.parameterType, t -> {
-                String name = paramNameAllocator.newName(t.toString(), t);
-                constructorBuilder.addParameter(t, name);
-                return name;
+        // generate the fields we need to inject
+        classContext.getInjected().forEach((injectable, injected) ->
+                builder.addField(injectable.fieldType, injected.fieldName, Modifier.PRIVATE, Modifier.FINAL));
+
+        // normal constructor (@Inject, one SerializerLocator parameter)
+        if (freeVariables.isEmpty()) {
+            MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder()
+                    .addModifiers(Modifier.PUBLIC)
+                    .addAnnotation(Inject.class)
+                    .addParameter(TypeName.get(SerializerLocator.class), "locator");
+            CodeBlock.Builder constructorCodeBuilder = CodeBlock.builder();
+            classContext.getInjected().forEach((injectable, injected) -> {
+                // for deserialization, we stick to invariant serializers, because we don't want to deserialize an arbitrary
+                // subtype from the classpath for security. Contravariant lookup only exposes the supertypes (few), while
+                // covariant lookup would expose all subtypes (potentially unlimited).
+                String methodName = injectable.forSerialization ? "findContravariantSerializer" : "findInvariantDeserializer";
+                if (injectable.provider) {
+                    methodName += "Provider";
+                }
+                constructorCodeBuilder.addStatement("this.$N = locator.$N(new $T<$T>() {});\n", injected.fieldName, methodName, GenericTypeToken.class, injectable.type);
             });
-            builder.addField(injectable.fieldType, injected.fieldName, Modifier.PRIVATE, Modifier.FINAL);
-            SerializerSymbol.Setter fieldSetter = expr -> CodeBlock.of("this.$N = $L", injected.fieldName, expr);
-            constructorCodeBuilder.add(injectable.buildInitializationStatement(CodeBlock.of("$N", paramName), fieldSetter));
-        });
-        constructorBuilder.addCode(constructorCodeBuilder.build());
-        builder.addMethod(constructorBuilder.build());
+            constructorBuilder.addCode(constructorCodeBuilder.build());
+            builder.addMethod(constructorBuilder.build());
+        }
 
         // if we have free type variables, we need a constructor SerializerLocator can use
-        if ((generateDirectConstructor || !freeVariables.isEmpty()) && !injectedParameters.isEmpty()) {
+        if ((generateDirectConstructor && !classContext.getInjected().isEmpty()) || !freeVariables.isEmpty()) {
             MethodSpec.Builder directConstructor = MethodSpec.constructorBuilder()
                     .addModifiers(Modifier.PUBLIC);
             CodeBlock.Builder directConstructorCode = CodeBlock.builder();

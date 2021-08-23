@@ -15,10 +15,11 @@
  */
 package io.micronaut.json.generator.symbol;
 
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.NameAllocator;
-import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.*;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.json.Deserializer;
+import io.micronaut.json.Serializer;
+import jakarta.inject.Provider;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,13 +37,13 @@ public final class GeneratorContext {
     private final NameAllocator fields;
     private final NameAllocator localVariables;
 
-    private final Map<Injectable, Injected> injected;
+    private final Map<InjectableSerializerType, Injected> injected;
 
     private GeneratorContext(
             ProblemReporter problemReporter, String readablePath,
             NameAllocator fields,
             NameAllocator localVariables,
-            Map<Injectable, Injected> injected) {
+            Map<InjectableSerializerType, Injected> injected) {
         this.problemReporter = problemReporter;
         this.readablePath = readablePath;
         this.fields = fields;
@@ -88,14 +89,14 @@ public final class GeneratorContext {
         return localVariables.newName(nameHint);
     }
 
-    public Injected requestInjection(Injectable injectable) {
+    public Injected requestInjection(InjectableSerializerType injectable) {
         return injected.computeIfAbsent(injectable, t -> {
             String fieldName = fields.newName(t.fieldType.toString());
             return new Injected(fieldName);
         });
     }
 
-    Map<Injectable, Injected> getInjected() {
+    Map<InjectableSerializerType, Injected> getInjected() {
         return injected;
     }
 
@@ -118,45 +119,48 @@ public final class GeneratorContext {
         }
     }
 
-    /**
-     * An value that can be injected.
-     *
-     * Subclasses must implement equals/hashCode to avoid injecting duplicates.
-     */
-    public static abstract class Injectable {
-        final TypeName fieldType;
-        final TypeName parameterType;
+    public static final class InjectableSerializerType {
+        final TypeName type;
+        final boolean provider;
+        final boolean forSerialization;
 
-        /**
-         * @param fieldType     The type to use for the field to store the injected value in.
-         * @param parameterType The actual parameter type requested in the {@code @Inject} constructor.
-         */
-        public Injectable(TypeName fieldType, TypeName parameterType) {
-            this.fieldType = fieldType;
-            this.parameterType = parameterType;
+        final TypeName fieldType;
+
+        public InjectableSerializerType(TypeName type, boolean provider, boolean forSerialization) {
+            this.type = type;
+            this.provider = provider;
+            this.forSerialization = forSerialization;
+            this.fieldType = fieldType(type, provider, forSerialization);
         }
 
-        /**
-         * Build the statement initializing the field from the parameter injection.
-         *
-         * @param parameterExpression The expression giving the injected parameter. Of type {@link #parameterType}.
-         * @param fieldSetter         The setter to write the field. Of type {@link #fieldType}.
-         */
-        protected abstract CodeBlock buildInitializationStatement(
-                CodeBlock parameterExpression,
-                SerializerSymbol.Setter fieldSetter
-        );
+        private static TypeName fieldType(TypeName type, boolean provider, boolean forSerialization) {
+            ParameterizedTypeName serType;
+            if (forSerialization) {
+                serType = ParameterizedTypeName.get(ClassName.get(Serializer.class), WildcardTypeName.supertypeOf(type));
+            } else {
+                serType = ParameterizedTypeName.get(ClassName.get(Deserializer.class), WildcardTypeName.subtypeOf(type));
+            }
+            if (provider) {
+                serType = ParameterizedTypeName.get(ClassName.get(Provider.class), WildcardTypeName.subtypeOf(serType));
+            }
+            return serType;
+        }
 
         @Override
         public boolean equals(Object o) {
-            return o instanceof Injectable &&
-                    this.fieldType.equals(((Injectable) o).fieldType) &&
-                    this.parameterType.equals(((Injectable) o).parameterType);
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            InjectableSerializerType that = (InjectableSerializerType) o;
+            return provider == that.provider && forSerialization == that.forSerialization && Objects.equals(type, that.type);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(fieldType, parameterType);
+            return Objects.hash(type, provider, forSerialization);
         }
     }
 }
