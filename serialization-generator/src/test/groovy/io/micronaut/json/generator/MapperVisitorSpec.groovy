@@ -484,4 +484,21 @@ class C {
         expect:
         ctx.getBean(Argument.of(Serializer.class, ctx.classLoader.loadClass('example.C'))) instanceof Serializer
     }
+
+    void "disabled mode isn't generated"() {
+        given:
+        def ctx = buildContext('example.A', '''
+package example;
+
+import io.micronaut.json.annotation.SerializableBean;
+
+@SerializableBean(allowDeserialization = false)
+class A {
+}
+''', true)
+
+        expect:
+        ctx.findBean(Argument.of(Serializer.class, ctx.classLoader.loadClass('example.A'))).isPresent()
+        !ctx.findBean(Argument.of(Deserializer.class, ctx.classLoader.loadClass('example.A'))).isPresent()
+    }
 }

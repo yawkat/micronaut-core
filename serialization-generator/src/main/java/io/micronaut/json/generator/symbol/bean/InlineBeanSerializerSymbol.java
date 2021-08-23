@@ -90,7 +90,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
      * Returns {@code false} iff this direction is explicitly disabled (e.g. by
      * {@link SerializableBean#allowDeserialization()}).
      */
-    private boolean supportsDirection(GeneratorType type, boolean serialization) {
+    public boolean supportsDirection(GeneratorType type, boolean serialization) {
         AnnotationValue<SerializableBean> annotation = getAnnotation(type);
         if (annotation == null) {
             return true;

@@ -41,8 +41,10 @@ public class MapperVisitor extends AbstractGeneratorVisitor<Object> implements T
             return;
         }
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(generatorType)
-                        .problemReporter(problemReporter)
-                        .symbol(inlineBeanSerializer)
-                        .generateMulti());
+                .problemReporter(problemReporter)
+                .symbol(inlineBeanSerializer)
+                .generateSerializer(inlineBeanSerializer.supportsDirection(generatorType, true))
+                .generateDeserializer(inlineBeanSerializer.supportsDirection(generatorType, false))
+                .generateMulti());
     }
 }

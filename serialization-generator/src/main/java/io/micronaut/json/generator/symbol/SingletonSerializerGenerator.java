@@ -54,6 +54,8 @@ public final class SingletonSerializerGenerator {
     private TypeName valueReferenceName = null;
     @Nullable
     private String packageName = null;
+    private boolean generateSerializer = true;
+    private boolean generateDeserializer = true;
 
     private SingletonSerializerGenerator(GeneratorType valueType) {
         this.valueType = valueType;
@@ -100,6 +102,16 @@ public final class SingletonSerializerGenerator {
         return this;
     }
 
+    public SingletonSerializerGenerator generateSerializer(boolean generateSerializer) {
+        this.generateSerializer = generateSerializer;
+        return this;
+    }
+
+    public SingletonSerializerGenerator generateDeserializer(boolean generateDeserializer) {
+        this.generateDeserializer = generateDeserializer;
+        return this;
+    }
+
     private void fillInMissingFields() {
         if (problemReporter == null) {
             problemReporter = new ProblemReporter();
@@ -134,7 +146,7 @@ public final class SingletonSerializerGenerator {
         assert packageName != null;
         assert problemReporter != null;
 
-        return generateClass(true, true, ClassName.get(packageName, prefix() + "$Serializer"));
+        return generateClass(generateSerializer, generateDeserializer, ClassName.get(packageName, prefix() + "$Serializer"));
     }
 
     /**
@@ -147,10 +159,14 @@ public final class SingletonSerializerGenerator {
         assert packageName != null;
         assert problemReporter != null;
 
-        return Arrays.asList(
-                generateClass(true, false, ClassName.get(packageName, prefix() + "$Serializer")),
-                generateClass(false, true, ClassName.get(packageName, prefix() + "$Deserializer"))
-        );
+        List<GenerationResult> results = new ArrayList<>(2);
+        if (generateSerializer) {
+            results.add(generateClass(true, false, ClassName.get(packageName, prefix() + "$Serializer")));
+        }
+        if (generateDeserializer) {
+            results.add(generateClass(false, true, ClassName.get(packageName, prefix() + "$Deserializer")));
+        }
+        return results;
     }
 
     private GenerationResult generateClass(boolean serializer, boolean deserializer, ClassName generatedName) {
