@@ -70,16 +70,15 @@ public final class SerializerLocator {
     }
 
     private <T> Provider<T> inferenceFactory(Class<? extends T> on, Map<TypeVariable<?>, Type> inferredTypes) {
-        Constructor<?> constructor = Arrays.stream(on.getConstructors())
-                .filter(c -> Arrays.stream(c.getParameterTypes()).allMatch(param -> param == Serializer.class || param == Deserializer.class || param == Provider.class))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("Missing constructor for generic serializer"));
+        Constructor<?> constructor = on.getConstructors()[0];
         List<Provider<?>> parameterProviders = Arrays.stream(constructor.getGenericParameterTypes())
                 .map(t -> foldInferred(t, inferredTypes))
                 .map(this::requestParameter)
                 .collect(Collectors.toList());
         return () -> {
             try {
+                // TODO: avoid reflection
+                constructor.setAccessible(true);
                 //noinspection unchecked
                 return (T) constructor.newInstance(parameterProviders.stream().map(Provider::get).toArray(Object[]::new));
             } catch (ReflectiveOperationException e) {
@@ -89,29 +88,34 @@ public final class SerializerLocator {
     }
 
     private Provider<?> requestParameter(Type type) {
-        if (!(type instanceof ParameterizedType)) {
-            throw new IllegalArgumentException("Must be parameterized type");
-        }
-        Type rawType = ((ParameterizedType) type).getRawType();
-        if (rawType == Provider.class) {
-            Provider<?> actualSupplier = requestParameter(((ParameterizedType) type).getActualTypeArguments()[0]);
-            return () -> actualSupplier;
-        } else if (rawType == Serializer.class) {
-            Type parameter = ((ParameterizedType) type).getActualTypeArguments()[0];
-            if (!(parameter instanceof WildcardType) || ((WildcardType) parameter).getLowerBounds().length != 1) {
-                throw new IllegalStateException("Serializer must be contravariant wildcard");
+        if (type instanceof Class<?>) {
+            BeanDefinition<?> definition = context.getBeanDefinition((Class<?>) type);
+            return () -> context.getBean(definition);
+        } else if (type instanceof ParameterizedType) {
+            Type rawType = ((ParameterizedType) type).getRawType();
+            if (rawType == Provider.class) {
+                Provider<?> actualSupplier = requestParameter(((ParameterizedType) type).getActualTypeArguments()[0]);
+                return () -> actualSupplier;
+            } else if (rawType == Serializer.class) {
+                Type parameter = ((ParameterizedType) type).getActualTypeArguments()[0];
+                if (!(parameter instanceof WildcardType) || ((WildcardType) parameter).getLowerBounds().length != 1) {
+                    throw new IllegalStateException("Serializer must be contravariant wildcard");
+                }
+                return findContravariantSerializerProvider(((WildcardType) parameter).getLowerBounds()[0]);
+            } else if (rawType == Deserializer.class) {
+                Type parameter = ((ParameterizedType) type).getActualTypeArguments()[0];
+                if (!(parameter instanceof WildcardType) || ((WildcardType) parameter).getLowerBounds().length != 0) {
+                    throw new IllegalStateException("Deserializer must be covariant wildcard");
+                }
+                // exact match, even though the param is covariant.
+                return findInvariantDeserializerProvider(((WildcardType) parameter).getUpperBounds()[0]);
+            } else {
+                // checked above
+                throw new AssertionError(rawType);
             }
-            return findContravariantSerializerProvider(((WildcardType) parameter).getLowerBounds()[0]);
-        } else if (rawType == Deserializer.class) {
-            Type parameter = ((ParameterizedType) type).getActualTypeArguments()[0];
-            if (!(parameter instanceof WildcardType) || ((WildcardType) parameter).getLowerBounds().length != 0) {
-                throw new IllegalStateException("Deserializer must be covariant wildcard");
-            }
-            // exact match, even though the param is covariant.
-            return findInvariantDeserializerProvider(((WildcardType) parameter).getUpperBounds()[0]);
         } else {
-            // checked above
-            throw new AssertionError(rawType);
+            // typevariables should have been folded above, any other types are invalid.
+            throw new AssertionError(type.getTypeName());
         }
     }
 

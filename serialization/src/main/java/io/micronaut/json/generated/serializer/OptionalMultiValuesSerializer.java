@@ -15,31 +15,30 @@ import java.util.List;
 import java.util.Optional;
 
 @Singleton
-class OptionalMultiValuesSerializer implements Serializer<OptionalMultiValues<?>> {
+class OptionalMultiValuesSerializer<V> implements Serializer<OptionalMultiValues<V>> {
     private final boolean alwaysSerializeErrorsAsList;
+    private final Serializer<? super V> valueSerializer;
+    private final Serializer<? super List<V>> listSerializer;
 
-    public OptionalMultiValuesSerializer() {
-        this.alwaysSerializeErrorsAsList = false;
-    }
-
-    @Inject
-    public OptionalMultiValuesSerializer(JsonConfiguration jacksonConfiguration) {
+    public OptionalMultiValuesSerializer(JsonConfiguration jacksonConfiguration, Serializer<? super V> valueSerializer, Serializer<? super List<V>> listSerializer) {
         this.alwaysSerializeErrorsAsList = jacksonConfiguration.isAlwaysSerializeErrorsAsList();
+        this.valueSerializer = valueSerializer;
+        this.listSerializer = listSerializer;
     }
 
     @Override
-    public void serialize(JsonGenerator encoder, OptionalMultiValues<?> value) throws IOException {
+    public void serialize(JsonGenerator encoder, OptionalMultiValues<V> value) throws IOException {
         encoder.writeStartObject();
         for (CharSequence key : value) {
-            Optional<? extends List<?>> opt = value.get(key);
+            Optional<? extends List<V>> opt = value.get(key);
             if (opt.isPresent()) {
                 String fieldName = key.toString();
                 encoder.writeFieldName(fieldName);
-                List<?> list = opt.get();
+                List<V> list = opt.get();
                 if (list.size() == 1 && (list.get(0).getClass() != JsonError.class || !alwaysSerializeErrorsAsList)) {
-                    encoder.writeObject(list.get(0));
+                    valueSerializer.serialize(encoder, list.get(0));
                 } else {
-                    encoder.writeObject(list);
+                    listSerializer.serialize(encoder, list);
                 }
             }
         }

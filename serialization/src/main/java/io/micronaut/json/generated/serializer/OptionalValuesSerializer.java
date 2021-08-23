@@ -13,26 +13,21 @@ import java.io.IOException;
 import java.util.Optional;
 
 @Singleton
-class OptionalValuesSerializer implements Serializer<OptionalValues<?>> {
-    private final boolean alwaysSerializeErrorsAsList;
+class OptionalValuesSerializer<V> implements Serializer<OptionalValues<V>> {
+    private final Serializer<? super V> valueSerializer;
 
-    public OptionalValuesSerializer() {
-        this.alwaysSerializeErrorsAsList = false;
-    }
-
-    @Inject
-    public OptionalValuesSerializer(JsonConfiguration jacksonConfiguration) {
-        this.alwaysSerializeErrorsAsList = jacksonConfiguration.isAlwaysSerializeErrorsAsList();
+    public OptionalValuesSerializer(Serializer<? super V> valueSerializer) {
+        this.valueSerializer = valueSerializer;
     }
 
     @Override
-    public void serialize(JsonGenerator encoder, OptionalValues<?> value) throws IOException {
+    public void serialize(JsonGenerator encoder, OptionalValues<V> value) throws IOException {
         encoder.writeStartObject();
         for (CharSequence key : value) {
-            Optional<?> opt = value.get(key);
+            Optional<V> opt = value.get(key);
             if (opt.isPresent()) {
                 encoder.writeFieldName(key.toString());
-                encoder.writeObject(opt.get());
+                valueSerializer.serialize(encoder, opt.get());
             }
         }
         encoder.writeEndObject();
