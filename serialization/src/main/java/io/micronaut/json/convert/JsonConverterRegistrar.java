@@ -196,9 +196,10 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
                 if (CharSequence.class.isAssignableFrom(targetType) && node.isObject()) {
                     return Optional.of(node.toString());
                 } else {
-                    Argument<Object> argument = null;
-                    if (node.isContainerNode() && context instanceof ArgumentConversionContext && targetType.getTypeParameters().length != 0) {
-                        argument = ((ArgumentConversionContext<Object>) context).getArgument();
+                    Argument<?> argument = null;
+                    // todo: the old converter checks node instanceof ContainerNode here, but this breaks tests.
+                    if (context instanceof ArgumentConversionContext && targetType.getTypeParameters().length != 0) {
+                        argument = ((ArgumentConversionContext<?>) context).getArgument();
                     }
                     MicronautObjectCodec om = this.objectCodec.get();
                     JsonParser parser = node.traverse(om.getObjectCodec());
