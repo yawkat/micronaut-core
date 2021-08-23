@@ -132,7 +132,17 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
         if (prop.property.permitRecursiveSerialization) {
             symbol = symbol.withRecursiveSerialization();
         }
-        if (prop.property.nullable) {
+        Boolean nullable = prop.property.nullable;
+        // if no nullity is given, infer nullity from the value null support.
+        // most types will be wrapped with NullableSerializerSymbol, but e.g. Optional won't be.
+        if (nullable == null) {
+            if (prop.type.isPrimitive() && !prop.type.isArray()) {
+                nullable = false;
+            } else {
+                nullable = !symbol.supportsNullDeserialization();
+            }
+        }
+        if (nullable) {
             symbol = new NullableSerializerSymbol(symbol);
         }
         return symbol;

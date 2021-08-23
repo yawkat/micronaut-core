@@ -15,6 +15,7 @@
  */
 package io.micronaut.json.generator.symbol.bean;
 
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.*;
 import io.micronaut.json.generator.symbol.GeneratorType;
 
@@ -51,7 +52,8 @@ class BeanDefinition {
         final ParameterElement creatorParameter;
 
         final boolean permitRecursiveSerialization;
-        final boolean nullable;
+        @Nullable
+        final Boolean nullable;
         final boolean unwrapped;
 
         final Set<String> aliases;
@@ -60,7 +62,7 @@ class BeanDefinition {
             this(name, field, getter, setter, creatorParameter, false, false, false, Collections.emptySet());
         }
 
-        private Property(String name, FieldElement field, MethodElement getter, MethodElement setter, ParameterElement creatorParameter, boolean permitRecursiveSerialization, boolean nullable, boolean unwrapped, Set<String> aliases) {
+        private Property(String name, FieldElement field, MethodElement getter, MethodElement setter, ParameterElement creatorParameter, boolean permitRecursiveSerialization, Boolean nullable, boolean unwrapped, Set<String> aliases) {
             this.name = name;
             this.field = field;
             this.getter = getter;
@@ -72,11 +74,11 @@ class BeanDefinition {
             this.aliases = aliases;
         }
 
-        public Property withPermitRecursiveSerialization(boolean value) {
+        public Property withPermitRecursiveSerialization(Boolean value) {
             return new Property(name, field, getter, setter, creatorParameter, value, nullable, unwrapped, aliases);
         }
 
-        public Property withNullable(boolean value) {
+        public Property withNullable(@Nullable Boolean value) {
             return new Property(name, field, getter, setter, creatorParameter, permitRecursiveSerialization, value, unwrapped, aliases);
         }
 

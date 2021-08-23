@@ -310,7 +310,7 @@ class BeanIntrospector {
                             }
                         })
                         .filter(Objects::nonNull)
-                        .findFirst().orElse(false);
+                        .findFirst().orElse(null);
 
                 prop.unwrapped = prop.annotatedElementsInOrder(forSerialization)
                         .anyMatch(element -> element.hasAnnotation(JsonUnwrapped.class));
@@ -404,7 +404,7 @@ class BeanIntrospector {
         String name;
 
         boolean permitRecursiveSerialization;
-        boolean nullable;
+        Boolean nullable;
         boolean unwrapped;
 
         Set<String> aliases;
