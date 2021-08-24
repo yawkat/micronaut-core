@@ -266,14 +266,8 @@ public class GenericTypeUtils {
     public static Type foldTypeVariables(Type into, VariableFold fold) {
         if (into instanceof GenericArrayType) {
             Type component = foldTypeVariables(((GenericArrayType) into).getGenericComponentType(), fold);
-            if (component == null) {
-                // erased type
-                return Object[].class;
-            } else if (component instanceof Class<?>) {
-                return Array.newInstance((Class<?>) component, 0).getClass();
-            } else {
-                return new GenericArrayTypeImpl(component);
-            }
+            // erased type
+            return component == null ? Object[].class : makeArrayType(component);
         } else if (into instanceof ParameterizedType) {
             ParameterizedType t = (ParameterizedType) into;
             Type owner = t.getOwnerType() == null ? null : foldTypeVariables(t.getOwnerType(), fold);
@@ -337,86 +331,96 @@ public class GenericTypeUtils {
      * Find the parameterization of a raw type on a type. For example, if {@code on} is {@code List<String>}, and
      * {@code of} is {@code Iterable.class}, this method will return a type corresponding to {@code Iterable<String>}.
      *
-     * @param on The type to look on for the parameterization
-     * @param of The raw type to look for
+     * @param child The type to look on for the parameterization
+     * @param parent The raw type to look for
      * @return One of: A {@link ParameterizedType} with the raw type being {@code of}, the original value of {@code of}
      * if {@code on} only implements {@code of} as a raw type, or {@code null} if {@code on} does not implement
      * {@code of}.
      */
     @Nullable
-    public static Type findParameterization(Type on, Class<?> of) {
-        if (on instanceof GenericArrayType) {
-            if (of == Object.class || of == Cloneable.class || of == Serializable.class) {
-                return of;
+    public static Type findParameterization(Type child, Class<?> parent) {
+        if (child instanceof GenericArrayType) {
+            if (parent == Object.class || parent == Cloneable.class || parent == Serializable.class) {
+                return parent;
             }
-            if (!of.isArray()) {
+            if (!parent.isArray()) {
                 return null;
             }
-            Type componentType = ((GenericArrayType) on).getGenericComponentType();
+            Type componentType = ((GenericArrayType) child).getGenericComponentType();
             if (componentType instanceof TypeVariable) {
-                if (isAssignableFrom(of.getComponentType(), componentType)) {
-                    return on;
+                if (isAssignableFrom(parent.getComponentType(), componentType)) {
+                    return child;
                 } else {
                     return null;
                 }
             } else {
-                Type componentParameterization = findParameterization(componentType, of.getComponentType());
-                return componentParameterization == null ? null : new GenericArrayTypeImpl(componentParameterization);
+                Type componentParameterization = findParameterization(componentType, parent.getComponentType());
+                return componentParameterization == null ? null : makeArrayType(componentParameterization);
             }
-        } else if (on instanceof ParameterizedType) {
-            ParameterizedType onT = (ParameterizedType) on;
+        } else if (child instanceof ParameterizedType) {
+            ParameterizedType onT = (ParameterizedType) child;
             Class<?> rawType = (Class<?>) onT.getRawType();
-            if (rawType == of) {
+            if (rawType == parent) {
                 return onT;
             } else {
                 Map<TypeVariable<?>, Type> typesToFold = new HashMap<>();
                 findFoldableTypes(typesToFold, onT);
-                return findParameterization(rawType, t -> foldTypeVariables(t, typesToFold::get), of);
+                return findParameterization(rawType, t -> foldTypeVariables(t, typesToFold::get), parent);
             }
-        } else if (on instanceof TypeVariable<?>) {
-            for (Type bound : ((TypeVariable<?>) on).getBounds()) {
-                Type boundParameterization = findParameterization(bound, of);
+        } else if (child instanceof TypeVariable<?>) {
+            for (Type bound : ((TypeVariable<?>) child).getBounds()) {
+                Type boundParameterization = findParameterization(bound, parent);
                 if (boundParameterization != null) {
                     return boundParameterization;
                 }
             }
             return null;
-        } else if (on instanceof WildcardType) {
-            for (Type upperBound : ((WildcardType) on).getUpperBounds()) {
-                Type boundParameterization = findParameterization(upperBound, of);
+        } else if (child instanceof WildcardType) {
+            for (Type upperBound : ((WildcardType) child).getUpperBounds()) {
+                Type boundParameterization = findParameterization(upperBound, parent);
                 if (boundParameterization != null) {
                     return boundParameterization;
                 }
             }
             return null;
-        } else if (on instanceof Class<?>) {
-            if (on == of) {
-                return on;
+        } else if (child instanceof Class<?>) {
+            if (child == parent) {
+                return child;
             } else {
                 // replace any type variables with raw types
-                return findParameterization((Class<?>) on, t -> foldTypeVariables(t, v -> null), of);
+                return findParameterization((Class<?>) child, t -> foldTypeVariables(t, v -> null), parent);
             }
         } else {
-            throw new UnsupportedOperationException("Unsupported type for resolution: " + on.getClass());
+            throw new UnsupportedOperationException("Unsupported type for resolution: " + child.getClass());
         }
     }
 
-    private static Type findParameterization(Class<?> on, Function<Type, Type> foldFunction, Class<?> of) {
+    private static Type findParameterization(Class<?> child, Function<Type, Type> foldFunction, Class<?> parent) {
+        if (child.isArray()) {
+            if (parent == Serializable.class || parent == Cloneable.class) {
+                return parent;
+            } else if (parent.isArray()) {
+                Type componentParameterization = findParameterization(child.getComponentType(), foldFunction, parent.getComponentType());
+                return componentParameterization == null ? null : makeArrayType(componentParameterization);
+            } else {
+                return null;
+            }
+        }
         // special case Object, because Object is also a supertype of interfaces but does not appear in
         // getGenericSuperclass for those
-        if (of == Object.class && !on.isPrimitive()) {
+        if (parent == Object.class && !child.isPrimitive()) {
             return Object.class;
         }
-        if (of.isInterface()) {
-            for (Type itf : on.getGenericInterfaces()) {
-                Type parameterization = findParameterization(foldFunction.apply(itf), of);
+        if (parent.isInterface()) {
+            for (Type itf : child.getGenericInterfaces()) {
+                Type parameterization = findParameterization(foldFunction.apply(itf), parent);
                 if (parameterization != null) {
                     return parameterization;
                 }
             }
         }
-        if (on.getGenericSuperclass() != null) {
-            return findParameterization(foldFunction.apply(on.getGenericSuperclass()), of);
+        if (child.getGenericSuperclass() != null) {
+            return findParameterization(foldFunction.apply(child.getGenericSuperclass()), parent);
         } else {
             return null;
         }
@@ -671,6 +675,14 @@ public class GenericTypeUtils {
             }
             builder.append('>');
             return builder.toString();
+        }
+    }
+
+    private static Type makeArrayType(Type component) {
+        if (component instanceof Class<?>) {
+            return Array.newInstance((Class<?>) component, 0).getClass();
+        } else {
+            return new GenericArrayTypeImpl(component);
         }
     }
 

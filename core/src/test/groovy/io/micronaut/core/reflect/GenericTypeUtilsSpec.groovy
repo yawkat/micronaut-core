@@ -124,5 +124,18 @@ class GenericTypeUtilsSpec extends Specification {
         expect:
         GenericTypeUtils.findParameterization(new GenericTypeToken<List<String>[]>() {}.getType(), Iterable[]).typeName == 'java.lang.Iterable<java.lang.String>[]'
     }
+
+    void "test findParameterization normal array"() {
+        expect:
+        GenericTypeUtils.findParameterization(String[], CharSequence[]) == CharSequence[]
+        GenericTypeUtils.findParameterization(String[], Object[]) == Object[]
+        GenericTypeUtils.findParameterization(String[], Number[]) == null
+        GenericTypeUtils.findParameterization(String[], Serializable) == Serializable
+    }
+
+    void "test findParameterization from normal array to generic"() {
+        expect:
+        GenericTypeUtils.findParameterization(String[], Comparable[]).typeName == 'java.lang.Comparable<java.lang.String>[]'
+    }
 }
 
