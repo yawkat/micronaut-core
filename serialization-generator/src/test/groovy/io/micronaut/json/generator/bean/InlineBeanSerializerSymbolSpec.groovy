@@ -343,6 +343,7 @@ class Test {
 package example;
 
 import com.fasterxml.jackson.annotation.*;
+@JsonIgnoreProperties(ignoreUnknown = false)
 class Test {
     String foo;
 }

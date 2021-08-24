@@ -14,14 +14,6 @@ import java.lang.reflect.TypeVariable
 import java.lang.reflect.WildcardType
 
 class MapperVisitorSpec extends AbstractTypeElementSpec implements SerializerUtils {
-    def setupSpec() {
-        SingletonSerializerGenerator.generateDirectConstructor = true;
-    }
-
-    def cleanupSpec() {
-        SingletonSerializerGenerator.generateDirectConstructor = false;
-    }
-
     void "generator creates a serializer for jackson annotations"() {
         given:
         def compiled = buildClassLoader('example.Test', '''
@@ -420,16 +412,15 @@ interface Test {
 ''')
         def testBean = ['getFoo': { Object[] args -> 'bar' }].asType(compiled.loadClass('example.Test'))
         def serializer = compiled.loadClass('example.$Test$Serializer').newInstance()
-        def deserializer = compiled.loadClass('example.$Test$Deserializer').newInstance()
 
         expect:
         serializeToString(serializer, testBean) == '{"foo":"bar"}'
 
         when:
-        deserializeFromString(deserializer, '{"foo":"bar"}')
+        compiled.loadClass('example.$Test$Deserializer')
 
         then:
-        thrown UnsupportedOperationException
+        thrown ClassNotFoundException
     }
 
     void "optional"() {
@@ -482,7 +473,7 @@ class C {
 ''', true)
 
         expect:
-        ctx.getBean(Argument.of(Serializer.class, ctx.classLoader.loadClass('example.C'))) instanceof Serializer
+        ctx.getBeansOfType(Serializer.Factory).any { it.genericType == ctx.classLoader.loadClass('example.C') }
     }
 
     void "disabled mode isn't generated"() {
@@ -498,7 +489,7 @@ class A {
 ''', true)
 
         expect:
-        ctx.findBean(Argument.of(Serializer.class, ctx.classLoader.loadClass('example.A'))).isPresent()
-        !ctx.findBean(Argument.of(Deserializer.class, ctx.classLoader.loadClass('example.A'))).isPresent()
+        ctx.getBeansOfType(Serializer.Factory).any { it.genericType == ctx.classLoader.loadClass('example.A') }
+        !ctx.getBeansOfType(Deserializer.Factory).any { it.genericType == ctx.classLoader.loadClass('example.A') }
     }
 }

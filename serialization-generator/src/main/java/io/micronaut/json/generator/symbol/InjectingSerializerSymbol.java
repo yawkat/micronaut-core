@@ -62,7 +62,7 @@ final class InjectingSerializerSymbol implements SerializerSymbol {
     }
 
     private CodeBlock getSerializerAccess(GeneratorContext generatorContext, GeneratorType type, boolean forSerialization) {
-        GeneratorContext.InjectableSerializerType injectable = new GeneratorContext.InjectableSerializerType(PoetUtil.toTypeName(type), provider, forSerialization);
+        GeneratorContext.InjectableSerializerType injectable = new GeneratorContext.InjectableSerializerType(type, provider, forSerialization);
         CodeBlock accessExpression = generatorContext.requestInjection(injectable).getAccessExpression();
         if (provider) {
             accessExpression = CodeBlock.of("$L.get()", accessExpression);

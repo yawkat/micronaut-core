@@ -2,7 +2,6 @@ package io.micronaut.json;
 
 import io.micronaut.context.BeanContext;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
-import io.micronaut.context.exceptions.NoSuchBeanException;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.reflect.GenericTypeToken;
 import io.micronaut.core.reflect.GenericTypeUtils;
@@ -15,6 +14,9 @@ import jakarta.inject.Singleton;
 
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @BootstrapContextCompatible
@@ -22,10 +24,19 @@ import java.util.stream.Collectors;
 public final class SerializerLocator {
     private final BeanContext context;
 
+    private final Registry<Serializer<?>> serializers;
+    private final Registry<Deserializer<?>> deserializers;
+
     @Inject
+    @SuppressWarnings({"rawtypes", "unchecked"})
     SerializerLocator(BeanContext context) {
         this.context = context;
+
+        this.serializers = new Registry(Serializer.class, Serializer.Factory.class);
+        this.deserializers = new Registry(Deserializer.class, Deserializer.Factory.class);
     }
+
+    //region API methods
 
     public <T> Deserializer<T> findInvariantDeserializer(Type forType) {
         return this.<T>findInvariantDeserializerProvider(forType).get();
@@ -41,85 +52,7 @@ public final class SerializerLocator {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> Provider<Deserializer<T>> findInvariantDeserializerProvider(Type forType) {
-        forType = normalizePrimitiveType(forType);
-
-        Collection<BeanDefinition<Deserializer>> allDeserializers = context.getBeanDefinitions(Deserializer.class);
-        for (BeanDefinition<? extends Deserializer> def : allDeserializers) {
-            Type serializerType = getSerializerType(def, Deserializer.class);
-            if (serializerType != null) {
-                Map<TypeVariable<?>, Type> inferred = TypeInference.inferExact(serializerType, forType);
-                if (inferred != null) {
-                    if (inferred.isEmpty()) {
-                        return () -> context.getBean(def);
-                    } else {
-                        return this.inferenceFactory((Class<? extends Deserializer<T>>) def.getBeanType(), inferred);
-                    }
-                }
-            }
-        }
-        // TODO
-        throw new NoSuchBeanException(forType.getTypeName()) {};
-    }
-
-    private Type foldInferred(Type into, Map<TypeVariable<?>, Type> inferredTypes) {
-        GenericTypeUtils.VariableFold fold = var -> {
-            Type inferredType = inferredTypes.get(var);
-            if (inferredType == null) {
-                throw new IllegalArgumentException("Missing inferred variable " + var);
-            }
-            return inferredType;
-        };
-        return GenericTypeUtils.foldTypeVariables(into, fold);
-    }
-
-    private <T> Provider<T> inferenceFactory(Class<? extends T> on, Map<TypeVariable<?>, Type> inferredTypes) {
-        Constructor<?> constructor = on.getConstructors()[0];
-        List<Provider<?>> parameterProviders = Arrays.stream(constructor.getGenericParameterTypes())
-                .map(t -> foldInferred(t, inferredTypes))
-                .map(this::requestParameter)
-                .collect(Collectors.toList());
-        return () -> {
-            try {
-                // TODO: avoid reflection
-                constructor.setAccessible(true);
-                //noinspection unchecked
-                return (T) constructor.newInstance(parameterProviders.stream().map(Provider::get).toArray(Object[]::new));
-            } catch (ReflectiveOperationException e) {
-                throw new RuntimeException(e);
-            }
-        };
-    }
-
-    private Provider<?> requestParameter(Type type) {
-        if (type instanceof Class<?>) {
-            BeanDefinition<?> definition = context.getBeanDefinition((Class<?>) type);
-            return () -> context.getBean(definition);
-        } else if (type instanceof ParameterizedType) {
-            Type rawType = ((ParameterizedType) type).getRawType();
-            if (rawType == Provider.class) {
-                Provider<?> actualSupplier = requestParameter(((ParameterizedType) type).getActualTypeArguments()[0]);
-                return () -> actualSupplier;
-            } else if (rawType == Serializer.class) {
-                Type parameter = ((ParameterizedType) type).getActualTypeArguments()[0];
-                if (!(parameter instanceof WildcardType) || ((WildcardType) parameter).getLowerBounds().length != 1) {
-                    throw new IllegalStateException("Serializer must be contravariant wildcard");
-                }
-                return findContravariantSerializerProvider(((WildcardType) parameter).getLowerBounds()[0]);
-            } else if (rawType == Deserializer.class) {
-                Type parameter = ((ParameterizedType) type).getActualTypeArguments()[0];
-                if (!(parameter instanceof WildcardType) || ((WildcardType) parameter).getLowerBounds().length != 0) {
-                    throw new IllegalStateException("Deserializer must be covariant wildcard");
-                }
-                // exact match, even though the param is covariant.
-                return findInvariantDeserializerProvider(((WildcardType) parameter).getUpperBounds()[0]);
-            } else {
-                // checked above
-                throw new AssertionError(rawType);
-            }
-        } else {
-            // typevariables should have been folded above, any other types are invalid.
-            throw new AssertionError(type.getTypeName());
-        }
+        return (Provider) deserializers.findInvariant(forType);
     }
 
     public <T> Provider<Deserializer<T>> findInvariantDeserializerProvider(GenericTypeToken<T> typeToken) {
@@ -140,21 +73,59 @@ public final class SerializerLocator {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> Provider<Serializer<? super T>> findContravariantSerializerProvider(Type forType) {
-        forType = normalizePrimitiveType(forType);
+        return (Provider) serializers.findContravariant(forType);
+    }
 
-        Collection<BeanDefinition<Serializer>> allSerializers = context.getBeanDefinitions(Serializer.class);
-        Provider<Serializer<? super T>> found = null;
-        Type foundType = null;
-        for (BeanDefinition<? extends Serializer> def : allSerializers) {
-            Type serializerType = getSerializerType(def, Serializer.class);
-            if (serializerType != null) {
-                Map<TypeVariable<?>, Type> inferred = TypeInference.inferContravariant(serializerType, forType);
+    public <T> Provider<Serializer<? super T>> findContravariantSerializerProvider(GenericTypeToken<T> typeToken) {
+        return findContravariantSerializerProvider(typeToken.getType());
+    }
+
+    //endregion
+
+    private static Type foldInferred(Type into, Map<TypeVariable<?>, Type> inferredTypes) {
+        GenericTypeUtils.VariableFold fold = var -> {
+            Type inferredType = inferredTypes.get(var);
+            if (inferredType == null) {
+                throw new IllegalArgumentException("Missing inferred variable " + var);
+            }
+            return inferredType;
+        };
+        return GenericTypeUtils.foldTypeVariables(into, fold);
+    }
+
+    private static Type normalizePrimitiveType(Type t) {
+        if (t instanceof Class<?>) {
+            return ReflectionUtils.getPrimitiveType((Class<?>) t);
+        } else {
+            return t;
+        }
+    }
+
+    private class Registry<S> {
+        private final Collection<FactoryWrapper<S>> factories;
+
+        Registry(Class<S> baseClass, Class<? extends BaseCodecFactory> factoryClass) {
+            Collection<BaseCodecFactory> factories = new ArrayList<>(context.getBeansOfType(factoryClass));
+            for (BeanDefinition<S> directDefinition : context.getBeanDefinitions(baseClass)) {
+                factories.add(new ContainerSyntheticFactory<>(directDefinition, baseClass));
+            }
+            //noinspection Convert2MethodRef
+            this.factories = factories.stream().map(factory -> new FactoryWrapper<S>(factory)).collect(Collectors.toList());
+        }
+
+        public Provider<S> findContravariant(Type forType) {
+            forType = normalizePrimitiveType(forType);
+
+            Provider<S> found = null;
+            Type foundType = null;
+            for (FactoryWrapper<S> factory : factories) {
+                Map<TypeVariable<?>, Type> inferred = TypeInference.inferContravariant(factory.genericType, forType);
                 if (inferred != null) {
                     Type hereType;
                     if (inferred.isEmpty()) {
-                        hereType = serializerType;
+                        hereType = factory.genericType;
                     } else {
-                        hereType = foldInferred(serializerType, inferred);
+                        hereType = foldInferred(factory.genericType, inferred);
                     }
                     if (found != null && foundType != null && hereType != null && GenericTypeUtils.isAssignableFrom(hereType, foundType, true)) {
                         // hereType :> foundType :> type, foundType is the better choice
@@ -162,118 +133,152 @@ public final class SerializerLocator {
                     }
 
                     foundType = hereType;
-                    if (inferred.isEmpty()) {
-                        found = () -> context.getBean(def);
-                    } else {
-                        found = this.inferenceFactory((Class<? extends Serializer<T>>) def.getBeanType(), inferred);
-                    }
+                    found = () -> factory.createFromInference(inferred);
                 }
             }
+            if (found != null) {
+                return found;
+            }
+            throw new AssertionError("Shouldn't happen, ObjectSerializer should always match. Maybe the classpath is broken?");
         }
-        if (found != null) {
-            return found;
-        }
-        // TODO
-        throw new NoSuchBeanException(forType.getTypeName()) {};
-    }
 
-    public <T> Provider<Serializer<? super T>> findContravariantSerializerProvider(GenericTypeToken<T> typeToken) {
-        return findContravariantSerializerProvider(typeToken.getType());
-    }
+        public Provider<S> findInvariant(Type forType) {
+            forType = normalizePrimitiveType(forType);
 
-    @Nullable
-    private static <T> Type getSerializerType(BeanType<? extends T> beanType, Class<T> target) {
-        Type parameterization = GenericTypeUtils.findParameterization(GenericTypeUtils.parameterizeWithFreeVariables(beanType.getBeanType()), target);
-        if (parameterization instanceof ParameterizedType) {
-            return ((ParameterizedType) parameterization).getActualTypeArguments()[0];
-        } else {
-            // raw type, would be eligible for any serializer
-            return null;
+            for (FactoryWrapper<S> factory : factories) {
+                Map<TypeVariable<?>, Type> inferred = TypeInference.inferExact(factory.genericType, forType);
+                if (inferred != null) {
+                    return () -> factory.createFromInference(inferred);
+                }
+            }
+            throw new NoSuchDeserializerException("No deserializer found for type " + forType.getTypeName());
         }
     }
 
-    private static Type normalizePrimitiveType(Type t) {
-         if (t instanceof Class<?>) {
-             return ReflectionUtils.getWrapperType((Class) t);
-         } else {
-             return t;
-         }
-    }
-
-    /*
-    @SuppressWarnings("rawtypes")
-    private static class ExactMatchQualifier implements Qualifier<Deserializer> {
-        private final Type type;
-
-        ExactMatchQualifier(Type type) {
-            this.type = type;
-        }
-
-        @Override
-        public <BT extends BeanType<Deserializer>> Stream<BT> reduce(Class<Deserializer> beanType, Stream<BT> candidates) {
-            return candidates.filter(candidate -> GenericTypeUtils.typesEqual(getSerializerType(candidate, Deserializer.class), type));
-        }
-
-        @Override
-        public String toString() {
-            return "ExactMatchQualifier{" +
-                    "type=" + type +
-                    '}';
+    private static class NoSuchDeserializerException extends RuntimeException {
+        public NoSuchDeserializerException(String message) {
+            super(message);
         }
     }
-    */
 
-    // note: JLS §4.10 notation:
-    // S :> T       S is a supertype of T, T is assignable to S
-    // S > T        S :> T and S != T
+    private class FactoryWrapper<S> {
+        private final BaseCodecFactory factory;
+
+        @Nullable
+        private final ConcurrentMap<TypeVariableAssignment, S> instances;
+        private volatile S singleton = null;
+
+        final Type genericType;
+
+        FactoryWrapper(BaseCodecFactory factory) {
+            this.factory = factory;
+
+            this.genericType = factory.getGenericType();
+            if (TypeInference.hasFreeVariables(genericType)) {
+                instances = new ConcurrentHashMap<>();
+            } else {
+                instances = null;
+            }
+        }
+
+        S createFromInference(Map<TypeVariable<?>, Type> assignment) {
+            return create(assignment.entrySet().stream().collect(Collectors.toMap(e -> e.getKey().getName(), Map.Entry::getValue)));
+        }
+
+        S create(Map<String, Type> assignment) {
+            if (assignment.isEmpty()) {
+                assert instances == null;
+                S res = singleton;
+                if (res == null) {
+                    singleton = res = newInstanceSafe(TypeVariableAssignment.EMPTY);
+                }
+                return res;
+            } else {
+                assert instances != null;
+                TypeVariableAssignment assignmentWrapper = new TypeVariableAssignment(assignment);
+                S res = instances.get(assignmentWrapper);
+                if (res == null) {
+                    res = newInstanceSafe(assignmentWrapper);
+                    instances.put(assignmentWrapper, res);
+                }
+                return res;
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        private S newInstanceSafe(TypeVariableAssignment empty) {
+            return (S) factory.newInstance(SerializerLocator.this, empty);
+        }
+    }
 
     /**
-     * Qualifier for finding the most specific serializer that can serialize a given type.
-     * {@code serializerType :> type} holds. Raw types are treated as {@link Object}. Behavior when there are multiple
-     * most specific serializers is implementation-defined.
+     * {@link BaseCodecFactory} implementation created for (de)serializers that are in the bean context without a
+     * factory.
      */
-    /*
-    @SuppressWarnings("rawtypes")
-    private static class MostSpecificContravariantQualifier implements Qualifier<Serializer> {
-        private final Type type;
+    private class ContainerSyntheticFactory<S> implements BaseCodecFactory {
+        private final BeanDefinition<? extends S> definition;
+        private final Type genericType;
 
-        MostSpecificContravariantQualifier(Type type) {
-            this.type = type;
+        ContainerSyntheticFactory(BeanDefinition<? extends S> definition, Class<S> baseClass) {
+            this.definition = definition;
+            Type parameterization = GenericTypeUtils.findParameterization(GenericTypeUtils.parameterizeWithFreeVariables(definition.getBeanType()), baseClass);
+            assert parameterization != null;
+            if (parameterization instanceof Class) {
+                throw new IllegalStateException("Bean " + definition.getName() + " implements " + baseClass.getSimpleName() + " as a raw type, this is forbidden.");
+            }
+            this.genericType = ((ParameterizedType) parameterization).getActualTypeArguments()[0];
         }
 
         @Override
-        public <BT extends BeanType<Serializer>> Stream<BT> reduce(Class<Serializer> beanType, Stream<BT> candidates) {
-            BT found = null;
-            Type foundType = null;
-            for (Iterator<BT> itr = candidates.iterator(); itr.hasNext(); ) {
-                BT here = itr.next();
-                // the type that this BeanType can serialize, or null if this is a raw class
-                Type hereType = getSerializerType(here, Serializer.class);
-                if (hereType == null || GenericTypeUtils.isAssignableFrom(hereType, type)) {
-                    // hereType :> type
-
-                    if (found != null && foundType != null && hereType != null && GenericTypeUtils.isAssignableFrom(hereType, foundType, true)) {
-                        // hereType :> foundType :> type, foundType is the better choice
-                        break;
-                    }
-
-                    found = here;
-                    foundType = hereType;
-                }
-            }
-            if (found == null) {
-                return Stream.empty();
-            } else {
-                return Stream.of(found);
-            }
+        public Type getGenericType() {
+            return genericType;
         }
 
         @Override
-        public String toString() {
-            return "MostSpecificContravariantQualifier{" +
-                    "type=" + type +
-                    '}';
+        public S newInstance(SerializerLocator locator, Function<String, Type> getTypeParameter) {
+            return context.getBean(definition);
         }
     }
-    */
+
+    private static class TypeVariableAssignment implements Function<String, Type> {
+        static final TypeVariableAssignment EMPTY = new TypeVariableAssignment(Collections.emptyMap());
+
+        private final Map<String, Type> assignment;
+        private final int hash;
+
+        TypeVariableAssignment(Map<String, Type> assignment) {
+            this.assignment = assignment;
+            int hash = 1;
+            for (Map.Entry<String, Type> entry : assignment.entrySet()) {
+                hash = 31 * 31 * hash + 31 * entry.getKey().hashCode() + GenericTypeUtils.typeHashCode(entry.getValue());
+            }
+            this.hash = hash;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+
+            return o instanceof TypeVariableAssignment &&
+                    ((TypeVariableAssignment) o).hash == this.hash &&
+                    this.assignment.keySet().equals(((TypeVariableAssignment) o).assignment.keySet()) &&
+                    this.assignment.entrySet().stream().allMatch(entry -> GenericTypeUtils.typesEqual(entry.getValue(), ((TypeVariableAssignment) o).assignment.get(entry.getKey())));
+        }
+
+        @Override
+        public int hashCode() {
+            return hash;
+        }
+
+        @Override
+        public Type apply(String s) {
+            Type type = assignment.get(s);
+            if (type == null) {
+                throw new IllegalStateException("Unexpected type variable " + s);
+            }
+            return type;
+        }
+    }
 }

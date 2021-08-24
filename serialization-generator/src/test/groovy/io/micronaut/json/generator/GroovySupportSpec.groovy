@@ -39,7 +39,7 @@ class Bean {
 ''')
 
         then:
-        context.findBean(Argument.of(Serializer.class, context.classLoader.loadClass("example.Bean"))).isPresent()
+        context.getBeansOfType(Serializer.Factory).any { it.genericType == context.classLoader.loadClass("example.Bean") }
     }
 
     def nested() {
@@ -83,6 +83,6 @@ class Bean {
 ''')
 
         then:
-        context.findBean(Argument.of(Serializer.class, context.classLoader.loadClass("example.Bean"))).isPresent()
+        context.getBeansOfType(Serializer.Factory).any { it.genericType == context.classLoader.loadClass("example.Bean") }
     }
 }

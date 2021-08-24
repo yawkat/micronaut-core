@@ -25,6 +25,31 @@ class TypeInference {
         return inferExact(freeType, parameterization);
     }
 
+    private static boolean hasFreeVariables(Type[] types) {
+        for (Type type : types) {
+            if (hasFreeVariables(type)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean hasFreeVariables(@Nullable Type type) {
+        if (type instanceof TypeVariable) {
+            return true;
+        } else if (type instanceof GenericArrayType) {
+            return hasFreeVariables(((GenericArrayType) type).getGenericComponentType());
+        } else if (type instanceof ParameterizedType) {
+            return hasFreeVariables(((ParameterizedType) type).getOwnerType()) ||
+                    hasFreeVariables(((ParameterizedType) type).getRawType()) ||
+                    hasFreeVariables(((ParameterizedType) type).getActualTypeArguments());
+        } else if (type instanceof WildcardType) {
+            return hasFreeVariables(((WildcardType) type).getUpperBounds()) || hasFreeVariables(((WildcardType) type).getLowerBounds());
+        } else {
+            return false;
+        }
+    }
+
     private static boolean inferRecursive(Map<TypeVariable<?>, Type> inferred, Type[] generic, Type[] target) {
         if (generic.length != target.length) {
             return false;

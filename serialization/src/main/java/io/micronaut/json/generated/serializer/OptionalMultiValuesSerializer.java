@@ -1,18 +1,20 @@
 package io.micronaut.json.generated.serializer;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
+import io.micronaut.core.reflect.GenericTypeFactory;
 import io.micronaut.core.value.OptionalMultiValues;
 import io.micronaut.http.hateoas.JsonError;
 import io.micronaut.json.JsonConfiguration;
 import io.micronaut.json.Serializer;
-import io.micronaut.json.generated.JsonParseException;
+import io.micronaut.json.SerializerLocator;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 @Singleton
 class OptionalMultiValuesSerializer<V> implements Serializer<OptionalMultiValues<V>> {
@@ -43,5 +45,29 @@ class OptionalMultiValuesSerializer<V> implements Serializer<OptionalMultiValues
             }
         }
         encoder.writeEndObject();
+    }
+
+    @Singleton
+    static class Factory implements Serializer.Factory {
+        private final JsonConfiguration jacksonConfiguration;
+
+        @Inject
+        Factory(JsonConfiguration jacksonConfiguration) {
+            this.jacksonConfiguration = jacksonConfiguration;
+        }
+
+        @Override
+        public Type getGenericType() {
+            return GenericTypeFactory.makeParameterizedTypeWithOwner(null, OptionalMultiValues.class, OptionalMultiValuesSerializer.class.getTypeParameters()[0]);
+        }
+
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        @Override
+        public Serializer<? super OptionalMultiValues<?>> newInstance(SerializerLocator locator, Function<String, Type> getTypeParameter) {
+            return new OptionalMultiValuesSerializer(
+                    jacksonConfiguration,
+                    locator.findContravariantSerializer(getTypeParameter.apply("V")),
+                    locator.findContravariantSerializer(GenericTypeFactory.makeParameterizedTypeWithOwner(null, List.class, getTypeParameter.apply("V"))));
+        }
     }
 }

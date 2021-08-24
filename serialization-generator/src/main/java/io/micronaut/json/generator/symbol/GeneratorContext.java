@@ -120,17 +120,19 @@ public final class GeneratorContext {
     }
 
     public static final class InjectableSerializerType {
-        final TypeName type;
+        final GeneratorType type;
+        final TypeName poetType;
         final boolean provider;
         final boolean forSerialization;
 
         final TypeName fieldType;
 
-        public InjectableSerializerType(TypeName type, boolean provider, boolean forSerialization) {
+        public InjectableSerializerType(GeneratorType type, boolean provider, boolean forSerialization) {
             this.type = type;
             this.provider = provider;
             this.forSerialization = forSerialization;
-            this.fieldType = fieldType(type, provider, forSerialization);
+            this.poetType = type.toPoetName();
+            this.fieldType = fieldType(poetType, provider, forSerialization);
         }
 
         private static TypeName fieldType(TypeName type, boolean provider, boolean forSerialization) {

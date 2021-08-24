@@ -24,6 +24,7 @@ import io.micronaut.core.util.ArrayUtils;
 import java.io.Serializable;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
 /**
@@ -267,7 +268,7 @@ public class GenericTypeUtils {
         if (into instanceof GenericArrayType) {
             Type component = foldTypeVariables(((GenericArrayType) into).getGenericComponentType(), fold);
             // erased type
-            return component == null ? Object[].class : makeArrayType(component);
+            return component == null ? Object[].class : GenericTypeFactory.makeArrayType(component);
         } else if (into instanceof ParameterizedType) {
             ParameterizedType t = (ParameterizedType) into;
             Type owner = t.getOwnerType() == null ? null : foldTypeVariables(t.getOwnerType(), fold);
@@ -277,7 +278,7 @@ public class GenericTypeUtils {
                 // erased type
                 return raw;
             } else {
-                return new ParameterizedTypeImpl(owner, (Class<?>) raw, args);
+                return GenericTypeFactory.makeParameterizedTypeWithOwner(owner, (Class<?>) raw, args);
             }
         } else if (into instanceof TypeVariable<?>) {
             return fold.apply((TypeVariable<?>) into);
@@ -289,7 +290,7 @@ public class GenericTypeUtils {
                 // erase type
                 return null;
             } else {
-                return new WildcardTypeImpl(upper, lower);
+                return GenericTypeFactory.makeWildcardType(upper, lower);
             }
         } else if (into instanceof Class) {
             return into;
@@ -355,7 +356,7 @@ public class GenericTypeUtils {
                 }
             } else {
                 Type componentParameterization = findParameterization(componentType, parent.getComponentType());
-                return componentParameterization == null ? null : makeArrayType(componentParameterization);
+                return componentParameterization == null ? null : GenericTypeFactory.makeArrayType(componentParameterization);
             }
         } else if (child instanceof ParameterizedType) {
             ParameterizedType onT = (ParameterizedType) child;
@@ -401,7 +402,7 @@ public class GenericTypeUtils {
                 return parent;
             } else if (parent.isArray()) {
                 Type componentParameterization = findParameterization(child.getComponentType(), foldFunction, parent.getComponentType());
-                return componentParameterization == null ? null : makeArrayType(componentParameterization);
+                return componentParameterization == null ? null : GenericTypeFactory.makeArrayType(componentParameterization);
             } else {
                 return null;
             }
@@ -448,13 +449,10 @@ public class GenericTypeUtils {
             return right instanceof GenericArrayType &&
                     typesEqual(((GenericArrayType) left).getGenericComponentType(), ((GenericArrayType) right).getGenericComponentType());
         } else if (left instanceof ParameterizedType) {
-            if (right instanceof ParameterizedType) {
-                return (!isInnerClass((Class<?>) ((ParameterizedType) left).getRawType()) || typesEqual(((ParameterizedType) left).getOwnerType(), ((ParameterizedType) right).getOwnerType())) &&
-                        typesEqual(((ParameterizedType) left).getRawType(), ((ParameterizedType) right).getRawType()) &&
-                        typesEqual(((ParameterizedType) left).getActualTypeArguments(), ((ParameterizedType) right).getActualTypeArguments());
-            } else {
-                return false;
-            }
+            return right instanceof ParameterizedType &&
+                    (!isInnerClass((Class<?>) ((ParameterizedType) left).getRawType()) || typesEqual(((ParameterizedType) left).getOwnerType(), ((ParameterizedType) right).getOwnerType())) &&
+                    typesEqual(((ParameterizedType) left).getRawType(), ((ParameterizedType) right).getRawType()) &&
+                    typesEqual(((ParameterizedType) left).getActualTypeArguments(), ((ParameterizedType) right).getActualTypeArguments());
         } else if (left instanceof TypeVariable<?> || left instanceof Class<?>) {
             // covered in equals above
             return false;
@@ -468,6 +466,45 @@ public class GenericTypeUtils {
         } else {
             return false;
         }
+    }
+
+    private static final int HASH_CODE_RANDOMIZER = ThreadLocalRandom.current().nextInt();
+
+    public static int typeHashCode(@Nullable Type type) {
+        return typeHashCode0(type) ^ HASH_CODE_RANDOMIZER;
+    }
+
+    private static int typeHashCode0(@Nullable Type type) {
+        if (type == null) {
+            return 0;
+        } else if (type instanceof GenericArrayType) {
+            return 31 + typeHashCode0(((GenericArrayType) type).getGenericComponentType());
+        } else if (type instanceof ParameterizedType) {
+            return 31 * 31 * 31 * 2 +
+                    31 * 31 * typeHashCode0(isInnerClass((Class<?>) ((ParameterizedType) type).getRawType()) ? ((ParameterizedType) type).getOwnerType() : null) +
+                    31 * typeHashCode0(((ParameterizedType) type).getRawType()) +
+                    typeHashCode0(((ParameterizedType) type).getActualTypeArguments());
+        } else if (type instanceof TypeVariable<?>) {
+            return 31 * 31 * 3 +
+                    31 * ((TypeVariable<?>) type).getGenericDeclaration().hashCode() +
+                    type.getTypeName().hashCode();
+        } else if (type instanceof WildcardType) {
+            return 31 * 31 * 4 +
+                    31 * typeHashCode0(((WildcardType) type).getUpperBounds()) +
+                    typeHashCode0(((WildcardType) type).getLowerBounds());
+        } else if (type instanceof Class) {
+            return type.hashCode();
+        } else {
+            throw new IllegalArgumentException("Unsupported type: " + type.getClass().getName());
+        }
+    }
+
+    private static int typeHashCode0(Type[] types) {
+        int v = 1;
+        for (Type t : types) {
+            v = 31 * v + typeHashCode0(t);
+        }
+        return v;
     }
 
     private static boolean typesEqual(Type[] left, Type[] right) {
@@ -569,45 +606,11 @@ public class GenericTypeUtils {
         if (typeVariables.isEmpty()) {
             return rawType;
         } else {
-            return new ParameterizedTypeImpl(
+            return GenericTypeFactory.makeParameterizedTypeWithOwner(
                     null,
                     rawType,
                     typeVariables.values().stream().map(GenericTypeUtils::argumentToReflectType).toArray(Type[]::new)
             );
-        }
-    }
-
-    private static class WildcardTypeImpl implements WildcardType {
-        private final Type[] upper;
-        private final Type[] lower;
-
-        public WildcardTypeImpl(@NonNull Type[] upper, @NonNull Type[] lower) {
-            this.upper = upper;
-            this.lower = lower;
-        }
-
-        @Override
-        public Type[] getUpperBounds() {
-            return upper.clone();
-        }
-
-        @Override
-        public Type[] getLowerBounds() {
-            return lower.clone();
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder builder = new StringBuilder("?");
-            for (Type type : upper) {
-                if (type != Object.class) {
-                    builder.append(" extends ").append(type.getTypeName());
-                }
-            }
-            for (Type type : lower) {
-                builder.append(" super ").append(type.getTypeName());
-            }
-            return builder.toString();
         }
     }
 
@@ -630,80 +633,7 @@ public class GenericTypeUtils {
         if ((owner == null || owner instanceof Class) && typeParameters.length == 0) {
             return cl;
         } else {
-            return new ParameterizedTypeImpl(owner, cl, typeParameters);
-        }
-    }
-
-    private static class ParameterizedTypeImpl implements ParameterizedType {
-        private final Type owner;
-        private final Type raw;
-        private final Type[] args;
-
-        public ParameterizedTypeImpl(@Nullable Type owner, Class<?> raw, Type[] args) {
-            this.args = args;
-            this.raw = raw;
-            this.owner = owner == null ? raw.getEnclosingClass() : owner;
-        }
-
-        @Override
-        public Type[] getActualTypeArguments() {
-            return args.clone();
-        }
-
-        @Override
-        public Type getRawType() {
-            return raw;
-        }
-
-        @Override
-        public Type getOwnerType() {
-            return owner;
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder builder = new StringBuilder();
-            if (owner != null) {
-                builder.append(owner.getTypeName()).append('.');
-            }
-            builder.append(raw.getTypeName()).append('<');
-            for (int i = 0; i < args.length; i++) {
-                if (i != 0) {
-                    builder.append(", ");
-                }
-                builder.append(args[i].getTypeName());
-            }
-            builder.append('>');
-            return builder.toString();
-        }
-    }
-
-    private static Type makeArrayType(Type component) {
-        if (component instanceof Class<?>) {
-            return Array.newInstance((Class<?>) component, 0).getClass();
-        } else {
-            return new GenericArrayTypeImpl(component);
-        }
-    }
-
-    private static class GenericArrayTypeImpl implements GenericArrayType {
-        private final Type component;
-
-        public GenericArrayTypeImpl(@NonNull Type component) {
-            if (component instanceof Class<?>) {
-                throw new IllegalArgumentException("GenericArrayType of must not have a non-generic component type");
-            }
-            this.component = component;
-        }
-
-        @Override
-        public Type getGenericComponentType() {
-            return component;
-        }
-
-        @Override
-        public String toString() {
-            return component.getTypeName() + "[]";
+            return GenericTypeFactory.makeParameterizedTypeWithOwner(owner, cl, typeParameters);
         }
     }
 }

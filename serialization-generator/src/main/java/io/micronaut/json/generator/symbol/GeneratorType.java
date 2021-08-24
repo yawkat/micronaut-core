@@ -5,8 +5,10 @@ import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.reflect.GenericTypeFactory;
 import io.micronaut.inject.ast.*;
 
+import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.*;
 import java.util.function.Function;
@@ -248,5 +250,61 @@ public class GeneratorType {
 
     public boolean typeEquals(GeneratorType other) {
         return fullType.equals(other.fullType);
+    }
+
+    /**
+     * Create an expression that returns the equivalent {@link Type} at runtime.
+     *
+     * @param variableResolve Function to resolve type variables.
+     */
+    CodeBlock toRuntimeFactory(Function<MnType.Variable, CodeBlock> variableResolve) {
+        return toRuntimeFactory(fullType, variableResolve);
+    }
+
+    private static CodeBlock toRuntimeFactory(MnType type, Function<MnType.Variable, CodeBlock> variableResolve) {
+        if (type instanceof MnType.Array) {
+            return CodeBlock.of("$T.makeArrayType($L)",
+                    GenericTypeFactory.class,
+                    toRuntimeFactory(((MnType.Array) type).getComponent(), variableResolve));
+        } else if (type instanceof MnType.RawClass) {
+            return CodeBlock.of("$T.class", PoetUtil.toTypeNameRaw(((MnType.RawClass) type).getClassElement()));
+        } else if (type instanceof MnType.Parameterized) {
+            MnType outer = ((MnType.Parameterized) type).getOuter();
+            return CodeBlock.of("$T.makeParameterizedTypeWithOwner($L, $L$L)",
+                    GenericTypeFactory.class,
+                    outer == null ? "null" : toRuntimeFactory(outer, variableResolve),
+                    toRuntimeFactory(((MnType.Parameterized) type).getRaw(), variableResolve),
+                    toRuntimeFactoryVarargs(((MnType.Parameterized) type).getParameters(), true, variableResolve));
+        } else if (type instanceof MnType.Wildcard) {
+            return CodeBlock.of("$T.makeWildcardType(new $T[] {$L}, new $T[] {$L})",
+                    GenericTypeFactory.class,
+                    Type.class, toRuntimeFactoryVarargs(((MnType.Wildcard) type).getUpperBounds(), false, variableResolve),
+                    Type.class, toRuntimeFactoryVarargs(((MnType.Wildcard) type).getLowerBounds(), false, variableResolve));
+        } else if (type instanceof MnType.Variable) {
+            return variableResolve.apply((MnType.Variable) type);
+        } else {
+            throw new AssertionError(type.getClass().getName());
+        }
+    }
+
+    private static CodeBlock toRuntimeFactoryVarargs(Collection<? extends MnType> types, boolean leadingComma, Function<MnType.Variable, CodeBlock> variableResolve) {
+        return varargsCodeBlock(
+                types.stream()
+                        .map(p -> toRuntimeFactory(p, variableResolve))
+                        .collect(Collectors.toList()),
+                leadingComma);
+    }
+
+    private static CodeBlock varargsCodeBlock(Collection<CodeBlock> values, boolean leadingComma) {
+        CodeBlock.Builder builder = CodeBlock.builder();
+        boolean first = true;
+        for (CodeBlock value : values) {
+            if (!first || leadingComma) {
+                builder.add(", ");
+            }
+            first = false;
+            builder.add("$L", value);
+        }
+        return builder.build();
     }
 }
