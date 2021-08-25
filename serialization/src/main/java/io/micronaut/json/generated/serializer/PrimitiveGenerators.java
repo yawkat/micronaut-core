@@ -2,6 +2,7 @@ package io.micronaut.json.generated.serializer;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
+import io.micronaut.core.reflect.GenericTypeFactory;
 import io.micronaut.core.reflect.GenericTypeToken;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Serializer;
@@ -14,7 +15,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.*;
+import java.util.function.Function;
 
 /**
  * Marker class to tell the generator that we should generate the primitive serializers here.
@@ -88,6 +91,23 @@ class PrimitiveGenerators {
     static class RawMap extends Raw<Map> {
         RawMap(SerializerLocator locator) {
             super(locator, new GenericTypeToken<Map<String, Object>>() {}.getType());
+        }
+    }
+
+    @Singleton
+    static class ObjectMapFactory implements Deserializer.Factory {
+        private static final TypeVariable<?> typeParameter = Map.class.getTypeParameters()[1];
+
+        @Override
+        public Type getGenericType() {
+            return GenericTypeFactory.makeParameterizedTypeWithOwner(null, Map.class, Object.class, typeParameter);
+        }
+
+        @Override
+        public Deserializer<?> newInstance(SerializerLocator locator, Function<String, Type> getTypeParameter) {
+            // find a deserializer for Map<String, V>
+            Type actualType = GenericTypeFactory.makeParameterizedTypeWithOwner(null, Map.class, String.class, getTypeParameter.apply(typeParameter.getName()));
+            return locator.findInvariantDeserializer(actualType);
         }
     }
 }

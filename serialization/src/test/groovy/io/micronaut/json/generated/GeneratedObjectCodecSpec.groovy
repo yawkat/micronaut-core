@@ -155,4 +155,16 @@ class GeneratedObjectCodecSpec extends Specification {
         then:
         parsedOpt == Optional.empty()
     }
+
+    def "Map<Object, V>"() {
+        given:
+        def ctx = ApplicationContext.run()
+        def codec = ctx.getBean(GeneratedObjectCodec)
+        def factory = codec.objectCodec.factory
+
+        when:
+        def parsed = codec.readValue(factory.createParser('{"foo":42}'), Argument.mapOf(Object, Integer))
+        then:
+        parsed == [foo: 42]
+    }
 }

@@ -25,11 +25,7 @@ public interface Deserializer<T> {
 
     interface Factory extends BaseCodecFactory {
         @Override
-        default Type getGenericType() {
-            Type parameterization = GenericTypeUtils.findParameterization(getClass(), Factory.class);
-            assert parameterization != null;
-            return ((ParameterizedType) parameterization).getActualTypeArguments()[0];
-        }
+        Type getGenericType();
 
         @Override
         Deserializer<?> newInstance(SerializerLocator locator, Function<String, Type> getTypeParameter);
