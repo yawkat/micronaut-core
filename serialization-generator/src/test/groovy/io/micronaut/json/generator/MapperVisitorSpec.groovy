@@ -492,4 +492,25 @@ class A {
         ctx.getBeansOfType(Serializer.Factory).any { it.genericType == ctx.classLoader.loadClass('example.A') }
         !ctx.getBeansOfType(Deserializer.Factory).any { it.genericType == ctx.classLoader.loadClass('example.A') }
     }
+
+    void "enum generated"() {
+        given:
+        def ctx = buildContext('example.Foo', '''
+package example;
+
+import io.micronaut.json.annotation.SerializableBean;
+
+@SerializableBean
+enum Foo {
+    A, B
+}
+''', true)
+
+        def serializer = ctx.getBeansOfType(Serializer.Factory)
+                .find { it.genericType == ctx.classLoader.loadClass('example.Foo') }
+                .newInstance(null, null)
+
+        expect:
+        serializeToString(serializer, Enum.valueOf(ctx.classLoader.loadClass('example.Foo'), 'A')) == '"A"'
+    }
 }

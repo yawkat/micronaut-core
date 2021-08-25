@@ -285,7 +285,17 @@ public final class SingletonSerializerGenerator {
                 .addParameter(JsonParser.class, DECODER)
                 .returns(valueReferenceName)
                 .addException(IOException.class)
-                .addCode(symbol.deserialize(classContext.newMethodContext(DECODER), valueType, expr -> CodeBlock.of("return $L;\n", expr)))
+                .addCode(symbol.deserialize(classContext.newMethodContext(DECODER), valueType, new SerializerSymbol.Setter() {
+                    @Override
+                    public CodeBlock createSetStatement(CodeBlock expr) {
+                        return CodeBlock.of("return $L;\n", expr);
+                    }
+
+                    @Override
+                    public boolean terminatesBlock() {
+                        return true;
+                    }
+                }))
                 .build();
     }
 

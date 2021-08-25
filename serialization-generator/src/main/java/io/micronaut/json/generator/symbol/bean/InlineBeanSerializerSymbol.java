@@ -283,7 +283,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                 return findSymbol(PropWithType.fromContext(rootType, rootDefinition.creatorDelegatingProperty)).deserialize(
                         generatorContext,
                         rootDefinition.creatorDelegatingProperty.getType(rootType.typeParametersAsFoldFunction()),
-                        expr -> setter.createSetStatement(getCreatorCall(rootType, rootDefinition, expr))
+                        Setter.delegate(setter, expr -> getCreatorCall(rootType, rootDefinition, expr))
                 );
             }
 

@@ -18,9 +18,9 @@ package io.micronaut.json.generator.symbol;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
-import io.micronaut.json.Serializer;
+
+import java.util.function.Function;
 
 @Internal
 public interface SerializerSymbol {
@@ -53,7 +53,7 @@ public interface SerializerSymbol {
      * Generate code that reads a value from {@link Names#DECODER}.
      * <p>
      * Decoder should be positioned at the first token of the value (as specified by
-     * {@link Serializer#deserialize})
+     * {@link io.micronaut.json.Deserializer#deserialize})
      *
      * @param generatorContext The context of the generator, e.g. declared local variables.
      * @param type The type of the value being deserialized.
@@ -75,6 +75,32 @@ public interface SerializerSymbol {
          * Create a statement that assigns the given expression using this setter. The given expression must only be evaluated once.
          */
         CodeBlock createSetStatement(CodeBlock expression);
+
+        /**
+         * Return whether this setter terminates the current block (e.g. a return statement or a break).
+         */
+        default boolean terminatesBlock() {
+            return false;
+        }
+
+        /**
+         * Create a setter that first transforms the expression to set using {@code transform}, and then sets it using
+         * {@code downstream}. Equivalent to {@code expr -> downstream.createSetStatement(transform.apply(expr))}, but
+         * with proper handling of {@link #terminatesBlock()}.
+         */
+        static Setter delegate(Setter downstream, Function<CodeBlock, CodeBlock> transform) {
+            return new Setter() {
+                @Override
+                public CodeBlock createSetStatement(CodeBlock expression) {
+                    return downstream.createSetStatement(transform.apply(expression));
+                }
+
+                @Override
+                public boolean terminatesBlock() {
+                    return downstream.terminatesBlock();
+                }
+            };
+        }
     }
 
     interface DependencyVisitor {

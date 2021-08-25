@@ -1,6 +1,8 @@
 package io.micronaut.json.generator.symbol;
 
 import com.squareup.javapoet.CodeBlock;
+import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.NonNull;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.EnumElement;
 import io.micronaut.json.generated.JsonParseException;
@@ -10,8 +12,9 @@ import java.util.stream.Collectors;
 
 import static io.micronaut.json.generator.symbol.Names.DECODER;
 
-class InlineEnumSerializerSymbol implements SerializerSymbol {
-    static final InlineEnumSerializerSymbol INSTANCE = new InlineEnumSerializerSymbol();
+@Internal
+public class InlineEnumSerializerSymbol implements SerializerSymbol {
+    public static final InlineEnumSerializerSymbol INSTANCE = new InlineEnumSerializerSymbol();
 
     private InlineEnumSerializerSymbol() {
     }
@@ -55,28 +58,49 @@ class InlineEnumSerializerSymbol implements SerializerSymbol {
     public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
         EnumDefinition enumDefinition = new EnumDefinition((EnumElement) type.getClassElement());
 
-        return enumDefinition.valueSerializer.deserialize(generatorContext, type, expr -> {
-            CodeBlock.Builder builder = CodeBlock.builder();
-            builder.beginControlFlow("switch ($L)", expr);
-
-            for (int i = 0; i < enumDefinition.constants.size(); i++) {
-                builder.beginControlFlow("case $L:", enumDefinition.serializedLiterals.get(i));
-                builder.add(setter.createSetStatement(CodeBlock.of("$T.$N", PoetUtil.toTypeName(type), enumDefinition.constants.get(i))));
-                builder.addStatement("break");
-                builder.endControlFlow();
+        return enumDefinition.valueSerializer.deserialize(generatorContext, type, new Setter() {
+            @Override
+            public CodeBlock createSetStatement(CodeBlock expr) {
+                return InlineEnumSerializerSymbol.this.deserialize0(generatorContext, type, setter, enumDefinition, expr);
             }
 
-            builder.beginControlFlow("default:");
-            builder.addStatement(
-                    "throw $T.from($N, $S)",
-                    JsonParseException.class, DECODER,
-                    "Bad enum value for field " + generatorContext.getReadablePath()
-            );
-            builder.endControlFlow();
-
-            builder.endControlFlow();
-            return builder.build();
+            @Override
+            public boolean terminatesBlock() {
+                return setter.terminatesBlock();
+            }
         });
+    }
+
+    @NonNull
+    private CodeBlock deserialize0(
+            GeneratorContext generatorContext,
+            GeneratorType type,
+            Setter setter,
+            EnumDefinition enumDefinition,
+            CodeBlock valueExpression
+    ) {
+        CodeBlock.Builder builder = CodeBlock.builder();
+        builder.beginControlFlow("switch ($L)", valueExpression);
+
+        for (int i = 0; i < enumDefinition.constants.size(); i++) {
+            builder.beginControlFlow("case $L:", enumDefinition.serializedLiterals.get(i));
+            builder.add(setter.createSetStatement(CodeBlock.of("$T.$N", PoetUtil.toTypeName(type), enumDefinition.constants.get(i))));
+            if (!setter.terminatesBlock()) {
+                builder.addStatement("break");
+            }
+            builder.endControlFlow();
+        }
+
+        builder.beginControlFlow("default:");
+        builder.addStatement(
+                "throw $T.from($N, $S)",
+                JsonParseException.class, DECODER,
+                "Bad enum value for field " + generatorContext.getReadablePath()
+        );
+        builder.endControlFlow();
+
+        builder.endControlFlow();
+        return builder.build();
     }
 
     private static class EnumDefinition {

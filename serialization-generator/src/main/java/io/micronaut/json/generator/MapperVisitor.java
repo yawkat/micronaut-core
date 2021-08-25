@@ -31,20 +31,26 @@ public class MapperVisitor extends AbstractGeneratorVisitor<Object> implements T
     public void visitClass(ClassElement element, VisitorContext context) {
         GeneratorType generatorType = GeneratorType.ofClass(element);
         SerializerLinker linker = new SerializerLinker(context);
-        InlineBeanSerializerSymbol inlineBeanSerializer = linker.inlineBean;
-        if (!inlineBeanSerializer.canSerializeStandalone(generatorType)) {
+        if (!linker.inlineBean.canSerializeStandalone(generatorType)) {
             return;
         }
-        DependencyGraphChecker depChecker = new DependencyGraphChecker(context, linker);
-        depChecker.checkCircularDependencies(inlineBeanSerializer, generatorType, element);
-        if (depChecker.hasAnyFailures()) {
-            return;
+        SerializerSymbol symbol;
+        if (element.isEnum()) {
+            // todo: maybe we want a separate annotation for this case?
+            symbol = InlineEnumSerializerSymbol.INSTANCE;
+        } else {
+            symbol = linker.inlineBean;
+            DependencyGraphChecker depChecker = new DependencyGraphChecker(context, linker);
+            depChecker.checkCircularDependencies(linker.inlineBean, generatorType, element);
+            if (depChecker.hasAnyFailures()) {
+                return;
+            }
         }
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(generatorType)
                 .problemReporter(problemReporter)
-                .symbol(inlineBeanSerializer)
-                .generateSerializer(inlineBeanSerializer.supportsDirection(generatorType, true))
-                .generateDeserializer(inlineBeanSerializer.supportsDirection(generatorType, false))
+                .symbol(symbol)
+                .generateSerializer(linker.inlineBean.supportsDirection(generatorType, true))
+                .generateDeserializer(linker.inlineBean.supportsDirection(generatorType, false))
                 .generateMulti());
     }
 }

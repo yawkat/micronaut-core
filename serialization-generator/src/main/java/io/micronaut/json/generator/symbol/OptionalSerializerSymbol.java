@@ -81,7 +81,8 @@ class OptionalSerializerSymbol implements SerializerSymbol {
                 .beginControlFlow("if ($N.currentToken() == $T.VALUE_NULL)", Names.DECODER, JsonToken.class)
                 .add(setter.createSetStatement(CodeBlock.of("$T.empty()", Optional.class)))
                 .nextControlFlow("else")
-                .add(getDelegateSerializer(delegateType.get()).deserialize(generatorContext, delegateType.get(), expr -> setter.createSetStatement(CodeBlock.of("$T.of($L)", Optional.class, expr))))
+                .add(getDelegateSerializer(delegateType.get()).deserialize(generatorContext, delegateType.get(),
+                        Setter.delegate(setter, expr -> CodeBlock.of("$T.of($L)", Optional.class, expr))))
                 .endControlFlow()
                 .build();
     }
