@@ -160,6 +160,15 @@ class BeanIntrospector {
             return null;
         }
 
+        /**
+         * @return Whether this element has an annotation that explicitly designates it as a property
+         */
+        private boolean hasPropertyAnnotation(AnnotatedElement element) {
+            return element.isAnnotationPresent(JsonProperty.class) ||
+                    element.isAnnotationPresent(JsonValue.class) ||
+                    element.isAnnotationPresent(JsonUnwrapped.class);
+        }
+
         private boolean isIgnore(AnnotatedElement element) {
             AnnotationValue<JsonIgnore> ignore = element.getAnnotation(JsonIgnore.class);
             if (ignore == null) {
@@ -234,7 +243,7 @@ class BeanIntrospector {
                 // also handle getters/setters again, because getBeanProperties doesn't return all of them. todo
                 if (method.getParameters().length == 0) {
                     // getter
-                    boolean consider = getExplicitName(method) != null;
+                    boolean consider = hasPropertyAnnotation(method);
 
                     String implicitName = method.getName();
                     if (implicitName.startsWith("get")) {
@@ -251,7 +260,7 @@ class BeanIntrospector {
                     }
                 } else if (method.getParameters().length == 1) {
                     // setter
-                    boolean consider = getExplicitName(method) != null;
+                    boolean consider = hasPropertyAnnotation(method);
 
                     String implicitName = method.getName();
                     // todo: implement write-only property queries in ClassElement

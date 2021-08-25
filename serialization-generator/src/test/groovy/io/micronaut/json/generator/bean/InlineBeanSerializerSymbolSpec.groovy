@@ -524,6 +524,33 @@ class Test {
         serializeToString(compiled.serializer, testBean) == '"bar"'
     }
 
+    void "@JsonValue on toString"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+class Test {
+    public final String foo;
+    
+    @JsonCreator
+    public Test(String foo) {
+        this.foo = foo;
+    }
+    
+    @Override 
+    @JsonValue
+    public String toString() {
+        return foo;
+    }
+}
+''')
+        def testBean = compiled.newInstance(['bar'])
+
+        expect:
+        serializeToString(compiled.serializer, testBean) == '"bar"'
+    }
+
     void "optional"() {
         given:
         def compiled = buildSerializer('''
