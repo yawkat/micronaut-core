@@ -52,8 +52,7 @@ public final class GeneratedObjectCodec extends MicronautObjectCodec {
     private <T> void writeValue0(JsonGenerator gen, T value, Class<T> type) throws IOException {
         Serializer<? super T> serializer = locator.findContravariantSerializer(type);
         if (serializer instanceof ObjectSerializer) {
-            // todo: custom exception
-            throw new NoSuchBeanException("No serializer for type " + type.getName()) {};
+            throw new ObjectMappingException("No serializer for type " + type.getName());
         }
         serializer.serialize(gen, value);
     }
