@@ -69,6 +69,10 @@ public final class GeneratedObjectCodec extends MicronautObjectCodec {
         if (!parser.hasCurrentToken()) {
             parser.nextToken();
         }
+        // for jackson compat we need to support deserializing null, but most deserializers don't support it.
+        if (parser.currentToken() == JsonToken.VALUE_NULL && !deserializer.supportsNullDeserialization()) {
+            return null;
+        }
         return (T) deserializer.deserialize(parser);
     }
 

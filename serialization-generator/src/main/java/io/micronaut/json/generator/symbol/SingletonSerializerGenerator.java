@@ -166,6 +166,7 @@ public final class SingletonSerializerGenerator {
 
     private GenerationResult generateClass(boolean serializer, boolean deserializer, ClassName generatedName) {
         assert valueReferenceName != null;
+        assert symbol != null;
 
         GeneratorContext classContext = GeneratorContext.create(problemReporter, valueReferenceName.toString());
 
@@ -179,6 +180,14 @@ public final class SingletonSerializerGenerator {
         if (deserializer) {
             builder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(Deserializer.class), valueReferenceName))
                     .addMethod(generateDeserialize(classContext));
+
+            if (symbol.supportsNullDeserialization()) {
+                builder.addMethod(MethodSpec.methodBuilder("supportsNullDeserialization")
+                        .addModifiers(Modifier.PUBLIC)
+                        .returns(boolean.class)
+                        .addCode("return true;\n")
+                        .build());
+            }
         }
 
         // add type parameters if necessary

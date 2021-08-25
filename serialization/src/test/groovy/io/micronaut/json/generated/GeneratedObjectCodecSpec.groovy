@@ -138,4 +138,21 @@ class GeneratedObjectCodecSpec extends Specification {
         then:
         json == '{"string":"foo","list":["bar"]}'
     }
+
+    def "top-level null"() {
+        given:
+        def ctx = ApplicationContext.run()
+        def codec = ctx.getBean(GeneratedObjectCodec)
+        def factory = codec.objectCodec.factory
+
+        when:
+        def parsedNaked = codec.readValue(factory.createParser('null'), String.class)
+        then:
+        parsedNaked == null
+
+        when:
+        def parsedOpt = codec.readValue(factory.createParser('null'), Argument.of(Optional.class, String.class))
+        then:
+        parsedOpt == Optional.empty()
+    }
 }

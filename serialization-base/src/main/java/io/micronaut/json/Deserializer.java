@@ -19,6 +19,10 @@ public interface Deserializer<T> {
      */
     T deserialize(JsonParser decoder) throws IOException;
 
+    default boolean supportsNullDeserialization() {
+        return false;
+    }
+
     interface Factory extends BaseCodecFactory {
         @Override
         default Type getGenericType() {
