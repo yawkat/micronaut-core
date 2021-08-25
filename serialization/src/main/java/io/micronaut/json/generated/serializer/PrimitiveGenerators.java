@@ -13,8 +13,8 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.Type;
+import java.util.*;
 
 /**
  * Marker class to tell the generator that we should generate the primitive serializers here.
@@ -29,48 +29,65 @@ class PrimitiveGenerators {
     // serializers for raw types
 
     @SuppressWarnings("rawtypes")
-    @Singleton
-    static class RawList implements Serializer<List>, Deserializer<List> {
+    private static abstract class Raw<T> implements Serializer<T>, Deserializer<T> {
         private final Serializer implSer;
         private final Deserializer implDes;
 
-        RawList(SerializerLocator locator) {
-            this.implSer = locator.findContravariantSerializer(new GenericTypeToken<List<Object>>() {});
-            this.implDes = locator.findInvariantDeserializer(new GenericTypeToken<List<Object>>() {});
-        }
-
-        @Override
-        public List deserialize(JsonParser decoder) throws IOException {
-            return (List) implDes.deserialize(decoder);
+        Raw(SerializerLocator locator, Type genericType) {
+            this.implSer = locator.findContravariantSerializer(genericType);
+            this.implDes = locator.findInvariantDeserializer(genericType);
         }
 
         @SuppressWarnings("unchecked")
         @Override
-        public void serialize(JsonGenerator encoder, List value) throws IOException {
+        public T deserialize(JsonParser decoder) throws IOException {
+            return (T) implDes.deserialize(decoder);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public void serialize(JsonGenerator encoder, T value) throws IOException {
             implSer.serialize(encoder, value);
         }
     }
 
     @SuppressWarnings("rawtypes")
     @Singleton
-    static class RawMap implements Serializer<Map>, Deserializer<Map> {
-        private final Serializer implSer;
-        private final Deserializer implDes;
+    static class RawList extends Raw<List> {
+        RawList(SerializerLocator locator) {
+            super(locator, new GenericTypeToken<List<Object>>() {}.getType());
+        }
+    }
 
+    @SuppressWarnings("rawtypes")
+    @Singleton
+    static class RawCollection extends Raw<Collection> {
+        RawCollection(SerializerLocator locator) {
+            super(locator, new GenericTypeToken<Collection<Object>>() {}.getType());
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    @Singleton
+    static class RawSet extends Raw<Set> {
+        RawSet(SerializerLocator locator) {
+            super(locator, new GenericTypeToken<Set<Object>>() {}.getType());
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    @Singleton
+    static class RawSortedSet extends Raw<SortedSet> {
+        RawSortedSet(SerializerLocator locator) {
+            super(locator, new GenericTypeToken<SortedSet<Object>>() {}.getType());
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    @Singleton
+    static class RawMap extends Raw<Map> {
         RawMap(SerializerLocator locator) {
-            this.implSer = locator.findContravariantSerializer(new GenericTypeToken<Map<String, Object>>() {});
-            this.implDes = locator.findInvariantDeserializer(new GenericTypeToken<Map<String, Object>>() {});
-        }
-
-        @Override
-        public Map deserialize(JsonParser decoder) throws IOException {
-            return (Map) implDes.deserialize(decoder);
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public void serialize(JsonGenerator encoder, Map value) throws IOException {
-            implSer.serialize(encoder, value);
+            super(locator, new GenericTypeToken<Map<String, Object>>() {}.getType());
         }
     }
 }
