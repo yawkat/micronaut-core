@@ -46,14 +46,16 @@ final class StringSerializerSymbol implements SerializerSymbol {
 
     @Override
     public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
+        String stringVar = generatorContext.newLocalVariable("string");
         return CodeBlock.builder()
+                .addStatement("$T $N = $N.getValueAsString()", String.class, stringVar, DECODER)
                 .addStatement(
-                        "if ($N.currentToken() != $T.VALUE_STRING) throw $T.from($N, $S + $N.currentToken())",
-                        DECODER, JsonToken.class,
+                        "if ($N == null) throw $T.from($N, $S + $N.currentToken())",
+                        stringVar,
                         JsonParseException.class, DECODER,
                         "Bad value for field " + generatorContext.getReadablePath() + ": Expected string, got ", DECODER
                 )
-                .add(setter.createSetStatement(CodeBlock.of("$N.getText()", DECODER)))
+                .add(setter.createSetStatement(CodeBlock.of("$N", stringVar)))
                 .build();
     }
 }

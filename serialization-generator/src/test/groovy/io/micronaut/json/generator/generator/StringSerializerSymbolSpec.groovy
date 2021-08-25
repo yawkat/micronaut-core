@@ -18,8 +18,16 @@ class StringSerializerSymbolSpec extends AbstractSymbolSpec {
         given:
         def serializer = buildBasicSerializer(String.class, StringSerializerSymbol.INSTANCE)
         when:
-        deserializeFromString(serializer, '52')
+        deserializeFromString(serializer, '{}')
         then:
         thrown JsonParseException
+    }
+
+    def "coercion"() {
+        given:
+        def serializer = buildBasicSerializer(String.class, StringSerializerSymbol.INSTANCE)
+
+        expect:
+        deserializeFromString(serializer, '42') == '42'
     }
 }
