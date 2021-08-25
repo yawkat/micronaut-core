@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
-@Singleton
 class OptionalMultiValuesSerializer<V> implements Serializer<OptionalMultiValues<V>> {
     private final boolean alwaysSerializeErrorsAsList;
     private final Serializer<? super V> valueSerializer;
