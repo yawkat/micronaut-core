@@ -21,9 +21,8 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.generated.JsonParseException;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.lang.reflect.TypeVariable;
+import java.util.*;
 
 import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;
@@ -84,11 +83,9 @@ abstract class InlineIterableSerializerSymbol extends AbstractInlineContainerSer
         return block.build();
     }
 
-    protected CodeBlock createIntermediate(GeneratorType elementType, String intermediateVariable) {
-        return CodeBlock.of("$T<$T> $N = new $T<>();\n", ArrayList.class, PoetUtil.toTypeName(elementType), intermediateVariable, ArrayList.class);
-    }
-
     protected abstract CodeBlock finishDeserialize(GeneratorType elementType, String intermediateVariable);
+
+    protected abstract CodeBlock createIntermediate(GeneratorType elementType, String intermediateVariable);
 
     static class ArrayImpl extends InlineIterableSerializerSymbol {
         ArrayImpl(SerializerLinker linker) {
@@ -120,28 +117,57 @@ abstract class InlineIterableSerializerSymbol extends AbstractInlineContainerSer
             // cast for generic arrays
             return CodeBlock.of("$N.toArray(($T[]) new $T[0])", intermediateVariable, PoetUtil.toTypeName(elementType), PoetUtil.toTypeName(elementType.getRawClass()));
         }
+
+        @Override
+        protected CodeBlock createIntermediate(GeneratorType elementType, String intermediateVariable) {
+            return CodeBlock.of("$T<$T> $N = new $T<>();\n", ArrayList.class, PoetUtil.toTypeName(elementType), intermediateVariable, ArrayList.class);
+        }
     }
 
-    /**
-     * Can also do {@link Iterable} and {@link java.util.List}.
-     */
-    static class ArrayListImpl extends InlineIterableSerializerSymbol {
-        ArrayListImpl(SerializerLinker linker) {
+    static class CollectionImpl extends InlineIterableSerializerSymbol {
+        private final Class<?> primaryType;
+        private final Map<Class<?>, String> supportedClassesAndTypeVariableNames;
+
+        CollectionImpl(SerializerLinker linker, Class<?>... supportedClasses) {
             super(linker);
+            this.supportedClassesAndTypeVariableNames = new HashMap<>();
+            this.primaryType = supportedClasses[0];
+            try {
+                primaryType.getConstructor();
+            } catch (NoSuchMethodException e) {
+                throw new IllegalArgumentException("Primary type must have no-args constructor", e);
+            }
+            for (Class<?> supportedClass : supportedClasses) {
+                if (!supportedClass.isAssignableFrom(primaryType)) {
+                    throw new IllegalArgumentException("Primary type must come first");
+                }
+                TypeVariable<? extends Class<?>>[] typeParameters = supportedClass.getTypeParameters();
+                if (typeParameters.length != 1) {
+                    throw new IllegalArgumentException("Supported classes must have exactly one type parameter");
+                }
+                supportedClassesAndTypeVariableNames.put(supportedClass, typeParameters[0].getName());
+            }
         }
 
-        private ArrayListImpl(ArrayListImpl original, boolean recursiveSerialization) {
+        private CollectionImpl(CollectionImpl original, boolean recursiveSerialization) {
             super(original, recursiveSerialization);
+            this.primaryType = original.primaryType;
+            this.supportedClassesAndTypeVariableNames = original.supportedClassesAndTypeVariableNames;
         }
 
         @Override
         public SerializerSymbol withRecursiveSerialization() {
-            return new ArrayListImpl(this, true);
+            return new CollectionImpl(this, true);
         }
 
         @Override
         public boolean canSerialize(GeneratorType type) {
-            return type.isRawTypeEquals(Iterable.class) || type.isRawTypeEquals(Collection.class) || type.isRawTypeEquals(List.class) || type.isRawTypeEquals(ArrayList.class);
+            for (Class<?> sup : supportedClassesAndTypeVariableNames.keySet()) {
+                if (type.isRawTypeEquals(sup)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override
@@ -150,16 +176,23 @@ abstract class InlineIterableSerializerSymbol extends AbstractInlineContainerSer
             /* todo: bug in getTypeArguments(class)? only returns java.lang.Object
             return type.getTypeArguments(Iterable.class).get("T");
             */
-            return type.getTypeArgumentsExact(ArrayList.class).map(m -> m.get("E")).orElseGet(() ->
-                    type.getTypeArgumentsExact(List.class).map(m -> m.get("E")).orElseGet(() ->
-                            type.getTypeArgumentsExact(Collection.class).map(m -> m.get("E")).orElseGet(() ->
-                                    type.getTypeArgumentsExact(Iterable.class).map(m -> m.get("T")).orElseThrow(() ->
-                                            new UnsupportedOperationException("unsupported type")))));
+            for (Map.Entry<Class<?>, String> entry : supportedClassesAndTypeVariableNames.entrySet()) {
+                Optional<Map<String, GeneratorType>> args = type.getTypeArgumentsExact(entry.getKey());
+                if (args.isPresent()) {
+                    return args.get().get(entry.getValue());
+                }
+            }
+            throw new UnsupportedOperationException("unsupported type");
         }
 
         @Override
         protected CodeBlock finishDeserialize(GeneratorType elementType, String intermediateVariable) {
             return CodeBlock.of("$N", intermediateVariable);
+        }
+
+        @Override
+        protected CodeBlock createIntermediate(GeneratorType elementType, String intermediateVariable) {
+            return CodeBlock.of("$T<$T> $N = new $T<>();\n", primaryType, PoetUtil.toTypeName(elementType), intermediateVariable, primaryType);
         }
     }
 }

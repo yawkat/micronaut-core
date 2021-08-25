@@ -60,12 +60,20 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
                     .generateMulti());
         }
 
-        // Serializer<List<E>>, Serializer<Map<String, V>>, Serializer<Optional<T>>
-        generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofParameterized(List.class, (Class<?>) null))
-                .problemReporter(problemReporter)
-                .packageName(element.getPackageName())
-                .linker(linker)
-                .generateMulti());
+        for (Class<?> t : Arrays.asList(
+                // need one for Collection too, because deserializer matching is invariant, so the Deserializer<List<E>> won't be reused.
+                Collection.class,
+                List.class,
+                Set.class,
+                SortedSet.class
+        )) {
+            generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofParameterized(t, (Class<?>) null))
+                    .problemReporter(problemReporter)
+                    .packageName(element.getPackageName())
+                    .linker(linker)
+                    .generateMulti());
+        }
+
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofParameterized(Map.class, String.class, null))
                 .problemReporter(problemReporter)
                 .packageName(element.getPackageName())

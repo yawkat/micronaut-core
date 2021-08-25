@@ -20,8 +20,7 @@ import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.visitor.VisitorContext;
 import io.micronaut.json.generator.symbol.bean.InlineBeanSerializerSymbol;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 @Internal
 public final class SerializerLinker {
@@ -29,7 +28,6 @@ public final class SerializerLinker {
     public final InlineBeanSerializerSymbol inlineBean;
 
     final InlineIterableSerializerSymbol.ArrayImpl array = new InlineIterableSerializerSymbol.ArrayImpl(this);
-    final InlineIterableSerializerSymbol.ArrayListImpl arrayList = new InlineIterableSerializerSymbol.ArrayListImpl(this);
     final InlineStringMapSerializerSymbol stringMap = new InlineStringMapSerializerSymbol(this);
 
     private final List<SerializerSymbol> symbolList;
@@ -38,7 +36,9 @@ public final class SerializerLinker {
         inlineBean = new InlineBeanSerializerSymbol(this, typeResolutionContext);
         symbolList = Arrays.asList(
                 array,
-                arrayList,
+                new InlineIterableSerializerSymbol.CollectionImpl(this, ArrayList.class, List.class, Collection.class, Iterable.class),
+                new InlineIterableSerializerSymbol.CollectionImpl(this, HashSet.class, Set.class),
+                new InlineIterableSerializerSymbol.CollectionImpl(this, TreeSet.class, SortedSet.class),
                 stringMap,
                 PrimitiveSerializerSymbol.INSTANCE,
                 StringSerializerSymbol.INSTANCE,
