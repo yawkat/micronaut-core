@@ -15,6 +15,7 @@
  */
 package io.micronaut.json.generator.symbol;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
@@ -67,6 +68,25 @@ public interface SerializerSymbol {
      */
     default CodeBlock getDefaultExpression(GeneratorType type) {
         return CodeBlock.of("null");
+    }
+
+    /**
+     * Get an expression returning a boolean that checks whether this value should be included in serialized output
+     * according to the given {@code inclusionPolicy}.
+     *
+     * @return an expression taking the value of this field, and returning whether the value
+     */
+    default ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorType type, JsonInclude.Include inclusionPolicy) {
+        switch (inclusionPolicy) {
+            // overridden in symbols that actually support nulls.
+            case ALWAYS:
+            case NON_NULL:
+            case NON_ABSENT:
+            case NON_EMPTY:
+                return ConditionExpression.alwaysTrue();
+            default:
+                throw new UnsupportedOperationException("Unsupported inclusion policy " + inclusionPolicy);
+        }
     }
 
     @FunctionalInterface

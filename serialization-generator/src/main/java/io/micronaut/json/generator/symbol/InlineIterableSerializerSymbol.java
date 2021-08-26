@@ -15,14 +15,17 @@
  */
 package io.micronaut.json.generator.symbol;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.generated.JsonParseException;
 
 import java.lang.reflect.TypeVariable;
 import java.util.*;
+import java.util.function.Function;
 
 import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;
@@ -99,6 +102,15 @@ abstract class InlineIterableSerializerSymbol extends AbstractInlineContainerSer
         @Override
         public SerializerSymbol withRecursiveSerialization() {
             return new ArrayImpl(this, true);
+        }
+
+        @Nullable
+        @Override
+        public ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorType type, JsonInclude.Include inclusionPolicy) {
+            if (inclusionPolicy == JsonInclude.Include.NON_EMPTY) {
+                return ConditionExpression.of(expr -> CodeBlock.of("$L.length != 0", expr));
+            }
+            return super.shouldIncludeCheck(type, inclusionPolicy);
         }
 
         @Override

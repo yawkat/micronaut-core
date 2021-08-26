@@ -1,5 +1,6 @@
 package io.micronaut.json.generator.symbol;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.Internal;
@@ -54,5 +55,17 @@ public class NullableSerializerSymbol implements SerializerSymbol {
                 .add(delegate.deserialize(generatorContext, type, setter))
                 .endControlFlow()
                 .build();
+    }
+
+    @Override
+    public ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorType type, JsonInclude.Include inclusionPolicy) {
+        ConditionExpression<CodeBlock> expr = this.delegate.shouldIncludeCheck(type, inclusionPolicy);
+        switch (inclusionPolicy) {
+            case NON_NULL:
+            case NON_ABSENT:
+            case NON_EMPTY:
+                expr = ConditionExpression.<CodeBlock>of(v -> CodeBlock.of("$L != null", v)).and(expr);
+        }
+        return expr;
     }
 }

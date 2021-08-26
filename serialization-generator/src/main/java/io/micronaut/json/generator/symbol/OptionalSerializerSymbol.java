@@ -1,5 +1,6 @@
 package io.micronaut.json.generator.symbol;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.inject.ast.ClassElement;
@@ -90,5 +91,25 @@ class OptionalSerializerSymbol implements SerializerSymbol {
     @Override
     public CodeBlock getDefaultExpression(GeneratorType type) {
         return CodeBlock.of("$T.empty()", Optional.class);
+    }
+
+    @Override
+    public ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorType type, JsonInclude.Include inclusionPolicy) {
+        Optional<GeneratorType> delegateType = findDelegateType(type);
+        if (!delegateType.isPresent()) {
+            // bail
+            return ConditionExpression.alwaysTrue();
+        }
+        SerializerSymbol delegateSerializer = getDelegateSerializer(delegateType.get());
+        ConditionExpression<CodeBlock> wrapped = delegateSerializer.shouldIncludeCheck(delegateType.get(), inclusionPolicy);
+        switch (inclusionPolicy) {
+            case NON_NULL:
+            case NON_ABSENT:
+            case NON_EMPTY:
+                return ConditionExpression.<CodeBlock>of(expr -> CodeBlock.of("$L.isPresent()", expr))
+                        .and(wrapped.compose(optional -> CodeBlock.of("$L.get()", optional)));
+            default:
+                return wrapped;
+        }
     }
 }

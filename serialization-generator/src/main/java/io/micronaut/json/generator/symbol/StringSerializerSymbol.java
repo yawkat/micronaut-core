@@ -15,6 +15,7 @@
  */
 package io.micronaut.json.generator.symbol;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.json.generated.JsonParseException;
@@ -57,5 +58,14 @@ final class StringSerializerSymbol implements SerializerSymbol {
                 )
                 .add(setter.createSetStatement(CodeBlock.of("$N", stringVar)))
                 .build();
+    }
+
+    @Override
+    public ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorType type, JsonInclude.Include inclusionPolicy) {
+        if (inclusionPolicy == JsonInclude.Include.NON_EMPTY) {
+            // note: can't use isEmpty, we support CharSequence
+            return ConditionExpression.of(expr -> CodeBlock.of("$L.length() != 0", expr));
+        }
+        return SerializerSymbol.super.shouldIncludeCheck(type, inclusionPolicy);
     }
 }

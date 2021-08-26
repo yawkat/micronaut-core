@@ -200,15 +200,39 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             GeneratorContext subGenerator = generatorContext.withSubPath(prop.name);
             PropWithType propWithType = PropWithType.fromContext(outerType, prop);
             if (prop.unwrapped) {
-                String tempVariable = generatorContext.newLocalVariable(prop.name);
-                serialize.addStatement("$T $N = $L", PoetUtil.toTypeName(propWithType.type), tempVariable, propRead);
+                propRead = onlyReadOnce(generatorContext, propWithType, propRead, serialize);
+
                 BeanDefinition subDefinition = introspect(generatorContext.getProblemReporter(), propWithType.type, true);
-                serializeBeanProperties(subGenerator, propWithType.type, subDefinition, CodeBlock.of("$N", tempVariable), serialize);
+                serializeBeanProperties(subGenerator, propWithType.type, subDefinition, propRead, serialize);
             } else {
+                SerializerSymbol symbol = findSymbol(propWithType);
+                ConditionExpression<CodeBlock> shouldIncludeCheck = symbol.shouldIncludeCheck(propWithType.type, prop.valueInclusionPolicy);
+                if (!shouldIncludeCheck.isAlwaysTrue()) {
+                    propRead = onlyReadOnce(generatorContext, propWithType, propRead, serialize);
+                    serialize.beginControlFlow("if ($L)", shouldIncludeCheck.build(propRead));
+                }
+
                 serialize.addStatement("$N.writeFieldName($S)", ENCODER, prop.name);
-                serialize.add(findSymbol(propWithType).serialize(subGenerator, propWithType.type, propRead));
+                serialize.add(symbol.serialize(subGenerator, propWithType.type, propRead));
+
+                if (!shouldIncludeCheck.isAlwaysTrue()) {
+                    serialize.endControlFlow();
+                }
             }
         }
+    }
+
+    /**
+     * Helper method to save a property read expression into a local variable so that it is only read once.
+     */
+    private CodeBlock onlyReadOnce(
+            GeneratorContext generatorContext,
+            PropWithType propWithType,
+            CodeBlock propRead,
+            CodeBlock.Builder serialize) {
+        String tempVariable = generatorContext.newLocalVariable(propWithType.property.name);
+        serialize.addStatement("$T $N = $L", PoetUtil.toTypeName(propWithType.type), tempVariable, propRead);
+        return CodeBlock.of("$N", tempVariable);
     }
 
     private CodeBlock getPropertyAccessExpression(CodeBlock beanReadExpression, BeanDefinition.Property prop) {

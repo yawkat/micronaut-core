@@ -68,10 +68,11 @@ class BeanIntrospector {
                     built = BeanDefinition.Property.field(prop.name, prop.field.accessor);
                 }
             }
-            built = built.withPermitRecursiveSerialization(prop.permitRecursiveSerialization);
-            built = built.withNullable(prop.nullable);
-            built = built.withUnwrapped(prop.unwrapped);
-            built = built.withAliases(prop.aliases);
+            built.permitRecursiveSerialization = prop.permitRecursiveSerialization;
+            built.nullable = prop.nullable;
+            built.unwrapped = prop.unwrapped;
+            built.aliases = prop.aliases;
+            built.valueInclusionPolicy = prop.valueInclusionPolicy;
             completeProps.put(prop, built);
         }
         beanDefinition.props = new ArrayList<>(completeProps.values());
@@ -134,6 +135,7 @@ class BeanIntrospector {
         PropBuilder valueProperty;
 
         boolean ignoreUnknownProperties;
+        JsonInclude.Include defaultInclusionPolicy;
 
         Scanner(ProblemReporter problemReporter, boolean forSerialization) {
             this.problemReporter = problemReporter;
@@ -200,7 +202,13 @@ class BeanIntrospector {
             // todo: do we really want to ignoreUnknown by default?
             ignoreUnknownProperties = true;
             if (jsonIgnoreProperties != null) {
-                ignoreUnknownProperties = jsonIgnoreProperties.get("ignoreUnknown", Boolean.class).orElse(ignoreUnknownProperties);
+                ignoreUnknownProperties = jsonIgnoreProperties.get("ignoreUnknown", Boolean.class, ignoreUnknownProperties);
+            }
+
+            AnnotationValue<JsonInclude> jsonInclude = ElementUtil.getAnnotation(JsonInclude.class, clazz, additionalAnnotationSource);
+            defaultInclusionPolicy = JsonInclude.Include.ALWAYS;
+            if (jsonInclude != null) {
+                defaultInclusionPolicy = jsonInclude.get("value", JsonInclude.Include.class, defaultInclusionPolicy);
             }
 
             // todo: check we don't have another candidate when replacing properties of the definition
@@ -343,7 +351,16 @@ class BeanIntrospector {
                         })
                         .collect(Collectors.toSet());
 
-
+                prop.valueInclusionPolicy = prop.annotatedElementsInOrder(forSerialization)
+                        .map(element -> element.getAnnotation(JsonInclude.class))
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        // if @JsonInclude is specified parameterless, pick ALWAYS. if it is not specified, pick USE_DEFAULTS.
+                        .map(annotation -> annotation.get("value", JsonInclude.Include.class, JsonInclude.Include.ALWAYS))
+                        .orElse(JsonInclude.Include.USE_DEFAULTS);
+                if (prop.valueInclusionPolicy == JsonInclude.Include.USE_DEFAULTS) {
+                    prop.valueInclusionPolicy = defaultInclusionPolicy;
+                }
             }
         }
 
@@ -417,6 +434,8 @@ class BeanIntrospector {
         boolean permitRecursiveSerialization;
         Boolean nullable;
         boolean unwrapped;
+
+        JsonInclude.Include valueInclusionPolicy = JsonInclude.Include.USE_DEFAULTS;
 
         Set<String> aliases;
 

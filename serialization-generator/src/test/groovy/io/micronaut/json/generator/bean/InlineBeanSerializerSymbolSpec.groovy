@@ -598,4 +598,58 @@ class Test {
         deserializeFromString(compiled.serializer, '{"foo":"bar"}').foo.get() == 'bar'
         serializeToString(compiled.serializer, testBean) == '{"foo":"bar"}'
     }
+
+    void "@JsonInclude"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.*;
+
+class Test {
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    String alwaysString;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String nonNullString;
+    @JsonInclude(JsonInclude.Include.NON_ABSENT)
+    String nonAbsentString;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    String nonEmptyString;
+    
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    String[] nonEmptyArray;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    List<String> nonEmptyList;
+    
+    @JsonInclude(JsonInclude.Include.NON_ABSENT)
+    Optional<String> nonAbsentOptionalString;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    Optional<List<String>> nonEmptyOptionalList;
+}
+''')
+        def with = compiled.newInstance()
+        with.alwaysString = 'a';
+        with.nonNullString = 'a';
+        with.nonAbsentString = 'a';
+        with.nonEmptyString = 'a';
+        with.nonEmptyArray = ['a'];
+        with.nonEmptyList = ['a'];
+        with.nonAbsentOptionalString = Optional.of('a');
+        with.nonEmptyOptionalList = Optional.of(['a']);
+
+        def without = compiled.newInstance()
+        without.alwaysString = null
+        without.nonNullString = null
+        without.nonAbsentString = null
+        without.nonEmptyString = null
+        without.nonEmptyArray = []
+        without.nonEmptyList = []
+        without.nonAbsentOptionalString = Optional.empty()
+        without.nonEmptyOptionalList = Optional.of([])
+
+        expect:
+        serializeToString(compiled.serializer, with) == '{"alwaysString":"a","nonNullString":"a","nonAbsentString":"a","nonEmptyString":"a","nonEmptyArray":["a"],"nonEmptyList":["a"],"nonAbsentOptionalString":"a","nonEmptyOptionalList":["a"]}'
+        serializeToString(compiled.serializer, without) == '{"alwaysString":null}'
+    }
 }

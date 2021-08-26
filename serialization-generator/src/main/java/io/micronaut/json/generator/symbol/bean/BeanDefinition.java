@@ -15,6 +15,8 @@
  */
 package io.micronaut.json.generator.symbol.bean;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.*;
 import io.micronaut.json.generator.symbol.GeneratorType;
@@ -51,43 +53,24 @@ class BeanDefinition {
         final MethodElement setter;
         final ParameterElement creatorParameter;
 
-        final boolean permitRecursiveSerialization;
+        boolean permitRecursiveSerialization = false;
         @Nullable
-        final Boolean nullable;
-        final boolean unwrapped;
+        Boolean nullable = null;
+        boolean unwrapped = false;
 
-        final Set<String> aliases;
+        @NonNull
+        Set<String> aliases = Collections.emptySet();
+
+        @NonNull
+        JsonInclude.Include valueInclusionPolicy = JsonInclude.Include.ALWAYS;
 
         private Property(String name, FieldElement field, MethodElement getter, MethodElement setter, ParameterElement creatorParameter) {
-            this(name, field, getter, setter, creatorParameter, false, false, false, Collections.emptySet());
-        }
-
-        private Property(String name, FieldElement field, MethodElement getter, MethodElement setter, ParameterElement creatorParameter, boolean permitRecursiveSerialization, Boolean nullable, boolean unwrapped, Set<String> aliases) {
             this.name = name;
+
             this.field = field;
             this.getter = getter;
             this.setter = setter;
             this.creatorParameter = creatorParameter;
-            this.permitRecursiveSerialization = permitRecursiveSerialization;
-            this.nullable = nullable;
-            this.unwrapped = unwrapped;
-            this.aliases = aliases;
-        }
-
-        public Property withPermitRecursiveSerialization(Boolean value) {
-            return new Property(name, field, getter, setter, creatorParameter, value, nullable, unwrapped, aliases);
-        }
-
-        public Property withNullable(@Nullable Boolean value) {
-            return new Property(name, field, getter, setter, creatorParameter, permitRecursiveSerialization, value, unwrapped, aliases);
-        }
-
-        public Property withUnwrapped(boolean value) {
-            return new Property(name, field, getter, setter, creatorParameter, permitRecursiveSerialization, nullable, value, aliases);
-        }
-
-        public Property withAliases(Set<String> value) {
-            return new Property(name, field, getter, setter, creatorParameter, permitRecursiveSerialization, nullable, unwrapped, value);
         }
 
         public GeneratorType getType(Function<MnType, MnType> fold) {
