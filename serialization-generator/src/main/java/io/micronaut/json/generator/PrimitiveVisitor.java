@@ -41,6 +41,7 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
                 PrimitiveElement.DOUBLE
         )) {
             generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofClass(prim))
+                    .originatingElement(element)
                     .problemReporter(problemReporter)
                     .packageName(element.getPackageName())
                     .valueReferenceName(PoetUtil.toTypeName(prim).box())
@@ -54,6 +55,7 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
                 BigInteger.class
         )) {
             generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofClass(ClassElement.of(t)))
+                    .originatingElement(element)
                     .problemReporter(problemReporter)
                     .packageName(element.getPackageName())
                     .linker(linker)
@@ -68,6 +70,7 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
                 SortedSet.class
         )) {
             generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofParameterized(t, (Class<?>) null))
+                    .originatingElement(element)
                     .problemReporter(problemReporter)
                     .packageName(element.getPackageName())
                     .linker(linker)
@@ -75,11 +78,13 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
         }
 
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofParameterized(Map.class, String.class, null))
+                .originatingElement(element)
                 .problemReporter(problemReporter)
                 .packageName(element.getPackageName())
                 .linker(linker)
                 .generateMulti());
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.ofParameterized(Optional.class, (Class<?>) null))
+                .originatingElement(element)
                 .problemReporter(problemReporter)
                 .packageName(element.getPackageName())
                 .linker(linker)
@@ -87,6 +92,7 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
 
         // Serializer<T[]>
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(GeneratorType.GENERIC_ARRAY)
+                .originatingElement(element)
                 .problemReporter(problemReporter)
                 .packageName(element.getPackageName())
                 .linker(linker)

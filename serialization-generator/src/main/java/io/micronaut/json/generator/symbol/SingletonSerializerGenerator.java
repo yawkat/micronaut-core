@@ -22,6 +22,7 @@ import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ClassElement;
+import io.micronaut.inject.ast.Element;
 import io.micronaut.inject.ast.MnType;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Serializer;
@@ -51,6 +52,8 @@ public final class SingletonSerializerGenerator {
     private String packageName = null;
     private boolean generateSerializer = true;
     private boolean generateDeserializer = true;
+
+    private Element originatingElement;
 
     private SingletonSerializerGenerator(GeneratorType valueType) {
         this.valueType = valueType;
@@ -104,6 +107,11 @@ public final class SingletonSerializerGenerator {
 
     public SingletonSerializerGenerator generateDeserializer(boolean generateDeserializer) {
         this.generateDeserializer = generateDeserializer;
+        return this;
+    }
+
+    public SingletonSerializerGenerator originatingElement(Element element) {
+        this.originatingElement = originatingElement;
         return this;
     }
 
@@ -172,6 +180,13 @@ public final class SingletonSerializerGenerator {
 
         TypeSpec.Builder builder = TypeSpec.classBuilder(generatedName.simpleName())
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
+
+        if (originatingElement != null) {
+            Object nativeType = originatingElement.getNativeType();
+            if (nativeType instanceof javax.lang.model.element.Element) {
+                builder.addOriginatingElement((javax.lang.model.element.Element) nativeType);
+            }
+        }
 
         if (serializer) {
             builder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(Serializer.class), valueReferenceName))

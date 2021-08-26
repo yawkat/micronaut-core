@@ -19,14 +19,21 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.visitor.TypeElementVisitor;
 import io.micronaut.inject.visitor.VisitorContext;
+import io.micronaut.json.annotation.SerializableBean;
 import io.micronaut.json.generator.symbol.*;
 import io.micronaut.json.generator.symbol.bean.DependencyGraphChecker;
 import io.micronaut.json.generator.symbol.bean.InlineBeanSerializerSymbol;
 
+import java.util.Collections;
+import java.util.Set;
+
 @Internal
-// todo: we have to visit everything, because annotated nested classes aren't processed otherwise
-// todo: implement getSupported
 public class MapperVisitor extends AbstractGeneratorVisitor<Object> implements TypeElementVisitor<Object, Object> {
+    @Override
+    public Set<String> getSupportedAnnotationNames() {
+        return Collections.singleton(SerializableBean.class.getName());
+    }
+
     @Override
     public void visitClass(ClassElement element, VisitorContext context) {
         GeneratorType generatorType = GeneratorType.ofClass(element);
@@ -47,6 +54,7 @@ public class MapperVisitor extends AbstractGeneratorVisitor<Object> implements T
             }
         }
         generateFromSymbol(context, problemReporter -> SingletonSerializerGenerator.create(generatorType)
+                .originatingElement(element)
                 .problemReporter(problemReporter)
                 .symbol(symbol)
                 .generateSerializer(linker.inlineBean.supportsDirection(generatorType, true))

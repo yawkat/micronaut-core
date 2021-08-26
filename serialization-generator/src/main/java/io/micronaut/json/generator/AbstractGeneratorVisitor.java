@@ -71,7 +71,6 @@ abstract class AbstractGeneratorVisitor<ANN> implements TypeElementVisitor<ANN, 
     @Override
     @NonNull
     public VisitorKind getVisitorKind() {
-        // todo: pass in originating element -> then make ISOLATING
-        return VisitorKind.AGGREGATING;
+        return VisitorKind.ISOLATING;
     }
 }
