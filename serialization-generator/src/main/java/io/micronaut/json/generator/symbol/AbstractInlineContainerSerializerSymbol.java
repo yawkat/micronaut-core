@@ -3,9 +3,6 @@ package io.micronaut.json.generator.symbol;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
-
-import java.util.function.Function;
 
 /**
  * Abstract class for serializers for lists and maps
@@ -28,11 +25,11 @@ abstract class AbstractInlineContainerSerializerSymbol implements SerializerSymb
     public abstract SerializerSymbol withRecursiveSerialization();
 
     @Override
-    public ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorType type, JsonInclude.Include inclusionPolicy) {
+    public ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorContext generatorContext, GeneratorType type, JsonInclude.Include inclusionPolicy) {
         if (inclusionPolicy == JsonInclude.Include.NON_EMPTY) {
             return ConditionExpression.of(expr -> CodeBlock.of("!$L.isEmpty()", expr));
         }
-        return SerializerSymbol.super.shouldIncludeCheck(type, inclusionPolicy);
+        return SerializerSymbol.super.shouldIncludeCheck(generatorContext, type, inclusionPolicy);
     }
 
     @NonNull

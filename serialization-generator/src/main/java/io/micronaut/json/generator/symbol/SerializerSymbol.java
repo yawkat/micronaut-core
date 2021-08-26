@@ -76,7 +76,7 @@ public interface SerializerSymbol {
      *
      * @return an expression taking the value of this field, and returning whether the value
      */
-    default ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorType type, JsonInclude.Include inclusionPolicy) {
+    default ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorContext generatorContext, GeneratorType type, JsonInclude.Include inclusionPolicy) {
         switch (inclusionPolicy) {
             // overridden in symbols that actually support nulls.
             case ALWAYS:

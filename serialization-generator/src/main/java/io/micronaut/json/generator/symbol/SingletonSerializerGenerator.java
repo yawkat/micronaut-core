@@ -15,6 +15,7 @@
  */
 package io.micronaut.json.generator.symbol;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.squareup.javapoet.*;
@@ -191,6 +192,17 @@ public final class SingletonSerializerGenerator {
         if (serializer) {
             builder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(Serializer.class), valueReferenceName))
                     .addMethod(generateSerialize(classContext));
+
+            ConditionExpression<CodeBlock> isEmptyCheck = symbol.shouldIncludeCheck(classContext.newMethodContext("value"), valueType, JsonInclude.Include.NON_EMPTY);
+            if (!isEmptyCheck.isAlwaysTrue()) {
+                builder.addMethod(MethodSpec.methodBuilder("isEmpty")
+                        .addAnnotation(Override.class)
+                        .addModifiers(Modifier.PUBLIC)
+                        .addParameter(valueReferenceName, "value")
+                        .returns(boolean.class)
+                        .addCode("return $L;\n", isEmptyCheck.build(CodeBlock.of("value")))
+                        .build());
+            }
         }
         if (deserializer) {
             builder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(Deserializer.class), valueReferenceName))
@@ -198,6 +210,7 @@ public final class SingletonSerializerGenerator {
 
             if (symbol.supportsNullDeserialization()) {
                 builder.addMethod(MethodSpec.methodBuilder("supportsNullDeserialization")
+                        .addAnnotation(Override.class)
                         .addModifiers(Modifier.PUBLIC)
                         .returns(boolean.class)
                         .addCode("return true;\n")

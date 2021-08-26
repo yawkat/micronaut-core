@@ -206,7 +206,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                 serializeBeanProperties(subGenerator, propWithType.type, subDefinition, propRead, serialize);
             } else {
                 SerializerSymbol symbol = findSymbol(propWithType);
-                ConditionExpression<CodeBlock> shouldIncludeCheck = symbol.shouldIncludeCheck(propWithType.type, prop.valueInclusionPolicy);
+                ConditionExpression<CodeBlock> shouldIncludeCheck = symbol.shouldIncludeCheck(generatorContext, propWithType.type, prop.valueInclusionPolicy);
                 if (!shouldIncludeCheck.isAlwaysTrue()) {
                     propRead = onlyReadOnce(generatorContext, propWithType, propRead, serialize);
                     serialize.beginControlFlow("if ($L)", shouldIncludeCheck.build(propRead));

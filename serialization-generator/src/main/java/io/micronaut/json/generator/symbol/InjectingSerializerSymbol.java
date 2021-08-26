@@ -15,6 +15,7 @@
  */
 package io.micronaut.json.generator.symbol;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.squareup.javapoet.*;
 import io.micronaut.context.BeanProvider;
 
@@ -54,6 +55,14 @@ final class InjectingSerializerSymbol implements SerializerSymbol {
     @Override
     public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
         return CodeBlock.of("$L.serialize($N, $L);\n", getSerializerAccess(generatorContext, type, true), Names.ENCODER, readExpression);
+    }
+
+    @Override
+    public ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorContext generatorContext, GeneratorType type, JsonInclude.Include inclusionPolicy) {
+        if (inclusionPolicy == JsonInclude.Include.NON_EMPTY) {
+            return ConditionExpression.of(expr -> CodeBlock.of("!$L.isEmpty($L)", getSerializerAccess(generatorContext, type, true), expr));
+        }
+        return SerializerSymbol.super.shouldIncludeCheck(generatorContext, type, inclusionPolicy);
     }
 
     @Override

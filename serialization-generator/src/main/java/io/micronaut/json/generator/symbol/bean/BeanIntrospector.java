@@ -206,7 +206,7 @@ class BeanIntrospector {
             }
 
             AnnotationValue<JsonInclude> jsonInclude = ElementUtil.getAnnotation(JsonInclude.class, clazz, additionalAnnotationSource);
-            defaultInclusionPolicy = JsonInclude.Include.ALWAYS;
+            defaultInclusionPolicy = JsonInclude.Include.NON_EMPTY; // match JacksonConfiguration default behavior
             if (jsonInclude != null) {
                 defaultInclusionPolicy = jsonInclude.get("value", JsonInclude.Include.class, defaultInclusionPolicy);
             }

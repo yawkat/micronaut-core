@@ -46,6 +46,11 @@ class OptionalMultiValuesSerializer<V> implements Serializer<OptionalMultiValues
         encoder.writeEndObject();
     }
 
+    @Override
+    public boolean isEmpty(OptionalMultiValues<V> value) {
+        return value.isEmpty();
+    }
+
     @Singleton
     static class Factory implements Serializer.Factory {
         private final JsonConfiguration jacksonConfiguration;

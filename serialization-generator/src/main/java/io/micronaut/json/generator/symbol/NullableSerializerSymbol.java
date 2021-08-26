@@ -58,8 +58,8 @@ public class NullableSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorType type, JsonInclude.Include inclusionPolicy) {
-        ConditionExpression<CodeBlock> expr = this.delegate.shouldIncludeCheck(type, inclusionPolicy);
+    public ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorContext generatorContext, GeneratorType type, JsonInclude.Include inclusionPolicy) {
+        ConditionExpression<CodeBlock> expr = this.delegate.shouldIncludeCheck(generatorContext, type, inclusionPolicy);
         switch (inclusionPolicy) {
             case NON_NULL:
             case NON_ABSENT:

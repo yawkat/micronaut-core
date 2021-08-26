@@ -513,4 +513,54 @@ enum Foo {
         expect:
         serializeToString(serializer, Enum.valueOf(ctx.classLoader.loadClass('example.Foo'), 'A')) == '"A"'
     }
+
+    void "injected serializer uses Serializer.isEmpty"() {
+        given:
+        def ctx = buildContext('example.A', '''
+package example;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import io.micronaut.json.annotation.SerializableBean;
+import jakarta.inject.Singleton;
+
+@SerializableBean(allowDeserialization = false)
+class A {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    B b;
+}
+
+class B {
+    boolean present;
+}
+
+@Singleton
+class BSerializer implements io.micronaut.json.Serializer<B> {
+    @Override
+    public void serialize(com.fasterxml.jackson.core.JsonGenerator encoder, B value) throws java.io.IOException {
+        encoder.writeBoolean(value.present);
+    }
+
+    @Override
+    public boolean isEmpty(B value) {
+        return !value.present;
+    }
+}
+''', true)
+        def bSerializer = ctx.getBean(ctx.classLoader.loadClass('example.BSerializer'))
+        def aSerializer = ctx.classLoader.loadClass('example.$A$Serializer').newInstance(bSerializer)
+
+        def bPresent = ctx.classLoader.loadClass('example.B').newInstance()
+        bPresent.present = true
+        def bAbsent = ctx.classLoader.loadClass('example.B').newInstance()
+        bAbsent.present = false
+
+        def aPresent = ctx.classLoader.loadClass('example.A').newInstance()
+        aPresent.b = bPresent
+        def aAbsent = ctx.classLoader.loadClass('example.A').newInstance()
+        aAbsent.b = bAbsent
+
+        expect:
+        serializeToString(aSerializer, aPresent) == '{"b":true}'
+        serializeToString(aSerializer, aAbsent) == '{}'
+    }
 }

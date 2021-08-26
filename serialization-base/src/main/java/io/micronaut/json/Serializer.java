@@ -27,6 +27,13 @@ import java.util.function.Function;
 public interface Serializer<T> {
     void serialize(JsonGenerator encoder, T value) throws IOException;
 
+    /**
+     * Used for {@code JsonInclude.Include#NON_EMPTY} checking.
+     */
+    default boolean isEmpty(T value) {
+        return false;
+    }
+
     interface Factory extends BaseCodecFactory {
         @Override
         Type getGenericType();

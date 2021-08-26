@@ -32,6 +32,11 @@ class OptionalValuesSerializer<V> implements Serializer<OptionalValues<V>> {
         encoder.writeEndObject();
     }
 
+    @Override
+    public boolean isEmpty(OptionalValues<V> value) {
+        return value.isEmpty();
+    }
+
     @Singleton
     static class Factory implements Serializer.Factory {
         @Override

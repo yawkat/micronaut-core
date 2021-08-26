@@ -25,7 +25,6 @@ import io.micronaut.json.generated.JsonParseException;
 
 import java.lang.reflect.TypeVariable;
 import java.util.*;
-import java.util.function.Function;
 
 import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;
@@ -106,11 +105,11 @@ abstract class InlineIterableSerializerSymbol extends AbstractInlineContainerSer
 
         @Nullable
         @Override
-        public ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorType type, JsonInclude.Include inclusionPolicy) {
+        public ConditionExpression<CodeBlock> shouldIncludeCheck(GeneratorContext generatorContext, GeneratorType type, JsonInclude.Include inclusionPolicy) {
             if (inclusionPolicy == JsonInclude.Include.NON_EMPTY) {
                 return ConditionExpression.of(expr -> CodeBlock.of("$L.length != 0", expr));
             }
-            return super.shouldIncludeCheck(type, inclusionPolicy);
+            return super.shouldIncludeCheck(generatorContext, type, inclusionPolicy);
         }
 
         @Override
