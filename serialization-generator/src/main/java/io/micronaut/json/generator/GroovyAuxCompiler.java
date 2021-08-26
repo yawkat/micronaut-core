@@ -125,7 +125,7 @@ class GroovyAuxCompiler {
                     null,
                     files.stream().map(JavaFile::toJavaFileObject).collect(Collectors.toList())
             );
-            callTaskAndCheck(diagnosticListener, task);
+            callTaskAndCheck(diagnosticListener, task, "Failed to compile serializers for groovy classes");
         } finally {
             deleteRecursively(groovyStubs);
         }
@@ -164,23 +164,25 @@ class GroovyAuxCompiler {
                     null,
                     Files.walk(tempDirectory)
                             .filter(p -> p.toString().endsWith(".java"))
+                            // package-info.java contain invalid java when compiling the inject-groovy test module
+                            .filter(p -> !p.getFileName().toString().equals("package-info.java"))
                             .map(path -> new PathFileObject(path, JavaFileObject.Kind.SOURCE))
                             .collect(Collectors.toList())
             );
-            callTaskAndCheck(diagnosticListener, task);
+            callTaskAndCheck(diagnosticListener, task, "Failed to compile java stubs required for groovy serializer generation, this can happen if there is weird groovy code *anywhere* in the same source root");
         } finally {
             deleteRecursively(tempDirectory);
         }
     }
 
-    private static void callTaskAndCheck(DiagnosticCollector<JavaFileObject> diagnosticListener, JavaCompiler.CompilationTask task) {
+    private static void callTaskAndCheck(DiagnosticCollector<JavaFileObject> diagnosticListener, JavaCompiler.CompilationTask task, String failMsg) {
         if (!task.call()) {
             for (Diagnostic<? extends JavaFileObject> diagnostic : diagnosticListener.getDiagnostics()) {
                 if (diagnostic.getKind() == Diagnostic.Kind.ERROR) {
-                    throw new RuntimeException("Failed to compile: " + diagnostic.getMessage(Locale.ROOT));
+                    throw new RuntimeException(failMsg + ": " + diagnostic.getMessage(Locale.ROOT));
                 }
             }
-            throw new RuntimeException("Failed to compile");
+            throw new RuntimeException(failMsg);
         }
     }
 
