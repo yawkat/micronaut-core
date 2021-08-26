@@ -21,6 +21,7 @@ import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
+import io.micronaut.json.DatabindChoice;
 import io.micronaut.runtime.ApplicationConfiguration;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -40,6 +41,7 @@ import java.util.List;
 @Deprecated
 @Singleton
 @BootstrapContextCompatible
+@DatabindChoice.RequiresJackson
 public class JsonStreamMediaTypeCodec extends JsonMediaTypeCodec {
 
     public static final String CONFIGURATION_QUALIFIER = "json-stream";

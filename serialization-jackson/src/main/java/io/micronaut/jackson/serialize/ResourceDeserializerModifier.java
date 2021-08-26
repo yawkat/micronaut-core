@@ -23,6 +23,7 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.http.hateoas.Resource;
 import io.micronaut.jackson.modules.BeanIntrospectionModule;
+import io.micronaut.json.DatabindChoice;
 
 import java.util.List;
 
@@ -32,6 +33,7 @@ import java.util.List;
  */
 @Internal
 @Requires(missingBeans = BeanIntrospectionModule.class)
+@DatabindChoice.RequiresJackson
 public class ResourceDeserializerModifier extends BeanDeserializerModifier {
 
     @Override

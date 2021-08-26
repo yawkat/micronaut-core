@@ -15,12 +15,14 @@
  */
 package io.micronaut.jackson;
 
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.json.MicronautObjectCodec;
 import io.micronaut.json.GenericJsonAdapter;
 
 /**
  * For ServiceLoader (used where no app context is available)
  */
+@Internal
 public class JacksonJsonAdapter implements GenericJsonAdapter {
     @Override
     public MicronautObjectCodec createObjectMapper() {

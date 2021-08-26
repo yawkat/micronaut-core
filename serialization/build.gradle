@@ -1,5 +1,6 @@
 dependencies {
     annotationProcessor project(":inject-java")
+    annotationProcessor project(":serialization-generator")
 
     api project(':context')
     api project(":http")

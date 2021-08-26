@@ -36,6 +36,7 @@ import io.micronaut.context.annotation.Type;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.reflect.GenericTypeUtils;
 import io.micronaut.core.util.StringUtils;
+import io.micronaut.json.DatabindChoice;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -54,6 +55,7 @@ import java.util.TimeZone;
  */
 @Factory
 @BootstrapContextCompatible
+@DatabindChoice.RequiresJackson
 public class ObjectMapperFactory {
 
     /**

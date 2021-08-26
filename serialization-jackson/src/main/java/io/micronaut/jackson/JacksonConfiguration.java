@@ -34,6 +34,7 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.ArgumentUtils;
 import io.micronaut.core.util.ArrayUtils;
 import io.micronaut.core.util.CollectionUtils;
+import io.micronaut.json.DatabindChoice;
 import io.micronaut.json.JsonConfiguration;
 
 import java.util.ArrayList;
@@ -59,6 +60,7 @@ import java.util.TimeZone;
                 LinkedHashMap.class,
                 HashSet.class
         })
+@DatabindChoice.RequiresJackson
 public class JacksonConfiguration implements JsonConfiguration {
 
     /**

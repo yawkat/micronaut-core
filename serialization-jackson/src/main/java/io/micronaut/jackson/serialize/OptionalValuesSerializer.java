@@ -22,6 +22,7 @@ import io.micronaut.core.value.OptionalMultiValues;
 import io.micronaut.core.value.OptionalValues;
 import io.micronaut.http.hateoas.JsonError;
 import io.micronaut.jackson.JacksonConfiguration;
+import io.micronaut.json.DatabindChoice;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -36,6 +37,7 @@ import java.util.Optional;
  * @since 1.0
  */
 @Singleton
+@DatabindChoice.RequiresJackson
 public class OptionalValuesSerializer extends JsonSerializer<OptionalValues<?>> {
 
     private final boolean alwaysSerializeErrorsAsList;
