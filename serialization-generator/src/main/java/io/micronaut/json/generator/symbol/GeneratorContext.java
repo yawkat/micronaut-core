@@ -157,12 +157,12 @@ public final class GeneratorContext {
                 return false;
             }
             InjectableSerializerType that = (InjectableSerializerType) o;
-            return provider == that.provider && forSerialization == that.forSerialization && Objects.equals(type, that.type);
+            return provider == that.provider && forSerialization == that.forSerialization && Objects.equals(poetType, that.poetType);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(type, provider, forSerialization);
+            return Objects.hash(poetType, provider, forSerialization);
         }
     }
 }

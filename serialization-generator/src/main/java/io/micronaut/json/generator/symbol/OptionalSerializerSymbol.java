@@ -71,18 +71,18 @@ class OptionalSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
+    public CodeBlock deserialize(GeneratorContext generatorContext, String decoderVariable, GeneratorType type, Setter setter) {
         Optional<GeneratorType> delegateType = findDelegateType(type);
         if (!delegateType.isPresent()) {
             generatorContext.getProblemReporter().fail("Could not resolve optional type", null);
             return CodeBlock.of("");
         }
         return CodeBlock.builder()
-                .beginControlFlow("if ($N.currentToken() == $T.VALUE_NULL)", Names.DECODER, JsonToken.class)
+                .beginControlFlow("if ($N.decodeNull())", decoderVariable)
                 .add(setter.createSetStatement(CodeBlock.of("$T.empty()", Optional.class)))
                 .nextControlFlow("else")
-                .add(getDelegateSerializer(delegateType.get()).deserialize(generatorContext, delegateType.get(),
-                        Setter.delegate(setter, expr -> CodeBlock.of("$T.of($L)", Optional.class, expr))))
+                .add(getDelegateSerializer(delegateType.get()).deserialize(generatorContext, decoderVariable,
+                        delegateType.get(), Setter.delegate(setter, expr -> CodeBlock.of("$T.of($L)", Optional.class, expr))))
                 .endControlFlow()
                 .build();
     }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterizedTypeName;
+import io.micronaut.json.Decoder;
 import io.micronaut.json.generated.JsonParseException;
 
 import java.util.HashMap;
@@ -11,7 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;
 
 final class InlineStringMapSerializerSymbol extends AbstractInlineContainerSerializerSymbol implements SerializerSymbol {
@@ -70,14 +70,15 @@ final class InlineStringMapSerializerSymbol extends AbstractInlineContainerSeria
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
+    public CodeBlock deserialize(GeneratorContext generatorContext, String decoderVariable, GeneratorType type, Setter setter) {
         GeneratorType elementType = getType(type, "V");
         SerializerSymbol elementDeserializer = getElementSymbol(elementType);
 
         String intermediateVariable = generatorContext.newLocalVariable("map");
+        String elementDecoderVariable = generatorContext.newLocalVariable("mapDecoder");
 
         CodeBlock.Builder block = CodeBlock.builder();
-        block.add("if ($N.currentToken() != $T.START_OBJECT) throw $T.from($N, \"Unexpected token \" + $N.currentToken() + \", expected START_OBJECT\");\n", DECODER, JsonToken.class, JsonParseException.class, DECODER, DECODER);
+        block.addStatement("$T $N = $N.decodeObject()", Decoder.class, elementDecoderVariable, decoderVariable);
         block.addStatement("$T $N = new $T<>()",
                 ParameterizedTypeName.get(
                         ClassName.get(LinkedHashMap.class),
@@ -87,14 +88,13 @@ final class InlineStringMapSerializerSymbol extends AbstractInlineContainerSeria
                 intermediateVariable,
                 LinkedHashMap.class
         );
-        block.beginControlFlow("while ($N.nextToken() == $T.FIELD_NAME)", DECODER, JsonToken.class);
         String keyVariable = generatorContext.newLocalVariable("key");
-        block.addStatement("$T $N = $N.getCurrentName()", String.class, keyVariable, DECODER);
-        block.addStatement("$N.nextToken()", DECODER);
-        block.add(elementDeserializer.deserialize(generatorContext, elementType, expr -> CodeBlock.of("$N.put($N, $L);\n", intermediateVariable, keyVariable, expr)));
+        block.addStatement("$T $N", String.class, keyVariable);
+        block.beginControlFlow("while (($N = $N.decodeKey()) != null)", keyVariable, elementDecoderVariable);
+        block.add(elementDeserializer.deserialize(generatorContext, elementDecoderVariable, elementType, expr -> CodeBlock.of("$N.put($N, $L);\n", intermediateVariable, keyVariable, expr)));
         block.endControlFlow();
 
-        block.add("if ($N.currentToken() != $T.END_OBJECT) throw $T.from($N, \"Unexpected token \" + $N.currentToken() + \", expected FIELD_NAME or END_OBJECT\");\n", DECODER, JsonToken.class, JsonParseException.class, DECODER, DECODER);
+        block.addStatement("$N.finishStructure()", elementDecoderVariable);
 
         block.add(setter.createSetStatement(CodeBlock.of("$N", intermediateVariable)));
         return block.build();

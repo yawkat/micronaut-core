@@ -1,9 +1,9 @@
 package io.micronaut.json.generated.serializer;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
 import io.micronaut.core.reflect.GenericTypeFactory;
 import io.micronaut.core.reflect.GenericTypeToken;
+import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
@@ -43,7 +43,7 @@ class PrimitiveGenerators {
 
         @SuppressWarnings("unchecked")
         @Override
-        public T deserialize(JsonParser decoder) throws IOException {
+        public T deserialize(Decoder decoder) throws IOException {
             return (T) implDes.deserialize(decoder);
         }
 

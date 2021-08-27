@@ -20,13 +20,13 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.json.Decoder;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.generated.JsonParseException;
 
 import java.lang.reflect.TypeVariable;
 import java.util.*;
 
-import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;
 
 /**
@@ -69,18 +69,20 @@ abstract class InlineIterableSerializerSymbol extends AbstractInlineContainerSer
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
+    public CodeBlock deserialize(GeneratorContext generatorContext, String decoderVariable, GeneratorType type, Setter setter) {
         GeneratorType elementType = getElementType(type);
         SerializerSymbol elementDeserializer = getElementSymbol(elementType);
 
         String intermediateVariable = generatorContext.newLocalVariable("intermediate");
+        String elementDecoderVariable = generatorContext.newLocalVariable("arrayDecoder");
 
         CodeBlock.Builder block = CodeBlock.builder();
-        block.add("if ($N.currentToken() != $T.START_ARRAY) throw $T.from($N, \"Unexpected token \" + $N.currentToken() + \", expected START_ARRAY\");\n", DECODER, JsonToken.class, JsonParseException.class, DECODER, DECODER);
+        block.addStatement("$T $N = $N.decodeArray()", Decoder.class, elementDecoderVariable, decoderVariable);
         block.add(createIntermediate(elementType, intermediateVariable));
-        block.beginControlFlow("while ($N.nextToken() != $T.END_ARRAY)", DECODER, JsonToken.class);
-        block.add(elementDeserializer.deserialize(generatorContext, elementType, expr -> CodeBlock.of("$N.add($L);\n", intermediateVariable, expr)));
+        block.beginControlFlow("while ($N.hasNextArrayValue())", elementDecoderVariable);
+        block.add(elementDeserializer.deserialize(generatorContext, elementDecoderVariable, elementType, expr -> CodeBlock.of("$N.add($L);\n", intermediateVariable, expr)));
         block.endControlFlow();
+        block.addStatement("$N.finishStructure()", elementDecoderVariable);
         block.add(setter.createSetStatement(finishDeserialize(elementType, intermediateVariable)));
         return block.build();
     }

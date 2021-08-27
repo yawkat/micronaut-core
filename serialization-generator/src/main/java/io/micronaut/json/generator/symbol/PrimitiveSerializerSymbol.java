@@ -15,14 +15,11 @@
  */
 package io.micronaut.json.generator.symbol;
 
-import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
-import io.micronaut.json.generated.JsonParseException;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;
 
 final class PrimitiveSerializerSymbol implements SerializerSymbol {
@@ -52,20 +49,11 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
+    public CodeBlock deserialize(GeneratorContext generatorContext, String decoderVariable, GeneratorType type, Setter setter) {
         if (!canSerialize(type)) {
             throw new UnsupportedOperationException("This symbol can only handle primitives");
         }
-        String tokenVar = generatorContext.newLocalVariable("token");
-        return CodeBlock.builder()
-                .addStatement("$T $N = $N.currentToken()", JsonToken.class, tokenVar, DECODER)
-                .beginControlFlow("if ($N == $T.VALUE_STRING)", tokenVar, JsonToken.class)
-                .add(setter.createSetStatement(coerceFromString(type, CodeBlock.of("$N.getText()", DECODER))))
-                .nextControlFlow("else")
-                .add(checkCorrectToken(generatorContext, type, tokenVar))
-                .add(setter.createSetStatement(CodeBlock.of(deserializeExpression(type))))
-                .endControlFlow()
-                .build();
+        return setter.createSetStatement(CodeBlock.of("$N.$N()", decoderVariable, deserializeMethod(type)));
     }
 
     @Override
@@ -80,52 +68,27 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
         }
     }
 
-    private CodeBlock checkCorrectToken(GeneratorContext generatorContext, GeneratorType type, String tokenVar) {
+    private String deserializeMethod(GeneratorType type) {
         if (type.isRawTypeEquals(boolean.class)) {
-            return CodeBlock.builder()
-                    .addStatement(
-                            "if ($N != $T.VALUE_TRUE && $N != $T.VALUE_FALSE) throw $T.from($N, $S + $N)",
-                            tokenVar, JsonToken.class,
-                            tokenVar, JsonToken.class,
-                            JsonParseException.class, DECODER,
-                            "Bad value for field " + generatorContext.getReadablePath() + ": Expected boolean, got ", tokenVar
-                    )
-                    .build();
-        } else {
-            // for numbers, we accept floats and ints interchangeably, because json makes no distinction. Other serialization formats might, though.
-            return CodeBlock.builder()
-                    .addStatement(
-                            "if ($N != $T.VALUE_NUMBER_INT && $N != $T.VALUE_NUMBER_FLOAT) throw $T.from($N, $S + $N)",
-                            tokenVar, JsonToken.class,
-                            tokenVar, JsonToken.class,
-                            JsonParseException.class, DECODER,
-                            "Bad value for field " + generatorContext.getReadablePath() + ": Expected number, got ", tokenVar
-                    )
-                    .build();
-        }
-    }
-
-    private String deserializeExpression(GeneratorType type) {
-        if (type.isRawTypeEquals(boolean.class)) {
-            return DECODER + ".getBooleanValue()";
+            return "decodeBoolean";
         } else if (type.isRawTypeEquals(byte.class)) {
-            return DECODER + ".getByteValue()";
+            return "decodeByte";
         } else if (type.isRawTypeEquals(short.class)) {
-            return DECODER + ".getShortValue()";
+            return "decodeShort";
         } else if (type.isRawTypeEquals(char.class)) {
-            return "(char) " + DECODER + ".getIntValue()"; // TODO
+            return "decodeChar";
         } else if (type.isRawTypeEquals(int.class)) {
-            return DECODER + ".getIntValue()";
+            return "decodeInt";
         } else if (type.isRawTypeEquals(long.class)) {
-            return DECODER + ".getLongValue()";
+            return "decodeLong";
         } else if (type.isRawTypeEquals(float.class)) {
-            return DECODER + ".getFloatValue()";
+            return "decodeFloat";
         } else if (type.isRawTypeEquals(double.class)) {
-            return DECODER + ".getDoubleValue()";
+            return "decodeDouble";
         } else if (type.isRawTypeEquals(BigInteger.class)) {
-            return DECODER + ".getBigIntegerValue()";
+            return "decodeBigInteger";
         } else if (type.isRawTypeEquals(BigDecimal.class)) {
-            return DECODER + ".getDecimalValue()";
+            return "decodeBigDecimal";
         } else {
             throw new AssertionError("unknown primitive type " + type);
         }

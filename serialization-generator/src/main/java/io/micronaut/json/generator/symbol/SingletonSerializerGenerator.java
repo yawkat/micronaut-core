@@ -17,7 +17,6 @@ package io.micronaut.json.generator.symbol;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
 import com.squareup.javapoet.*;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Internal;
@@ -25,6 +24,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
 import io.micronaut.inject.ast.MnType;
+import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
@@ -36,7 +36,6 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.Function;
 
-import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;
 
 @Internal
@@ -319,10 +318,10 @@ public final class SingletonSerializerGenerator {
         return MethodSpec.methodBuilder("deserialize")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
-                .addParameter(JsonParser.class, DECODER)
+                .addParameter(Decoder.class, "decoder")
                 .returns(valueReferenceName)
                 .addException(IOException.class)
-                .addCode(symbol.deserialize(classContext.newMethodContext(DECODER), valueType, new SerializerSymbol.Setter() {
+                .addCode(symbol.deserialize(classContext.newMethodContext("decoder"), "decoder", valueType, new SerializerSymbol.Setter() {
                     @Override
                     public CodeBlock createSetStatement(CodeBlock expr) {
                         return CodeBlock.of("return $L;\n", expr);

@@ -20,7 +20,6 @@ import io.micronaut.core.annotation.Internal;
 @Internal
 public final class Names {
     public static final String ENCODER = "encoder";
-    public static final String DECODER = "decoder";
 
     private Names() {
     }

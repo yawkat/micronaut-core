@@ -1,7 +1,7 @@
 package io.micronaut.json.generated.serializer;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
+import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
@@ -21,7 +21,7 @@ class DateSerializer implements Serializer<Date>, Deserializer<Date> {
     }
 
     @Override
-    public Date deserialize(JsonParser decoder) throws IOException {
+    public Date deserialize(Decoder decoder) throws IOException {
         return new Date(longDeserializer.deserialize(decoder));
     }
 

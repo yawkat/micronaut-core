@@ -57,11 +57,12 @@ public interface SerializerSymbol {
      * {@link io.micronaut.json.Deserializer#deserialize})
      *
      * @param generatorContext The context of the generator, e.g. declared local variables.
+     * @param decoderVariable The variable name of the decoder to use for deserialization
      * @param type The type of the value being deserialized.
      * @param setter The setter to use to build the final return value.
      * @return The code that performs the deserialization.
      */
-    CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter);
+    CodeBlock deserialize(GeneratorContext generatorContext, String decoderVariable, GeneratorType type, Setter setter);
 
     /**
      * Get an expression giving a default value for this type. Used when deserializing a bean and a property is missing.

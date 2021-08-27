@@ -434,7 +434,7 @@ class Test {
 
         expect:
         des.foo == null
-        serializeToString(compiled.serializer, testBean) == '{"foo":null}'
+        serializeToString(compiled.serializer, testBean) == '{}'
     }
 
     void "nullable setter"() {

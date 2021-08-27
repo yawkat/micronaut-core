@@ -3,14 +3,11 @@ package io.micronaut.json.generator.symbol;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
-import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.EnumElement;
 import io.micronaut.json.generated.JsonParseException;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static io.micronaut.json.generator.symbol.Names.DECODER;
 
 @Internal
 public class InlineEnumSerializerSymbol implements SerializerSymbol {
@@ -55,13 +52,13 @@ public class InlineEnumSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
+    public CodeBlock deserialize(GeneratorContext generatorContext, String decoderVariable, GeneratorType type, Setter setter) {
         EnumDefinition enumDefinition = new EnumDefinition((EnumElement) type.getClassElement());
 
-        return enumDefinition.valueSerializer.deserialize(generatorContext, type, new Setter() {
+        return enumDefinition.valueSerializer.deserialize(generatorContext, decoderVariable, type, new Setter() {
             @Override
             public CodeBlock createSetStatement(CodeBlock expr) {
-                return InlineEnumSerializerSymbol.this.deserialize0(generatorContext, type, setter, enumDefinition, expr);
+                return InlineEnumSerializerSymbol.this.deserialize0(generatorContext, decoderVariable, type, setter, enumDefinition, expr);
             }
 
             @Override
@@ -74,6 +71,7 @@ public class InlineEnumSerializerSymbol implements SerializerSymbol {
     @NonNull
     private CodeBlock deserialize0(
             GeneratorContext generatorContext,
+            String decoderVariable,
             GeneratorType type,
             Setter setter,
             EnumDefinition enumDefinition,
@@ -94,7 +92,7 @@ public class InlineEnumSerializerSymbol implements SerializerSymbol {
         builder.beginControlFlow("default:");
         builder.addStatement(
                 "throw $T.from($N, $S)",
-                JsonParseException.class, DECODER,
+                JsonParseException.class, decoderVariable,
                 "Bad enum value for field " + generatorContext.getReadablePath()
         );
         builder.endControlFlow();

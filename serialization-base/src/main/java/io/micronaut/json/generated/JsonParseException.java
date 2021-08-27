@@ -19,6 +19,8 @@ import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonParser;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.json.Decoder;
+import io.micronaut.json.JacksonDecoder;
 
 @Internal
 public final class JsonParseException extends JacksonException {
@@ -31,7 +33,8 @@ public final class JsonParseException extends JacksonException {
         this.location = location;
     }
 
-    public static JsonParseException from(JsonParser parser, String msg) {
+    public static JsonParseException from(Decoder decoder, String msg) {
+        JsonParser parser = ((JacksonDecoder) decoder).parser;
         return new JsonParseException(msg, null, parser, parser.getCurrentLocation());
     }
 

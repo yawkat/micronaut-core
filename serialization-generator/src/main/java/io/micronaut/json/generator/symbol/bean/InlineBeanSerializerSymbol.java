@@ -15,14 +15,12 @@
  */
 package io.micronaut.json.generator.symbol.bean;
 
-import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
-import io.micronaut.core.annotation.AnnotatedElement;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ConstructorElement;
-import io.micronaut.inject.visitor.VisitorContext;
+import io.micronaut.json.Decoder;
 import io.micronaut.json.generated.JsonParseException;
 import io.micronaut.json.annotation.SerializableBean;
 import io.micronaut.json.generator.symbol.*;
@@ -30,7 +28,6 @@ import io.micronaut.json.generator.symbol.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static io.micronaut.json.generator.symbol.Names.DECODER;
 import static io.micronaut.json.generator.symbol.Names.ENCODER;
 
 @Internal
@@ -248,13 +245,13 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
+    public CodeBlock deserialize(GeneratorContext generatorContext, String decoderVariable, GeneratorType type, Setter setter) {
         if (!supportsDirection(type, false)) {
             // todo: don't implement Serializer at all
             return CodeBlock.of("throw new $T(\"Deserialization of this type is disabled\");\n", UnsupportedOperationException.class);
         }
 
-        return new DeserGen(generatorContext, type).generate(setter);
+        return new DeserGen(generatorContext, type).generate(setter, decoderVariable);
     }
 
     private class DeserGen {
@@ -276,14 +273,17 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
          */
         private final CodeBlock.Builder deserialize = CodeBlock.builder();
 
+        private final String elementDecoderVariable;
+
         DeserGen(GeneratorContext generatorContext, GeneratorType type) {
             this.generatorContext = generatorContext;
             this.rootType = type;
+            elementDecoderVariable = generatorContext.newLocalVariable("elementDecoder");
 
             rootDefinition = introspectRecursive(type);
             localVariableNames = leafProperties.stream()
                     .collect(Collectors.toMap(prop -> prop.property, prop -> generatorContext.newLocalVariable(prop.property.name)));
-            duplicatePropertyManager = new DuplicatePropertyManager(generatorContext, leafProperties.stream().map(p -> p.property).collect(Collectors.toList()));
+            duplicatePropertyManager = new DuplicatePropertyManager(generatorContext, leafProperties.stream().map(p -> p.property).collect(Collectors.toList()), elementDecoderVariable);
         }
 
         private BeanDefinition introspectRecursive(GeneratorType type) {
@@ -298,7 +298,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             return def;
         }
 
-        private CodeBlock generate(Setter setter) {
+        private CodeBlock generate(Setter setter, String outerDecoderVariable) {
             // if there were failures, the definition may be in an inconsistent state, so we avoid codegen.
             if (generatorContext.getProblemReporter().isFailed()) {
                 return CodeBlock.of("");
@@ -307,14 +307,12 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             if (rootDefinition.creatorDelegatingProperty != null) {
                 // delegating to another type
                 return findSymbol(PropWithType.fromContext(rootType, rootDefinition.creatorDelegatingProperty)).deserialize(
-                        generatorContext,
+                        generatorContext, outerDecoderVariable,
                         rootDefinition.creatorDelegatingProperty.getType(rootType.typeParametersAsFoldFunction()),
-                        Setter.delegate(setter, expr -> getCreatorCall(rootType, rootDefinition, expr))
-                );
+                        Setter.delegate(setter, expr -> getCreatorCall(rootType, rootDefinition, expr)));
             }
 
-            deserialize.add("if ($N.currentToken() != $T.START_OBJECT) throw $T.from($N, \"Unexpected token \" + $N.currentToken() + \", expected START_OBJECT\");\n",
-                    DECODER, JsonToken.class, JsonParseException.class, DECODER, DECODER);
+            deserialize.addStatement("$T $N = $N.decodeObject()", Decoder.class, elementDecoderVariable, outerDecoderVariable);
 
             duplicatePropertyManager.emitMaskDeclarations(deserialize);
 
@@ -325,14 +323,9 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
 
             // main parse loop
             deserialize.beginControlFlow("while (true)");
-            String tokenVariable = generatorContext.newLocalVariable("token");
-            deserialize.addStatement("$T $N = $N.nextToken()", JsonToken.class, tokenVariable, DECODER);
-            deserialize.add("if ($N == $T.END_OBJECT) break;\n", tokenVariable, JsonToken.class);
-            deserialize.add("if ($N != $T.FIELD_NAME) throw $T.from($N, \"Unexpected token \" + token + \", expected END_OBJECT or FIELD_NAME\");\n",
-                    tokenVariable, JsonToken.class, JsonParseException.class, DECODER);
             String fieldNameVariable = generatorContext.newLocalVariable("fieldName");
-            deserialize.addStatement("$T $N = $N.getCurrentName()", String.class, fieldNameVariable, DECODER);
-            deserialize.addStatement("$N.nextToken()", DECODER);
+            deserialize.addStatement("$T $N = $N.decodeKey()", String.class, fieldNameVariable, elementDecoderVariable);
+            deserialize.add("if ($N == null) break;\n", fieldNameVariable);
             deserialize.beginControlFlow("switch ($N)", fieldNameVariable);
             for (PropWithType prop : leafProperties) {
                 // todo: detect duplicates
@@ -348,16 +341,18 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             // unknown properties
             deserialize.beginControlFlow("default:");
             if (rootDefinition.ignoreUnknownProperties) {
-                deserialize.addStatement("$N.skipChildren()", DECODER);
+                deserialize.addStatement("$N.skipValue()", elementDecoderVariable);
             } else {
                 // todo: do we really want to output a potentially attacker-controlled field name to the logs here?
                 deserialize.addStatement("throw $T.from($N, $S + $N)",
-                        JsonParseException.class, DECODER, "Unknown property for type " + rootType.getTypeName() + ": ", fieldNameVariable);
+                        JsonParseException.class, elementDecoderVariable, "Unknown property for type " + rootType.getTypeName() + ": ", fieldNameVariable);
             }
             deserialize.endControlFlow();
 
             deserialize.endControlFlow();
             deserialize.endControlFlow();
+
+            deserialize.addStatement("$N.finishStructure()", elementDecoderVariable);
 
             duplicatePropertyManager.emitCheckRequired(deserialize);
 
@@ -372,7 +367,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             duplicatePropertyManager.emitReadVariable(deserialize, prop.property);
 
             CodeBlock deserializationCode = findSymbol(prop)
-                    .deserialize(generatorContext.withSubPath(prop.property.name), prop.type, expr -> CodeBlock.of("$N = $L;\n", localVariableNames.get(prop.property), expr));
+                    .deserialize(generatorContext.withSubPath(prop.property.name), elementDecoderVariable, prop.type, expr -> CodeBlock.of("$N = $L;\n", localVariableNames.get(prop.property), expr));
             deserialize.add(deserializationCode);
         }
 
@@ -453,6 +448,11 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
      * Note: implementation must use the same bit layout as BitSet to allow internal use of {@link BitSet#toLongArray()}.
      */
     private static class DuplicatePropertyManager {
+        /**
+         * Used for creating exceptions
+         */
+        private final String decoderVariable;
+
         private final Collection<BeanDefinition.Property> properties;
 
         private final List<String> maskVariables;
@@ -462,10 +462,12 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
 
         DuplicatePropertyManager(
                 GeneratorContext context,
-                Collection<BeanDefinition.Property> properties
+                Collection<BeanDefinition.Property> properties,
+                String decoderVariable
         ) {
             requiredMask = new BitSet(properties.size());
             this.properties = properties;
+            this.decoderVariable = decoderVariable;
 
             offsets = new HashMap<>();
             int offset = 0;
@@ -501,7 +503,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                     maskVariable,
                     mask,
                     JsonParseException.class,
-                    DECODER,
+                    decoderVariable,
                     "Duplicate property " + prop.name
             );
             output.addStatement("$N |= $L", maskVariable, mask);
@@ -552,7 +554,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                             maskVariable(offset),
                             mask(offset),
                             JsonParseException.class,
-                            DECODER,
+                            decoderVariable,
                             "Missing property " + prop.name
                     );
                 }

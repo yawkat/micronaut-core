@@ -1,7 +1,7 @@
 package io.micronaut.http.netty;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
+import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
@@ -26,7 +26,7 @@ class NettyHttpMethodSerializer implements Serializer<HttpMethod>, Deserializer<
     }
 
     @Override
-    public HttpMethod deserialize(JsonParser decoder) throws IOException {
+    public HttpMethod deserialize(Decoder decoder) throws IOException {
         return HttpMethod.valueOf(stringDeserializer.deserialize(decoder));
     }
 

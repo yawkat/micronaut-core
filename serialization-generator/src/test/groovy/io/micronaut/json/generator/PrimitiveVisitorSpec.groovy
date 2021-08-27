@@ -12,6 +12,7 @@ package io.micronaut.json.generated.serializer;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
+import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Serializer;
 import java.lang.annotation.*;
@@ -27,7 +28,7 @@ class PrimitiveGenerators {
 @jakarta.inject.Singleton
 class MockObjectSerializer implements Serializer<Object>, Deserializer<Object> {
     @Override
-    public Object deserialize(JsonParser decoder) {
+    public Object deserialize(Decoder decoder) {
         throw new UnsupportedOperationException();
     }
 

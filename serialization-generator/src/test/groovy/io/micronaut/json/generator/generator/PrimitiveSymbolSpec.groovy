@@ -103,7 +103,7 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
         given:
         def serializer = buildBasicSerializer(Boolean.class, PrimitiveSerializerSymbol.INSTANCE, PrimitiveElement.BOOLEAN)
         when:
-        deserializeFromString(serializer, "4")
+        deserializeFromString(serializer, "{}")
         then:
         thrown JsonParseException
     }
@@ -112,7 +112,7 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
         given:
         def serializer = buildBasicSerializer(Integer.class, PrimitiveSerializerSymbol.INSTANCE, PrimitiveElement.INT)
         when:
-        deserializeFromString(serializer, "true")
+        deserializeFromString(serializer, "{}")
         then:
         thrown JsonParseException
     }

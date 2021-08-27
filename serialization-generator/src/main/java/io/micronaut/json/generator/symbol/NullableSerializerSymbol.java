@@ -47,12 +47,12 @@ public class NullableSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock deserialize(GeneratorContext generatorContext, GeneratorType type, Setter setter) {
+    public CodeBlock deserialize(GeneratorContext generatorContext, String decoderVariable, GeneratorType type, Setter setter) {
         return CodeBlock.builder()
-                .beginControlFlow("if ($N.currentToken() == $T.VALUE_NULL)", Names.DECODER, JsonToken.class)
+                .beginControlFlow("if ($N.decodeNull())", decoderVariable)
                 .add(setter.createSetStatement(CodeBlock.of("null")))
                 .nextControlFlow("else")
-                .add(delegate.deserialize(generatorContext, type, setter))
+                .add(delegate.deserialize(generatorContext, decoderVariable, type, setter))
                 .endControlFlow()
                 .build();
     }
