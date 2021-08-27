@@ -652,4 +652,22 @@ class Test {
         serializeToString(compiled.serializer, with) == '{"alwaysString":"a","nonNullString":"a","nonAbsentString":"a","nonEmptyString":"a","nonEmptyArray":["a"],"nonEmptyList":["a"],"nonAbsentOptionalString":"a","nonEmptyOptionalList":["a"]}'
         serializeToString(compiled.serializer, without) == '{"alwaysString":null}'
     }
+
+    void "missing properties are not overwritten"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import io.micronaut.core.annotation.Nullable;
+import java.util.Optional;
+class Test {
+    @Nullable
+    String foo = "bar";
+}
+''')
+
+        expect:
+        deserializeFromString(compiled.serializer, '{}').foo == 'bar'
+        deserializeFromString(compiled.serializer, '{"foo":null}').foo == null
+    }
 }

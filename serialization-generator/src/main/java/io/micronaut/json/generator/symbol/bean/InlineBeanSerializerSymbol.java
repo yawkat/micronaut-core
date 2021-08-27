@@ -398,6 +398,13 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
 
             deserialize.addStatement("$T $N = $L", PoetUtil.toTypeName(type), resultVariable, getCreatorCall(type, definition, creatorParameters.build()));
             for (BeanDefinition.Property prop : definition.props) {
+                CodeBlock expressionHasBeenRead = duplicatePropertyManager.getVariableReadExpression(prop);
+
+                if (expressionHasBeenRead != null) {
+                    // don't set a property we haven't read
+                    deserialize.beginControlFlow("if ($L)", expressionHasBeenRead);
+                }
+
                 String localVariable = allPropertyLocals.get(prop);
                 if (prop.setter != null) {
                     deserialize.addStatement("$N.$N($N)", resultVariable, prop.setter.getName(), localVariable);
@@ -407,6 +414,10 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                     if (prop.creatorParameter == null) {
                         throw new AssertionError("Cannot set property, should have been filtered out during introspection");
                     }
+                }
+
+                if (expressionHasBeenRead != null) {
+                    deserialize.endControlFlow();
                 }
             }
             return resultVariable;
@@ -488,12 +499,18 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             }
         }
 
+        /**
+         * Emit the prelude required for duplicate detection.
+         */
         void emitMaskDeclarations(CodeBlock.Builder output) {
             for (String maskVariable : maskVariables) {
                 output.addStatement("long $N = 0", maskVariable);
             }
         }
 
+        /**
+         * Emit the code when a variable is read. Checks for duplicates, and marks this property as read.
+         */
         void emitReadVariable(CodeBlock.Builder output, BeanDefinition.Property prop) {
             int offset = offsets.get(prop);
             String maskVariable = maskVariable(offset);
@@ -523,6 +540,9 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             return "0x" + Long.toHexString(value) + "L";
         }
 
+        /**
+         * Emit the final checks that all required properties are present.
+         */
         void emitCheckRequired(CodeBlock.Builder output) {
             if (requiredMask.isEmpty()) {
                 return;
@@ -564,6 +584,21 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             output.addStatement("throw new $T()", AssertionError.class);
 
             output.endControlFlow();
+        }
+
+        /**
+         * Get the boolean expression that checks whether the given variable was present, or {@code null} if the
+         * variable is guaranteed to be present (checked by {@link #emitCheckRequired(CodeBlock.Builder)}).
+         */
+        @Nullable
+        CodeBlock getVariableReadExpression(BeanDefinition.Property prop) {
+            int offset = offsets.get(prop);
+            if (requiredMask.get(offset)) {
+                return null;
+            }
+            String maskVariable = maskVariable(offset);
+            String mask = mask(offset);
+            return CodeBlock.of("($N & $L) != 0", maskVariable, mask);
         }
     }
 }
