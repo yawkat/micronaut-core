@@ -9,7 +9,6 @@ import io.micronaut.core.reflect.GenericTypeFactory;
 import io.micronaut.inject.ast.*;
 
 import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;

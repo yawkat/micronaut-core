@@ -16,7 +16,6 @@
 package io.micronaut.json.generator.symbol;
 
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.visitor.VisitorContext;
 import io.micronaut.json.generator.symbol.bean.InlineBeanSerializerSymbol;
 
@@ -33,7 +32,7 @@ public final class SerializerLinker {
     private final List<SerializerSymbol> symbolList;
 
     public SerializerLinker(VisitorContext typeResolutionContext) {
-        inlineBean = new InlineBeanSerializerSymbol(this, typeResolutionContext);
+        inlineBean = new InlineBeanSerializerSymbol(this);
         symbolList = Arrays.asList(
                 array,
                 new InlineIterableSerializerSymbol.CollectionImpl(this, ArrayList.class, List.class, Collection.class, Iterable.class),

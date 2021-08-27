@@ -563,4 +563,26 @@ class BSerializer implements io.micronaut.json.Serializer<B> {
         serializeToString(aSerializer, aPresent) == '{"b":true}'
         serializeToString(aSerializer, aAbsent) == '{}'
     }
+
+    void "mixin visitor"() {
+        given:
+        def ctx = buildContext('example.A', '''
+package example;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import io.micronaut.json.annotation.SerializableBean;
+import io.micronaut.json.annotation.SerializationMixin;
+import jakarta.inject.Singleton;
+
+@SerializationMixin(forClass = A.class)
+class Marker {}
+
+class A {
+    String foo;
+}
+''', true)
+
+        expect:
+        ctx.getBeansOfType(Serializer.Factory).any { it.genericType == ctx.classLoader.loadClass('example.A') }
+    }
 }

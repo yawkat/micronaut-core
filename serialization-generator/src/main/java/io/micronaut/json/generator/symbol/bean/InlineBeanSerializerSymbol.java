@@ -36,31 +36,30 @@ import static io.micronaut.json.generator.symbol.Names.ENCODER;
 @Internal
 public class InlineBeanSerializerSymbol implements SerializerSymbol {
     private final SerializerLinker linker;
-    /**
-     * Optional {@link VisitorContext} that is used to resolve class-level annotations on types passed into this symbol.
-     */
-    @Nullable
-    private final VisitorContext typeResolutionContext;
 
-    public InlineBeanSerializerSymbol(SerializerLinker linker, @Nullable VisitorContext typeResolutionContext) {
+    @Nullable
+    private final AnnotationValue<SerializableBean> fixedAnnotation;
+
+    public InlineBeanSerializerSymbol(SerializerLinker linker) {
         this.linker = linker;
-        this.typeResolutionContext = typeResolutionContext;
+        this.fixedAnnotation = null;
     }
 
-    private Collection<AnnotatedElement> findAdditionalAnnotationSource(GeneratorType type) {
-        /*
-        if (typeResolutionContext != null) {
-            Optional<ClassElement> resolved = typeResolutionContext.getClassElement(type.getName());
-            if (resolved.isPresent()) {
-                return Collections.singleton(resolved.get());
-            }
-        }
-        */
-        return Collections.emptyList();
+    private InlineBeanSerializerSymbol(InlineBeanSerializerSymbol original, AnnotationValue<SerializableBean> fixedAnnotation) {
+        this.linker = original.linker;
+        this.fixedAnnotation = fixedAnnotation;
+    }
+
+    /**
+     * Create a new {@link InlineBeanSerializerSymbol} that uses the given annotation for configuration, instead of the
+     * one actually declared on the class.
+     */
+    public InlineBeanSerializerSymbol withFixedAnnotation(AnnotationValue<SerializableBean> fixedAnnotation) {
+        return new InlineBeanSerializerSymbol(this, fixedAnnotation);
     }
 
     private BeanDefinition introspect(ProblemReporter problemReporter, GeneratorType type, boolean forSerialization) {
-        return BeanIntrospector.introspect(problemReporter, type.getRawClass(), findAdditionalAnnotationSource(type), forSerialization);
+        return BeanIntrospector.introspect(problemReporter, type.getRawClass(), Collections.emptyList(), forSerialization);
     }
 
     @Override
@@ -83,7 +82,10 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
 
     @Nullable
     private AnnotationValue<SerializableBean> getAnnotation(GeneratorType type) {
-        return ElementUtil.getAnnotation(SerializableBean.class, type.getRawClass(), findAdditionalAnnotationSource(type));
+        if (fixedAnnotation != null) {
+            return fixedAnnotation;
+        }
+        return ElementUtil.getAnnotation(SerializableBean.class, type.getRawClass(), Collections.emptyList());
     }
 
     /**

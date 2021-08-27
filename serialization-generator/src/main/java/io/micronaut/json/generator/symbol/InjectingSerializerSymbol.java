@@ -18,8 +18,10 @@ package io.micronaut.json.generator.symbol;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.squareup.javapoet.*;
 import io.micronaut.context.BeanProvider;
+import io.micronaut.core.annotation.Internal;
 
-final class InjectingSerializerSymbol implements SerializerSymbol {
+@Internal
+public final class InjectingSerializerSymbol implements SerializerSymbol {
     private final SerializerLinker linker;
 
     /**
