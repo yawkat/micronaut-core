@@ -199,7 +199,7 @@ public final class SingletonSerializerGenerator {
                         .addModifiers(Modifier.PUBLIC)
                         .addParameter(valueReferenceName, "value")
                         .returns(boolean.class)
-                        .addCode("return $L;\n", isEmptyCheck.build(CodeBlock.of("value")))
+                        .addCode("return !($L);\n", isEmptyCheck.build(CodeBlock.of("value")))
                         .build());
             }
         }

@@ -398,7 +398,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
 
             deserialize.addStatement("$T $N = $L", PoetUtil.toTypeName(type), resultVariable, getCreatorCall(type, definition, creatorParameters.build()));
             for (BeanDefinition.Property prop : definition.props) {
-                CodeBlock expressionHasBeenRead = duplicatePropertyManager.getVariableReadExpression(prop);
+                CodeBlock expressionHasBeenRead = prop.unwrapped ? null : duplicatePropertyManager.getVariableReadExpression(prop);
 
                 if (expressionHasBeenRead != null) {
                     // don't set a property we haven't read

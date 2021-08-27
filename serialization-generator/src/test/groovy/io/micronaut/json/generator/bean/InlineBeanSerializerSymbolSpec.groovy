@@ -558,7 +558,7 @@ package example;
 
 import java.util.Optional;
 class Test {
-    public Optional<String> foo;
+    public Optional<String> foo = Optional.empty();
 }
 ''')
         def testBean = compiled.newInstance()

@@ -315,6 +315,7 @@ public class JacksonDecoder implements Decoder {
             case VALUE_FALSE:
                 return decodeBoolean();
             case VALUE_NULL:
+                decodeNull();
                 return null;
             default:
                 throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected value");
