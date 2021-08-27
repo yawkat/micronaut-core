@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 @Internal
 public class JacksonDecoder implements Decoder {
@@ -25,12 +26,17 @@ public class JacksonDecoder implements Decoder {
 
     private JacksonDecoder child = null;
 
+    private boolean currentlyUnwrappingArray = false;
+
     private JacksonDecoder(JsonParser parser, @Nullable JacksonDecoder parent) {
         this.parser = parser;
         this.parent = parent;
     }
 
-    public static Decoder create(JsonParser parser) {
+    public static Decoder create(JsonParser parser) throws IOException {
+        if (!parser.hasCurrentToken()) {
+            parser.nextToken();
+        }
         return new JacksonDecoder(parser, null);
     }
 
@@ -47,6 +53,28 @@ public class JacksonDecoder implements Decoder {
         checkChild();
         if (parser.currentToken() == JsonToken.FIELD_NAME) {
             throw new IllegalStateException("Haven't parsed field name yet");
+        }
+    }
+
+    private boolean beginUnwrapArray() throws IOException {
+        if (currentlyUnwrappingArray) {
+            return false;
+        }
+        if (parser.currentToken() != JsonToken.START_ARRAY) {
+            throw new IllegalStateException("Not an array");
+        }
+        currentlyUnwrappingArray = true;
+        parser.nextToken();
+        return true;
+    }
+
+    private boolean endUnwrapArray() throws IOException {
+        currentlyUnwrappingArray = false;
+        if (parser.currentToken() == JsonToken.END_ARRAY) {
+            parser.nextToken();
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -121,6 +149,15 @@ public class JacksonDecoder implements Decoder {
                 String value = parser.getValueAsString();
                 parser.nextToken();
                 return value;
+            case START_ARRAY:
+                if (beginUnwrapArray()) {
+                    String unwrapped = decodeString();
+                    if (endUnwrapArray()) {
+                        return unwrapped;
+                    } else {
+                        throw JsonParseException.from(this, "Expected one string, but got array of multiple values");
+                    }
+                }
             default:
                 throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected string");
         }
@@ -138,6 +175,13 @@ public class JacksonDecoder implements Decoder {
                 boolean value = parser.getValueAsBoolean();
                 parser.nextToken();
                 return value;
+            case START_ARRAY:
+                if (beginUnwrapArray()) {
+                    boolean unwrapped = decodeBoolean();
+                    if (endUnwrapArray()) {
+                        return unwrapped;
+                    }
+                }
             default:
                 throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected boolean");
         }
@@ -181,6 +225,15 @@ public class JacksonDecoder implements Decoder {
                 long value = parser.getValueAsLong();
                 parser.nextToken();
                 return value;
+            case START_ARRAY:
+                if (beginUnwrapArray()) {
+                    long unwrapped = decodeInteger(min, max);
+                    if (endUnwrapArray()) {
+                        return unwrapped;
+                    } else {
+                        throw JsonParseException.from(this, "Expected one integer, but got array of multiple values");
+                    }
+                }
             default:
                 throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected integer");
         }
@@ -204,6 +257,15 @@ public class JacksonDecoder implements Decoder {
                 double value = parser.getValueAsDouble();
                 parser.nextToken();
                 return value;
+            case START_ARRAY:
+                if (beginUnwrapArray()) {
+                    double unwrapped = decodeDouble();
+                    if (endUnwrapArray()) {
+                        return unwrapped;
+                    } else {
+                        throw JsonParseException.from(this, "Expected one float, but got array of multiple values");
+                    }
+                }
             default:
                 throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected float");
         }
@@ -233,6 +295,15 @@ public class JacksonDecoder implements Decoder {
             case VALUE_FALSE:
                 value = BigInteger.ZERO;
                 break;
+            case START_ARRAY:
+                if (beginUnwrapArray()) {
+                    BigInteger unwrapped = decodeBigInteger();
+                    if (endUnwrapArray()) {
+                        return unwrapped;
+                    } else {
+                        throw JsonParseException.from(this, "Expected one integer, but got array of multiple values");
+                    }
+                }
             default:
                 throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected integer");
         }
@@ -264,6 +335,15 @@ public class JacksonDecoder implements Decoder {
             case VALUE_FALSE:
                 value = BigDecimal.ZERO;
                 break;
+            case START_ARRAY:
+                if (beginUnwrapArray()) {
+                    BigDecimal unwrapped = decodeBigDecimal();
+                    if (endUnwrapArray()) {
+                        return unwrapped;
+                    } else {
+                        throw JsonParseException.from(this, "Expected one float, but got array of multiple values");
+                    }
+                }
             default:
                 throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected float");
         }
@@ -278,6 +358,8 @@ public class JacksonDecoder implements Decoder {
             parser.nextToken();
             return true;
         } else {
+            // we don't support unwrapping null values from arrays, because the api user wouldn't be able to distinguish
+            // `[null]` and `null` anymore.
             return false;
         }
     }
