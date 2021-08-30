@@ -104,6 +104,11 @@ class BeanDefinition {
             }
         }
 
+        public boolean isRequired() {
+            // todo: only require when required=true is set
+            return creatorParameter != null;
+        }
+
         static Property field(String name, FieldElement field) {
             Objects.requireNonNull(field, "field");
             return new Property(name, field, null, null, null);
