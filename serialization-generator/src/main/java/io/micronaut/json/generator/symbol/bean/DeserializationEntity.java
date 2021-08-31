@@ -219,6 +219,14 @@ abstract class DeserializationEntity {
         }
 
         @Override
+        CodeBlock deserializeTopLevel(GeneratorContext generatorContext, String decoderVariable, SerializerSymbol.Setter setter) {
+            return symbol.deserialize(
+                    generatorContext, decoderVariable,
+                    prop.type,
+                    SerializerSymbol.Setter.delegate(setter, expr -> getCreatorCall(type, beanDefinition, expr)));
+        }
+
+        @Override
         public void deserialize(GeneratorContext generatorContext, CodeBlock.Builder builder, InlineBitSet<DeserializationEntity> readProperties, String decoderVariable) {
             builder.add(symbol.deserialize(
                     generatorContext, decoderVariable,
@@ -301,12 +309,18 @@ abstract class DeserializationEntity {
 
             Set<DeserializationEntity> required = definition.props.stream().filter(BeanDefinition.Property::isRequired).map(elements::get).collect(Collectors.toSet());
             if (!required.isEmpty()) {
+                // do a best-effort of finding the property names of the individual DeserializationEntities.
+                // One entity may be associated with multiple properties
+                Map<DeserializationEntity, String> propertyNames = new HashMap<>();
+                for (Map.Entry<BeanDefinition.Property, DeserializationEntity> element : elements.entrySet()) {
+                    propertyNames.put(element.getValue(), element.getKey().name);
+                }
                 readProperties.onMissing(builder, required.stream().collect(Collectors.toMap(
                         req -> req,
                         req -> CodeBlock.of("throw $T.from($N, $S);\n",
                                 JsonParseException.class,
                                 decoderVariable,
-                                "Missing property")
+                                "Missing property " + propertyNames.get(req))
                 )));
             }
 
