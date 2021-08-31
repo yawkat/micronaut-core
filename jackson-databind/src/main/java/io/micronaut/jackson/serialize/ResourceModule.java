@@ -16,7 +16,6 @@
 package io.micronaut.jackson.serialize;
 
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import io.micronaut.json.DatabindChoice;
 import jakarta.inject.Singleton;
 
 /**
@@ -26,7 +25,6 @@ import jakarta.inject.Singleton;
  * @since 1.0
  */
 @Singleton
-@DatabindChoice.RequiresJackson
 public class ResourceModule extends SimpleModule {
 
     /**

@@ -18,11 +18,10 @@ package io.micronaut.jackson.codec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.context.BeanProvider;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
-import io.micronaut.context.annotation.Requires;
+import io.micronaut.context.annotation.Secondary;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
-import io.micronaut.json.DatabindChoice;
 import io.micronaut.runtime.ApplicationConfiguration;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -36,9 +35,9 @@ import jakarta.inject.Singleton;
  */
 @Named("json")
 @Singleton
+@Secondary
 @BootstrapContextCompatible
 @Deprecated
-@DatabindChoice.RequiresJackson
 public class JsonMediaTypeCodec extends JacksonMediaTypeCodec {
 
     public static final String CONFIGURATION_QUALIFIER = "json";

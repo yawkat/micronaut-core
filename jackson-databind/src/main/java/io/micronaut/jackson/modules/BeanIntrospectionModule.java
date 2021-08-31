@@ -57,7 +57,6 @@ import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.core.util.StringUtils;
 import io.micronaut.http.hateoas.Resource;
 import io.micronaut.jackson.JacksonConfiguration;
-import io.micronaut.json.DatabindChoice;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +82,6 @@ import java.util.Optional;
 @Experimental
 @Singleton
 @Requires(property = JacksonConfiguration.PROPERTY_USE_BEAN_INTROSPECTION, notEquals = StringUtils.FALSE)
-@DatabindChoice.RequiresJackson
 public class BeanIntrospectionModule extends SimpleModule {
 
     private static final Logger LOG = LoggerFactory.getLogger(BeanIntrospectionModule.class);

@@ -10,6 +10,7 @@ dependencies {
     api project(':context')
     api project(":core-reactive")
     api project(":jackson-databind")
+    api project(":json-generated-api")
     api dependencyVersion("validation")
 
     implementation dependencyVersion("reactor")

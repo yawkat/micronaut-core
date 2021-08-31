@@ -1,20 +1,19 @@
 dependencies {
     annotationProcessor project(":inject-java")
 
-    api project(":json-generated-api")
-    api project(":inject")
-    // inject-java is not optional, we need it for wiring the generated serializer beans
-    api project(":inject-java")
-    compileOnly project(":inject-groovy")
+    api project(':context')
+    api project(":http")
+    api project(":json-core")
 
-    api "com.squareup:javapoet:$javapoetVersion"
-    api "com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion"
+    api("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
 
     testAnnotationProcessor project(":inject-java")
+    testAnnotationProcessor project(":inject-groovy")
+    testAnnotationProcessor project(":serialization-generator")
     testImplementation project(":inject-java")
     testImplementation project(":inject-java-test")
     testImplementation project(":inject-groovy")
-    testImplementation project(":inject-groovy-test")
+    testImplementation project(":serialization-generator")
     if (!JavaVersion.current().isJava9Compatible()) {
         testImplementation files(org.gradle.internal.jvm.Jvm.current().toolsJar)
     }

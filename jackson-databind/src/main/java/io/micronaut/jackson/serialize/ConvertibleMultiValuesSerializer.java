@@ -19,7 +19,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import io.micronaut.core.convert.value.ConvertibleMultiValues;
-import io.micronaut.json.DatabindChoice;
 import jakarta.inject.Singleton;
 
 import java.io.IOException;
@@ -33,7 +32,6 @@ import java.util.Map;
  * @since 1.0
  */
 @Singleton
-@DatabindChoice.RequiresJackson
 public class ConvertibleMultiValuesSerializer extends JsonSerializer<ConvertibleMultiValues<?>> {
 
     @Override

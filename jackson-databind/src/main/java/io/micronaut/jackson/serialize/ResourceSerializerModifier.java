@@ -24,7 +24,6 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.http.hateoas.Resource;
 import io.micronaut.jackson.modules.BeanIntrospectionModule;
-import io.micronaut.json.DatabindChoice;
 import jakarta.inject.Singleton;
 
 import java.util.Iterator;
@@ -39,7 +38,6 @@ import java.util.List;
 @Internal
 @Singleton
 @Requires(missingBeans = BeanIntrospectionModule.class)
-@DatabindChoice.RequiresJackson
 class ResourceSerializerModifier extends BeanSerializerModifier {
 
     @Override

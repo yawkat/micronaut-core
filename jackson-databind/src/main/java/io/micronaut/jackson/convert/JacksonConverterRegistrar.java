@@ -29,7 +29,6 @@ import io.micronaut.core.convert.TypeConverter;
 import io.micronaut.core.convert.TypeConverterRegistrar;
 import io.micronaut.core.naming.NameUtils;
 import io.micronaut.core.util.StringUtils;
-import io.micronaut.json.DatabindChoice;
 import io.micronaut.json.convert.JsonConverterRegistrar;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -44,7 +43,6 @@ import java.util.Optional;
  */
 @Singleton
 @Internal
-@DatabindChoice.RequiresJackson
 public class JacksonConverterRegistrar implements TypeConverterRegistrar {
 
     private final BeanProvider<ObjectMapper> objectMapper;

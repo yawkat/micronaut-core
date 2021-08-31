@@ -29,7 +29,6 @@ import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.type.Argument;
 import io.micronaut.jackson.codec.JacksonFeatures;
-import io.micronaut.json.DatabindChoice;
 import io.micronaut.json.MicronautObjectCodec;
 import io.micronaut.json.GenericDeserializationConfig;
 import io.micronaut.json.JsonFeatures;
@@ -41,7 +40,6 @@ import java.io.IOException;
 @Singleton
 @Primary
 @BootstrapContextCompatible
-@DatabindChoice.RequiresJackson
 public final class DatabindObjectCodec extends MicronautObjectCodec {
     private final ObjectMapper objectMapper;
 

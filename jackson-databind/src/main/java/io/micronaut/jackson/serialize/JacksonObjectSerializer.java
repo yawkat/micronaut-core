@@ -23,7 +23,6 @@ import io.micronaut.core.serialize.ObjectSerializer;
 import io.micronaut.core.serialize.exceptions.SerializationException;
 import io.micronaut.core.type.Argument;
 import io.micronaut.jackson.JacksonConfiguration;
-import io.micronaut.json.DatabindChoice;
 import jakarta.inject.Singleton;
 
 import java.io.IOException;
@@ -40,7 +39,6 @@ import java.util.Optional;
 @Singleton
 @Secondary
 @Deprecated
-@DatabindChoice.RequiresJackson
 public class JacksonObjectSerializer implements ObjectSerializer {
 
     private final ObjectMapper objectMapper;
