@@ -9,7 +9,7 @@ dependencies {
     api project(':aop')
     api project(':context')
     api project(":core-reactive")
-    api project(":serialization-jackson")
+    api project(":jackson-databind")
     api dependencyVersion("validation")
 
     implementation dependencyVersion("reactor")
