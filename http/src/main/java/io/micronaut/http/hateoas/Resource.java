@@ -49,13 +49,3 @@ public interface Resource {
         return OptionalMultiValues.empty();
     }
 }
-
-@Singleton
-class ResourceSerializer implements Serializer<Resource> {
-    @Override
-    public void serialize(JsonGenerator encoder, Resource value) throws IOException {
-        // dynamically determine serialization class.
-        // todo: this will recurse infinitely when there is no serializer for the class Resource
-        encoder.writeObject(value);
-    }
-}
