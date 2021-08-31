@@ -16,10 +16,10 @@
 package io.micronaut.json.generator.symbol.bean;
 
 import com.fasterxml.jackson.annotation.*;
-import io.micronaut.core.annotation.AnnotatedElement;
-import io.micronaut.core.annotation.AnnotationValue;
-import io.micronaut.core.annotation.Nullable;
+import com.sun.tools.javac.jvm.Gen;
+import io.micronaut.core.annotation.*;
 import io.micronaut.inject.ast.*;
+import io.micronaut.inject.visitor.VisitorContext;
 import io.micronaut.json.annotation.RecursiveSerialization;
 import io.micronaut.json.generator.symbol.GeneratorType;
 import io.micronaut.json.generator.symbol.ProblemReporter;
@@ -36,10 +36,16 @@ class BeanIntrospector {
      * @param forSerialization           Whether this introspection is intended for serialization or deserialization
      * @return The introspection result
      */
-    public static BeanDefinition introspect(ProblemReporter problemReporter, ClassElement clazz, Collection<AnnotatedElement> additionalAnnotationSource, boolean forSerialization) {
+    public static BeanDefinition introspect(ProblemReporter problemReporter, VisitorContext context, ClassElement clazz, Collection<AnnotatedElement> additionalAnnotationSource, boolean forSerialization) {
+        BeanDefinition beanDefinition = new BeanDefinition();
+        AnnotationValue<JsonTypeInfo> jsonTypeInfo = ElementUtil.getAnnotation(JsonTypeInfo.class, clazz, additionalAnnotationSource);
+        if (jsonTypeInfo != null) {
+            beanDefinition.subtyping = parseSubtyping(problemReporter, context, clazz, jsonTypeInfo, ElementUtil.getAnnotation(JsonSubTypes.class, clazz, additionalAnnotationSource));
+            return beanDefinition;
+        }
+
         Scanner scanner = new Scanner(problemReporter, forSerialization);
         scanner.scan(clazz, additionalAnnotationSource);
-        BeanDefinition beanDefinition = new BeanDefinition();
         Map<PropBuilder, BeanDefinition.Property> completeProps = new LinkedHashMap<>();
         for (PropBuilder prop : scanner.byName.values()) {
             // remove accessors marked as @JsonIgnore
@@ -95,6 +101,71 @@ class BeanIntrospector {
         beanDefinition.ignoreUnknownProperties = scanner.ignoreUnknownProperties;
         beanDefinition.valueProperty = completeProps.get(scanner.valueProperty);
         return beanDefinition;
+    }
+
+    private static BeanDefinition.Subtyping parseSubtyping(
+            ProblemReporter problemReporter,
+            VisitorContext context,
+            ClassElement on,
+            @NonNull AnnotationValue<JsonTypeInfo> jsonTypeInfo,
+            @Nullable AnnotationValue<JsonSubTypes> jsonSubTypes
+    ) {
+        BeanDefinition.Subtyping subtyping = new BeanDefinition.Subtyping();
+        if (jsonSubTypes == null) {
+            problemReporter.fail("Subtype handling must know all sub types in advance. Please annotate with @JsonSubTypes as well", on);
+            return subtyping;
+        }
+        JsonTypeInfo.Id use = jsonTypeInfo.get("use", JsonTypeInfo.Id.class).get();
+        // fqcn -> explicit names
+        Map<String, Collection<String>> explicitTypes = new LinkedHashMap<>();
+        for (AnnotationValue<JsonSubTypes.Type> explicitType : jsonSubTypes.<JsonSubTypes.Type>getAnnotations("value")) {
+            String fqcn = explicitType.annotationClassValue("value").get().getName();
+            Collection<String> explicitNames = explicitTypes.computeIfAbsent(fqcn, k -> new LinkedHashSet<>());
+            explicitType.stringValue("name").ifPresent(explicitNames::add);
+            Collections.addAll(explicitNames, explicitType.stringValues("names"));
+        }
+        subtyping.subTypes = explicitTypes.keySet().stream()
+                .map(fqcn -> GeneratorType.ofClass(context.getClassElement(fqcn).get()))
+                .collect(Collectors.toSet());
+        switch (use) {
+            case CLASS:
+                subtyping.subTypeNames = subtyping.subTypes.stream()
+                        .collect(Collectors.toMap(cls -> cls, cls -> Collections.singleton(cls.getTypeName())));
+                break;
+            case MINIMAL_CLASS:
+                String basePackage = on.getPackageName();
+                subtyping.subTypeNames = subtyping.subTypes.stream()
+                        .collect(Collectors.toMap(cls -> cls, cls -> {
+                            String fqcn = cls.getTypeName();
+                            if (fqcn.startsWith(basePackage + '.')) {
+                                return Collections.singleton(fqcn.substring(basePackage.length()));
+                            } else {
+                                return Collections.singleton(fqcn);
+                            }
+                        }));
+                break;
+            case NAME:
+                subtyping.subTypeNames = subtyping.subTypes.stream()
+                        .collect(Collectors.toMap(cls -> cls, cls -> explicitTypes.get(cls.getTypeName())));
+                break;
+            case DEDUCTION:
+                subtyping.deduce = true;
+                break;
+            default:
+                problemReporter.fail("Unsupported type id kind: " + use, on);
+                return subtyping;
+        }
+        subtyping.as = jsonTypeInfo.get("include", JsonTypeInfo.As.class, JsonTypeInfo.As.PROPERTY);
+        subtyping.propertyName = jsonTypeInfo.stringValue("property").orElse("");
+        Optional<AnnotationClassValue<?>> defaultImpl = jsonTypeInfo.annotationClassValue("defaultImpl");
+        if (defaultImpl.isPresent() && !defaultImpl.get().getName().equals(JsonTypeInfo.class.getName())) {
+            if (!defaultImpl.get().getName().equals(Void.class.getName())) {
+                problemReporter.fail("Mapping unknown types to null is not supported", on);
+                return subtyping;
+            }
+            subtyping.defaultImpl = GeneratorType.ofClass(context.getClassElement(defaultImpl.get().getName()).get());
+        }
+        return subtyping;
     }
 
     private static String decapitalize(String s) {

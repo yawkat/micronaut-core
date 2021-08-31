@@ -24,6 +24,9 @@ import java.util.*;
 @Internal
 public final class SerializerLinker {
     @Internal
+    public final VisitorContext typeResolutionContext;
+
+    @Internal
     public final InlineBeanSerializerSymbol inlineBean;
 
     final InlineIterableSerializerSymbol.ArrayImpl array = new InlineIterableSerializerSymbol.ArrayImpl(this);
@@ -32,6 +35,7 @@ public final class SerializerLinker {
     private final List<SerializerSymbol> symbolList;
 
     public SerializerLinker(VisitorContext typeResolutionContext) {
+        this.typeResolutionContext = typeResolutionContext;
         inlineBean = new InlineBeanSerializerSymbol(this);
         symbolList = Arrays.asList(
                 array,

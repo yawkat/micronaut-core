@@ -16,15 +16,13 @@
 package io.micronaut.json.generator.symbol.bean;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.*;
 import io.micronaut.json.generator.symbol.GeneratorType;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 
 class BeanDefinition {
@@ -41,6 +39,13 @@ class BeanDefinition {
      * If serialization should be delegating (@JsonValue), the property to use as the value.
      */
     Property valueProperty;
+
+    /**
+     * {@link com.fasterxml.jackson.annotation.JsonTypeName}
+     */
+    String subTypeName;
+
+    Subtyping subtyping;
 
     List<Property> props;
 
@@ -128,5 +133,19 @@ class BeanDefinition {
             Objects.requireNonNull(creatorParameter, "creatorParameter");
             return new Property(name, null, null, null, creatorParameter);
         }
+    }
+
+    public static class Subtyping {
+        Collection<GeneratorType> subTypes;
+        Map<GeneratorType, Collection<String>> subTypeNames;
+        /**
+         * {@link com.fasterxml.jackson.annotation.JsonTypeInfo.Id#DEDUCTION}
+         */
+        boolean deduce;
+        JsonTypeInfo.As as;
+        @Nullable
+        String propertyName;
+        @Nullable
+        GeneratorType defaultImpl;
     }
 }

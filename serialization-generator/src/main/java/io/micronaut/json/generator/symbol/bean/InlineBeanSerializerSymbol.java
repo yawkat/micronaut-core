@@ -52,7 +52,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
     }
 
     BeanDefinition introspect(ProblemReporter problemReporter, GeneratorType type, boolean forSerialization) {
-        return BeanIntrospector.introspect(problemReporter, type.getRawClass(), Collections.emptyList(), forSerialization);
+        return BeanIntrospector.introspect(problemReporter, linker.typeResolutionContext, type.getRawClass(), Collections.emptyList(), forSerialization);
     }
 
     @Override
@@ -106,13 +106,27 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             }
 
             ProblemReporter problemReporter = new ProblemReporter();
-            BeanDefinition definition = introspect(problemReporter, type, ser);
-            if (problemReporter.isFailed()) {
-                // definition may be in an invalid state. The actual errors will be reported by the codegen, so just skip here
-                continue;
+            visitDependencies(visitor, problemReporter, type, ser);
+        }
+    }
+
+    private void visitDependencies(DependencyVisitor visitor, ProblemReporter problemReporter, GeneratorType type, boolean ser) {
+        BeanDefinition definition = introspect(problemReporter, type, ser);
+        if (problemReporter.isFailed()) {
+            // definition may be in an invalid state. The actual errors will be reported by the codegen, so just skip here
+            return;
+        }
+        if (definition.subtyping != null) {
+            for (GeneratorType subType : definition.subtyping.subTypes) {
+                visitDependencies(visitor, problemReporter, subType, ser);
             }
-            for (BeanDefinition.Property prop : definition.props) {
-                PropWithType propWithType = PropWithType.fromContext(type, prop);
+            return;
+        }
+        for (BeanDefinition.Property prop : definition.props) {
+            PropWithType propWithType = PropWithType.fromContext(type, prop);
+            if (prop.unwrapped) {
+                visitDependencies(visitor, problemReporter, propWithType.type, ser);
+            } else {
                 SerializerSymbol symbol = linker.findSymbol(propWithType.type);
                 if (prop.permitRecursiveSerialization) {
                     symbol = symbol.withRecursiveSerialization();
@@ -141,6 +155,16 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             symbol = new NullableSerializerSymbol(symbol);
         }
         return symbol;
+    }
+
+    /**
+     * Check whether two properties are structurally identical, i.e. they will deserialize to the same type the same
+     * way. Must be consistent with {@link #findSymbol(PropWithType)}.
+     */
+    boolean areStructurallyIdentical(PropWithType a, PropWithType b) {
+        return a.type.typeEquals(b.type) &&
+                a.property.permitRecursiveSerialization == b.property.permitRecursiveSerialization &&
+                Objects.equals(a.property.nullable, b.property.nullable);
     }
 
     @Override
@@ -254,25 +278,6 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             return CodeBlock.of("");
         }
 
-        entity.allocateLocals(generatorContext, "result");
-
-        CodeBlock.Builder builder = CodeBlock.builder();
-        entity.generatePrologue(builder);
-
-        DuplicatePropertyManager duplicatePropertyManager;
-        Set<BeanDefinition.Property> propertiesForDuplicateDetection = entity.collectPropertiesForDuplicateDetection();
-        if (propertiesForDuplicateDetection.isEmpty()) {
-            duplicatePropertyManager = null;
-        } else {
-            duplicatePropertyManager = new DuplicatePropertyManager(generatorContext, propertiesForDuplicateDetection, decoderVariable);
-            duplicatePropertyManager.emitMaskDeclarations(builder);
-        }
-
-        entity.deserialize(generatorContext, builder, duplicatePropertyManager, decoderVariable);
-
-        entity.generateEpilogue(builder, duplicatePropertyManager);
-
-        builder.add(setter.createSetStatement(CodeBlock.of("$N", entity.localVariableName)));
-        return builder.build();
+        return entity.deserializeTopLevel(generatorContext, decoderVariable, setter);
     }
 }
