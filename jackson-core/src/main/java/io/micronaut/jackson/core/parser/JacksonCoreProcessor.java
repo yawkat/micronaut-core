@@ -65,6 +65,7 @@ public class JacksonCoreProcessor extends SingleThreadedBufferingProcessor<byte[
      * Creates a new JacksonProcessor.
      *
      * @param streamArray           Whether arrays should be streamed
+     * @param jsonFactory           Factory to use for creating the parser
      * @param deserializationConfig The deserialization configuration (in particular bignum handling)
      */
     public JacksonCoreProcessor(boolean streamArray, JsonFactory jsonFactory, @NonNull JsonConfig deserializationConfig) {

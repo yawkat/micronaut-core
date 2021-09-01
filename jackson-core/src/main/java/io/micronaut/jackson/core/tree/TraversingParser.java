@@ -63,7 +63,8 @@ class TraversingParser extends ParserMinimalBase {
             // the context stack starts out positioned on the first token, so we need to intercept the first nextToken call.
             first = false;
             assert !contextStack.isEmpty();
-            return _currToken = contextStack.peekFirst().currentToken();
+            _currToken = contextStack.peekFirst().currentToken();
+            return _currToken;
         }
 
         while (true) {
@@ -77,10 +78,11 @@ class TraversingParser extends ParserMinimalBase {
                 Context childContext = context.next();
                 if (childContext != null) {
                     contextStack.addFirst(childContext);
-                    return _currToken = childContext.currentToken();
+                    _currToken = childContext.currentToken();
                 } else {
-                    return _currToken = context.currentToken();
+                    _currToken = context.currentToken();
                 }
+                return _currToken;
             }
         }
     }
@@ -279,13 +281,13 @@ class TraversingParser extends ParserMinimalBase {
         }
     }
 
-    private static abstract class Context extends JsonStreamContext {
+    private abstract static class Context extends JsonStreamContext {
+        boolean lastToken = false;
+
         /**
-         * Only used to implement {@link JsonStreamContext#getParent()}
+         * Only used to implement {@link JsonStreamContext#getParent()}.
          */
         private final Context parent;
-
-        boolean lastToken = false;
 
         Context(Context parent) {
             this.parent = parent;

@@ -41,29 +41,22 @@ public final class MicronautTreeCodec {
         return new MicronautTreeCodec(config);
     }
 
-    @SuppressWarnings("unchecked")
-    public final JsonNode readTree(JsonParser p) throws IOException {
-        return readTree0(p);
-    }
-
-    private JsonNode readTree0(JsonParser p) throws IOException {
+    public JsonNode readTree(JsonParser p) throws IOException {
         switch (p.hasCurrentToken() ? p.currentToken() : p.nextToken()) {
-            case START_OBJECT: {
-                Map<String, JsonNode> values = new LinkedHashMap<>();
+            case START_OBJECT:
+                Map<String, JsonNode> map = new LinkedHashMap<>();
                 while (p.nextToken() != JsonToken.END_OBJECT) {
                     String name = p.currentName();
                     p.nextToken();
-                    values.put(name, readTree0(p));
+                    map.put(name, readTree(p));
                 }
-                return JsonNode.createObjectNode(values);
-            }
-            case START_ARRAY: {
-                List<JsonNode> values = new ArrayList<>();
+                return JsonNode.createObjectNode(map);
+            case START_ARRAY:
+                List<JsonNode> list = new ArrayList<>();
                 while (p.nextToken() != JsonToken.END_ARRAY) {
-                    values.add(readTree0(p));
+                    list.add(readTree(p));
                 }
-                return JsonNode.createArrayNode(values);
-            }
+                return JsonNode.createArrayNode(list);
             case VALUE_STRING:
                 return JsonNode.createStringNode(p.getText());
             case VALUE_NUMBER_INT:
