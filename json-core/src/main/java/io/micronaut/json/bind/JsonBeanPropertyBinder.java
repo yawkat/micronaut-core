@@ -20,7 +20,6 @@ import io.micronaut.core.bind.BeanPropertyBinder;
 import io.micronaut.core.convert.ArgumentConversionContext;
 import io.micronaut.core.convert.ConversionError;
 import io.micronaut.core.convert.exceptions.ConversionErrorException;
-import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.core.util.StringUtils;
 import io.micronaut.json.JsonCodec;
@@ -119,46 +118,7 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
      * @return The new conversion error
      */
     protected ConversionErrorException newConversionError(Object object, Exception e) {
-        /* todo
-        if (e instanceof InvalidFormatException) {
-            InvalidFormatException ife = (InvalidFormatException) e;
-            Object originalValue = ife.getValue();
-            ConversionError conversionError = new ConversionError() {
-                @Override
-                public Exception getCause() {
-                    return e;
-                }
-
-                @Override
-                public Optional<Object> getOriginalValue() {
-                    return Optional.ofNullable(originalValue);
-                }
-            };
-            Class type = object != null ? object.getClass() : Object.class;
-            List<JsonMappingException.Reference> path = ife.getPath();
-            String name;
-            if (!path.isEmpty()) {
-                name = path.get(path.size() - 1).getFieldName();
-            } else {
-                name = NameUtils.decapitalize(type.getSimpleName());
-            }
-            return new ConversionErrorException(Argument.of(ife.getTargetType(), name), conversionError);
-        } else */ {
-
-            ConversionError conversionError = new ConversionError() {
-                @Override
-                public Exception getCause() {
-                    return e;
-                }
-
-                @Override
-                public Optional<Object> getOriginalValue() {
-                    return Optional.empty();
-                }
-            };
-            Class type = object != null ? object.getClass() : Object.class;
-            return new ConversionErrorException(Argument.of(type), conversionError);
-        }
+        return objectMapper.newConversionError(object, e);
     }
 
     private JsonNode buildSourceObjectNode(Set<? extends Map.Entry<? extends CharSequence, Object>> source) throws IOException {

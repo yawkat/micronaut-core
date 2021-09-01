@@ -16,10 +16,10 @@
 package io.micronaut.json;
 
 public final class JsonConfig {
+    public static final JsonConfig DEFAULT = new JsonConfig(false, false);
+
     private final boolean useBigDecimalForFloats;
     private final boolean useBigIntegerForInts;
-
-    public static final JsonConfig DEFAULT = new JsonConfig(false, false);
 
     private JsonConfig(boolean useBigDecimalForFloats, boolean useBigIntegerForInts) {
         this.useBigDecimalForFloats = useBigDecimalForFloats;

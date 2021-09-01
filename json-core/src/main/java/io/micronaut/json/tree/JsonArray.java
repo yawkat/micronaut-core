@@ -18,7 +18,6 @@ package io.micronaut.json.tree;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 

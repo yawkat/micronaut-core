@@ -17,7 +17,7 @@ package io.micronaut.json.tree;
 
 import io.micronaut.core.annotation.NonNull;
 
-class JsonBoolean extends JsonScalar {
+final class JsonBoolean extends JsonScalar {
     private static final JsonBoolean TRUE = new JsonBoolean(true);
     private static final JsonBoolean FALSE = new JsonBoolean(false);
 

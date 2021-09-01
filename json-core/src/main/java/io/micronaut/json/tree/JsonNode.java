@@ -26,7 +26,8 @@ import java.util.Objects;
 
 @Internal
 public abstract class JsonNode {
-    JsonNode() {}
+    JsonNode() {
+    }
 
     public static JsonNode nullNode() {
         return JsonNull.INSTANCE;
@@ -50,7 +51,10 @@ public abstract class JsonNode {
     }
 
     /**
-     * Hidden, so that we don't have to check that the number type is supported
+     * Hidden, so that we don't have to check that the number type is supported.
+     *
+     * @param value The raw numeric value.
+     * @return The number node.
      */
     @Internal
     public static JsonNode createNumberNodeImpl(Number value) {
@@ -82,31 +86,58 @@ public abstract class JsonNode {
         return createNumberNodeImpl(value);
     }
 
+    /**
+     * @return {@code true} iff this is a number node.
+     */
     public boolean isNumber() {
         return false;
     }
 
+    /**
+     * @return The raw numeric value of this node. Always full precision.
+     * @throws IllegalStateException if this is not a number node.
+     */
     @NonNull
     public Number getNumberValue() {
         throw new IllegalStateException("Not a number");
     }
 
+    /**
+     * @return The value of this number node, converted to {@code int}. May lose precision.
+     * @throws IllegalStateException if this is not a number node.
+     */
     public final int getIntValue() {
         return getNumberValue().intValue();
     }
 
+    /**
+     * @return The value of this number node, converted to {@code long}. May lose precision.
+     * @throws IllegalStateException if this is not a number node.
+     */
     public final long getLongValue() {
         return getNumberValue().longValue();
     }
 
+    /**
+     * @return The value of this number node, converted to {@code float}. May lose precision.
+     * @throws IllegalStateException if this is not a number node.
+     */
     public final float getFloatValue() {
         return getNumberValue().floatValue();
     }
 
+    /**
+     * @return The value of this number node, converted to {@code double}. May lose precision.
+     * @throws IllegalStateException if this is not a number node.
+     */
     public final double getDoubleValue() {
         return getNumberValue().doubleValue();
     }
 
+    /**
+     * @return The value of this number node, converted to {@link BigInteger}. May lose the decimal part.
+     * @throws IllegalStateException if this is not a number node.
+     */
     @NonNull
     public final BigInteger getBigIntegerValue() {
         Number numberValue = getNumberValue();
@@ -119,6 +150,10 @@ public abstract class JsonNode {
         }
     }
 
+    /**
+     * @return The value of this number node, converted to {@link BigDecimal}.
+     * @throws IllegalStateException if this is not a number node.
+     */
     @NonNull
     public final BigDecimal getBigDecimalValue() {
         Number numberValue = getNumberValue();
@@ -134,10 +169,17 @@ public abstract class JsonNode {
         }
     }
 
+    /**
+     * @return {@code true} iff this is a string node.
+     */
     public boolean isString() {
         return false;
     }
 
+    /**
+     * @return The value of this string node.
+     * @throws IllegalStateException if this is not a string node.
+     */
     @NonNull
     public String getStringValue() {
         throw new IllegalStateException("Not a string");
@@ -146,6 +188,7 @@ public abstract class JsonNode {
     /**
      * Attempt to coerce this node to a string.
      *
+     * @return The coerced string value.
      * @throws IllegalStateException if this node is not a scalar value
      */
     @NonNull
@@ -153,43 +196,84 @@ public abstract class JsonNode {
         throw new IllegalStateException("Not a scalar value");
     }
 
+    /**
+     * @return {@code true} iff this is a boolean node.
+     */
     public boolean isBoolean() {
         return false;
     }
 
+    /**
+     * @return The value of this boolean node.
+     * @throws IllegalStateException if this is not a boolean node.
+     */
     public boolean getBooleanValue() {
         throw new IllegalStateException("Not a boolean");
     }
 
+    /**
+     * @return {@code true} iff this is the null node.
+     */
     public boolean isNull() {
         return false;
     }
 
+    /**
+     * @return The number of immediate children of this node, or {@code 0} if this is not a container node.
+     */
     public abstract int size();
 
+    /**
+     * @return An {@link Iterable} of all values of this array or object node.
+     * @throws IllegalStateException if this is not a container node.
+     */
     @NonNull
     public abstract Iterable<JsonNode> values();
 
+    /**
+     * @return An {@link Iterable} of all entries of this object node.
+     * @throws IllegalStateException if this is not an object node.
+     */
     @NonNull
     public abstract Iterable<Map.Entry<String, JsonNode>> entries();
 
+    /**
+     * @return {@code true} iff this node is a value node (string, number, boolean, null).
+     */
     public boolean isValueNode() {
         return false;
     }
 
+    /**
+     * @return {@code true} iff this node is a container node (array or object).
+     */
     public boolean isContainerNode() {
         return false;
     }
 
+    /**
+     * @return {@code true} iff this node is an array node.
+     */
     public boolean isArray() {
         return false;
     }
 
+    /**
+     * @return {@code true} iff this node is an object node.
+     */
     public boolean isObject() {
         return false;
     }
 
+    /**
+     * @param fieldName The field name.
+     * @return The field with the given name, or {@code null} if there is no such field or this is not an object.
+     */
     public abstract JsonNode get(String fieldName);
 
+    /**
+     * @param index The index into this array.
+     * @return The field at the given index, or {@code null} if there is no such field or this is not an array.
+     */
     public abstract JsonNode get(int index);
 }

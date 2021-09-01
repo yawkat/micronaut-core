@@ -108,6 +108,13 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
         return objectMapper;
     }
 
+    /**
+     * Create a copy of this codec with the given features. Should not be extended, extend {@link #cloneWithMapper}
+     * instead.
+     *
+     * @param features The features to apply.
+     * @return A new codec with the features applied, leaving this codec unchanged.
+     */
     public JsonCodecMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
         return cloneWithMapper(getObjectCodec().cloneWithFeatures(features));
     }

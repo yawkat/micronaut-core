@@ -16,10 +16,15 @@
 package io.micronaut.jackson.databind;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.convert.ConversionError;
+import io.micronaut.core.convert.exceptions.ConversionErrorException;
+import io.micronaut.core.naming.NameUtils;
 import io.micronaut.core.type.Argument;
 import io.micronaut.jackson.JacksonConfiguration;
 import io.micronaut.jackson.core.tree.MicronautTreeCodec;
@@ -37,6 +42,7 @@ import org.reactivestreams.Subscriber;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -147,5 +153,34 @@ public final class JacksonDatabindCodec implements JsonCodec {
     public Optional<JsonFeatures> detectFeatures(AnnotationMetadata annotations) {
         return Optional.ofNullable(annotations.getAnnotation(io.micronaut.jackson.annotation.JacksonFeatures.class))
                 .map(JacksonFeatures::fromAnnotation);
+    }
+
+    @Override
+    public ConversionErrorException newConversionError(Object object, Exception e) {
+        if (e instanceof InvalidFormatException) {
+            InvalidFormatException ife = (InvalidFormatException) e;
+            Object originalValue = ife.getValue();
+            ConversionError conversionError = new ConversionError() {
+                @Override
+                public Exception getCause() {
+                    return e;
+                }
+
+                @Override
+                public Optional<Object> getOriginalValue() {
+                    return Optional.ofNullable(originalValue);
+                }
+            };
+            Class type = object != null ? object.getClass() : Object.class;
+            List<JsonMappingException.Reference> path = ife.getPath();
+            String name;
+            if (!path.isEmpty()) {
+                name = path.get(path.size() - 1).getFieldName();
+            } else {
+                name = NameUtils.decapitalize(type.getSimpleName());
+            }
+            return new ConversionErrorException(Argument.of(ife.getTargetType(), name), conversionError);
+        }
+        return JsonCodec.super.newConversionError(object, e);
     }
 }

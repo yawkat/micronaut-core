@@ -17,10 +17,11 @@ package io.micronaut.json.tree;
 
 import io.micronaut.core.annotation.NonNull;
 
-class JsonNull extends JsonScalar {
+final class JsonNull extends JsonScalar {
     static final JsonNull INSTANCE = new JsonNull();
 
-    private JsonNull() {}
+    private JsonNull() {
+    }
 
     @NonNull
     @Override

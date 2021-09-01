@@ -19,7 +19,6 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.convert.ArgumentConversionContext;
 import io.micronaut.core.convert.ConversionService;
 import io.micronaut.core.convert.value.ConvertibleValues;
-import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.json.tree.JsonNode;
 
 import java.util.*;

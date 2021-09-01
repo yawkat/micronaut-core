@@ -17,6 +17,8 @@ package io.micronaut.json;
 
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.convert.ConversionError;
+import io.micronaut.core.convert.exceptions.ConversionErrorException;
 import io.micronaut.core.type.Argument;
 import io.micronaut.json.tree.JsonNode;
 import org.reactivestreams.Processor;
@@ -71,5 +73,22 @@ public interface JsonCodec {
     @Internal
     default Optional<JsonFeatures> detectFeatures(AnnotationMetadata annotations) {
         return Optional.empty();
+    }
+
+    @Internal
+    default ConversionErrorException newConversionError(Object object, Exception e) {
+        ConversionError conversionError = new ConversionError() {
+            @Override
+            public Exception getCause() {
+                return e;
+            }
+
+            @Override
+            public Optional<Object> getOriginalValue() {
+                return Optional.empty();
+            }
+        };
+        Class type = object != null ? object.getClass() : Object.class;
+        return new ConversionErrorException(Argument.of(type), conversionError);
     }
 }
