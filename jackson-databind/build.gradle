@@ -1,7 +1,7 @@
 dependencies {
     annotationProcessor project(":inject-java")
 
-    api project(":json-core")
+    api project(":jackson-core")
 
     api "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     api "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jacksonVersion"

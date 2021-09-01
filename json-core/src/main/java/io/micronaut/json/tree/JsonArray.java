@@ -1,13 +1,9 @@
 package io.micronaut.json.tree;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonToken;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -20,11 +16,6 @@ public class JsonArray extends JsonContainer {
 
     JsonArray(List<JsonNode> values) {
         this.values = values;
-    }
-
-    @Override
-    public JsonToken asToken() {
-        return JsonToken.START_ARRAY;
     }
 
     @Override
@@ -52,42 +43,14 @@ public class JsonArray extends JsonContainer {
     }
 
     @Override
-    public JsonNode path(String fieldName) {
-        return JsonMissing.INSTANCE;
-    }
-
-    @Override
-    public JsonNode path(int index) {
-        if (index < 0 || index >= size()) {
-            return JsonMissing.INSTANCE;
-        } else {
-            return values.get(index);
-        }
-    }
-
-    @Override
-    void emit(JsonGenerator generator) throws IOException {
-        generator.writeStartArray();
-        for (JsonNode value : values) {
-            value.emit(generator);
-        }
-        generator.writeEndArray();
-    }
-
-    @Override
-    public Iterator<String> fieldNames() {
-        return Collections.emptyIterator();
+    @NonNull
+    public Iterable<JsonNode> values() {
+        return values;
     }
 
     @Override
     @NonNull
-    public Iterator<JsonNode> valueIterator() {
-        return values.iterator();
-    }
-
-    @Override
-    @NonNull
-    public Iterator<Map.Entry<String, JsonNode>> entryIterator() {
+    public Iterable<Map.Entry<String, JsonNode>> entries() {
         throw new IllegalStateException("Not an object");
     }
 

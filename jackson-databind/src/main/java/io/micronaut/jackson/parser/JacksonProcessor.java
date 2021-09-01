@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.function.Consumer;
 
 /**
  * A Reactive streams publisher that publishes a {@link JsonNode} once the JSON has been fully consumed.
@@ -45,6 +46,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  *
  * @author Graeme Rocher
  * @since 1.0
+ * @deprecated Use {@link io.micronaut.json.JsonCodec#createReactiveParser}
  */
 @Deprecated
 public class JacksonProcessor extends SingleThreadedBufferingProcessor<byte[], JsonNode> {

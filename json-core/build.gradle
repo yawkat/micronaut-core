@@ -4,16 +4,11 @@ dependencies {
     api project(':context')
     api project(":http")
 
-    api("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
-    api("com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion")
-
     testAnnotationProcessor project(":inject-java")
     testAnnotationProcessor project(":inject-groovy")
-    testAnnotationProcessor project(":serialization-generator")
     testImplementation project(":inject-java")
     testImplementation project(":inject-java-test")
     testImplementation project(":inject-groovy")
-    testImplementation project(":serialization-generator")
     if (!JavaVersion.current().isJava9Compatible()) {
         testImplementation files(org.gradle.internal.jvm.Jvm.current().toolsJar)
     }

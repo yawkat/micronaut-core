@@ -1,17 +1,71 @@
 package io.micronaut.json.tree;
 
-import com.fasterxml.jackson.core.*;
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 
-import java.io.IOException;
-import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
-public abstract class JsonNode implements TreeNode {
+@Internal
+public abstract class JsonNode {
     JsonNode() {}
+
+    public static JsonNode nullNode() {
+        return JsonNull.INSTANCE;
+    }
+
+    public static JsonNode createArrayNode(List<JsonNode> nodes) {
+        return new JsonArray(nodes);
+    }
+
+    public static JsonNode createObjectNode(Map<String, JsonNode> nodes) {
+        return new JsonObject(nodes);
+    }
+
+    public static JsonNode createBooleanNode(boolean value) {
+        return JsonBoolean.valueOf(value);
+    }
+
+    public static JsonNode createStringNode(@NonNull String value) {
+        Objects.requireNonNull(value, "value");
+        return new JsonString(value);
+    }
+
+    /**
+     * Hidden, so that we don't have to check that the number type is supported
+     */
+    @Internal
+    public static JsonNode createNumberNodeImpl(Number value) {
+        Objects.requireNonNull(value, "value");
+        return new JsonNumber(value);
+    }
+
+    public static JsonNode createNumberNode(int value) {
+        return createNumberNodeImpl(value);
+    }
+
+    public static JsonNode createNumberNode(long value) {
+        return createNumberNodeImpl(value);
+    }
+
+    public static JsonNode createNumberNode(@NonNull BigDecimal value) {
+        return createNumberNodeImpl(value);
+    }
+
+    public static JsonNode createNumberNode(float value) {
+        return createNumberNodeImpl(value);
+    }
+
+    public static JsonNode createNumberNode(double value) {
+        return createNumberNodeImpl(value);
+    }
+
+    public static JsonNode createNumberNode(@NonNull BigInteger value) {
+        return createNumberNodeImpl(value);
+    }
 
     public boolean isNumber() {
         return false;
@@ -96,94 +150,31 @@ public abstract class JsonNode implements TreeNode {
         return false;
     }
 
-    @NonNull
-    public abstract Iterator<JsonNode> valueIterator();
+    public abstract int size();
 
     @NonNull
-    public abstract Iterator<Map.Entry<String, JsonNode>> entryIterator();
+    public abstract Iterable<JsonNode> values();
 
-    @Override
+    @NonNull
+    public abstract Iterable<Map.Entry<String, JsonNode>> entries();
+
     public boolean isValueNode() {
         return false;
     }
 
-    @Override
     public boolean isContainerNode() {
         return false;
     }
 
-    @Override
-    public boolean isMissingNode() {
-        return false;
-    }
-
-    @Override
     public boolean isArray() {
         return false;
     }
 
-    @Override
     public boolean isObject() {
         return false;
     }
 
-    @Override
-    public final JsonParser traverse() {
-        return new TraversingParser(this);
-    }
-
-    @Override
-    public final JsonParser traverse(ObjectCodec codec) {
-        JsonParser parser = traverse();
-        parser.setCodec(codec);
-        return parser;
-    }
-
-    @Override
-    public final JsonNode at(JsonPointer ptr) {
-        JsonNode node = this;
-        while (true) {
-            if (ptr.matches()) {
-                return node;
-            }
-            if (node.isObject()) {
-                node = node.path(ptr.getMatchingProperty());
-            } else if (node.isArray()) {
-                node = node.path(ptr.getMatchingIndex());
-            } else {
-                return JsonMissing.INSTANCE;
-            }
-            ptr = ptr.tail();
-        }
-    }
-
-    @Override
-    public final JsonNode at(String jsonPointerExpression) throws IllegalArgumentException {
-        return at(JsonPointer.compile(jsonPointerExpression));
-    }
-
-    @Override
     public abstract JsonNode get(String fieldName);
 
-    @Override
     public abstract JsonNode get(int index);
-
-    @Override
-    public abstract JsonNode path(String fieldName);
-
-    @Override
-    public abstract JsonNode path(int index);
-
-    abstract void emit(JsonGenerator generator) throws IOException;
-
-    @Override
-    public String toString() {
-        StringWriter writer = new StringWriter();
-        try (JsonGenerator generator = new JsonFactory().createGenerator(writer)) {
-            emit(generator);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return writer.toString();
-    }
 }

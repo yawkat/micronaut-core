@@ -15,8 +15,6 @@
  */
 package io.micronaut.json.convert;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.TreeNode;
 import io.micronaut.context.BeanProvider;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.bind.ArgumentBinder;
@@ -25,8 +23,9 @@ import io.micronaut.core.convert.*;
 import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.naming.NameUtils;
 import io.micronaut.core.type.Argument;
-import io.micronaut.json.MicronautObjectCodec;
+import io.micronaut.json.JsonCodec;
 import io.micronaut.json.tree.JsonArray;
+import io.micronaut.json.tree.JsonNode;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -35,13 +34,13 @@ import java.util.*;
 
 @Singleton
 public final class JsonConverterRegistrar implements TypeConverterRegistrar {
-    private final BeanProvider<MicronautObjectCodec> objectCodec;
+    private final BeanProvider<JsonCodec> objectCodec;
     private final ConversionService<?> conversionService;
     private final BeanProvider<BeanPropertyBinder> beanPropertyBinder;
 
     @Inject
     public JsonConverterRegistrar(
-            BeanProvider<MicronautObjectCodec> objectCodec,
+            BeanProvider<JsonCodec> objectCodec,
             ConversionService<?> conversionService,
             BeanProvider<BeanPropertyBinder> beanPropertyBinder
     ) {
@@ -63,12 +62,12 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
                 arrayNodeToIterableConverter()
         );
         conversionService.addConverter(
-                TreeNode.class,
+                JsonNode.class,
                 ConvertibleValues.class,
                 objectNodeToConvertibleValuesConverter()
         );
         conversionService.addConverter(
-                TreeNode.class,
+                JsonNode.class,
                 Object.class,
                 jsonNodeToObjectConverter()
         );
@@ -79,7 +78,7 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
         );
         conversionService.addConverter(
                 Object.class,
-                TreeNode.class,
+                JsonNode.class,
                 objectToJsonNodeConverter()
         );
     }
@@ -88,15 +87,14 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
      * @return A converter that converts object nodes to convertible values
      */
     @Internal
-    public TypeConverter<TreeNode, ConvertibleValues> objectNodeToConvertibleValuesConverter() {
-        return (object, targetType, context) -> Optional.of(new ObjectNodeConvertibleValues<>(object, conversionService));
+    public TypeConverter<JsonNode, ConvertibleValues> objectNodeToConvertibleValuesConverter() {
+        return (object, targetType, context) -> Optional.of(new JsonNodeConvertibleValues<>(object, conversionService));
     }
 
     /**
-     * @param <ARR> Type of {@link TreeNode} that is accepted
      * @return Converts array nodes to iterables.
      */
-    public <ARR extends TreeNode> TypeConverter<ARR, Iterable> arrayNodeToIterableConverter() {
+    public TypeConverter<JsonArray, Iterable> arrayNodeToIterableConverter() {
         return (node, targetType, context) -> {
             Map<String, Argument<?>> typeVariables = context.getTypeVariables();
             Class elementType = typeVariables.isEmpty() ? Map.class : typeVariables.values().iterator().next().getType();
@@ -112,15 +110,14 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
     }
 
     /**
-     * @param <ARR> Type of {@link TreeNode} that is accepted
      * @return Converts array nodes to objects.
      */
     @Internal
-    public <ARR extends TreeNode> TypeConverter<ARR, Object[]> arrayNodeToObjectConverter() {
+    public TypeConverter<JsonArray, Object[]> arrayNodeToObjectConverter() {
         return (node, targetType, context) -> {
             try {
-                MicronautObjectCodec om = this.objectCodec.get();
-                Object[] result = om.readValue(node.traverse(om.getObjectCodec()), targetType);
+                JsonCodec om = this.objectCodec.get();
+                Object[] result = om.readValueFromTree(node, targetType);
                 return Optional.of(result);
             } catch (IOException e) {
                 context.reject(e);
@@ -176,11 +173,11 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
     /**
      * @return A converter that converts an object to a json node
      */
-    protected TypeConverter<Object, TreeNode> objectToJsonNodeConverter() {
+    protected TypeConverter<Object, JsonNode> objectToJsonNodeConverter() {
         return (object, targetType, context) -> {
             try {
-                return Optional.of(objectCodec.get().valueToTree(object));
-            } catch (IllegalArgumentException e) {
+                return Optional.of(objectCodec.get().writeValueToTree(object));
+            } catch (IllegalArgumentException | IOException e) {
                 context.reject(e);
                 return Optional.empty();
             }
@@ -190,7 +187,7 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
     /**
      * @return The JSON node to object converter
      */
-    protected TypeConverter<TreeNode, Object> jsonNodeToObjectConverter() {
+    protected TypeConverter<JsonNode, Object> jsonNodeToObjectConverter() {
         return (node, targetType, context) -> {
             try {
                 if (CharSequence.class.isAssignableFrom(targetType) && node.isObject()) {
@@ -201,15 +198,11 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
                     if (context instanceof ArgumentConversionContext && targetType.getTypeParameters().length != 0) {
                         argument = ((ArgumentConversionContext<?>) context).getArgument();
                     }
-                    MicronautObjectCodec om = this.objectCodec.get();
-                    JsonParser parser = node.traverse(om.getObjectCodec());
-                    Object result;
-                    if (argument != null) {
-                        result = om.readValue(parser, argument);
-                    } else {
-                        result = om.readValue(parser, targetType);
+                    if (argument == null) {
+                        argument = Argument.of(targetType);
                     }
-                    return Optional.ofNullable(result);
+                    JsonCodec om = this.objectCodec.get();
+                    return Optional.ofNullable(om.readValueFromTree(node, argument));
                 }
             } catch (IOException e) {
                 context.reject(e);

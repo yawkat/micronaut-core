@@ -45,7 +45,6 @@ class LinkSpec extends Specification {
         link.templated == true
     }
 
-    @SerializableBean
     static class Test extends AbstractResource<Test> {
         String name
     }

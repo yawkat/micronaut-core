@@ -22,6 +22,7 @@ import io.micronaut.context.annotation.Secondary;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
+import io.micronaut.jackson.databind.JacksonFeatures;
 import io.micronaut.runtime.ApplicationConfiguration;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -32,6 +33,7 @@ import jakarta.inject.Singleton;
  *
  * @author Graeme Rocher
  * @since 1.0.0
+ * @deprecated Use {@link io.micronaut.json.codec.JsonMediaTypeCodec}
  */
 @Named("json")
 @Singleton

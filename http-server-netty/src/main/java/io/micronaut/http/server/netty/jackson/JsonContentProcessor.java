@@ -15,7 +15,6 @@
  */
 package io.micronaut.http.server.netty.jackson;
 
-import com.fasterxml.jackson.core.TreeNode;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.async.publisher.Publishers;
 import io.micronaut.core.async.subscriber.CompletionAwareSubscriber;
@@ -25,8 +24,8 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.server.HttpServerConfiguration;
 import io.micronaut.http.server.netty.AbstractHttpContentProcessor;
 import io.micronaut.http.server.netty.NettyHttpRequest;
-import io.micronaut.json.GenericDeserializationConfig;
-import io.micronaut.json.parser.JacksonJrProcessor;
+import io.micronaut.json.JsonCodec;
+import io.micronaut.json.tree.JsonNode;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
@@ -45,26 +44,26 @@ import java.util.Optional;
  * @since 1.0
  */
 @Internal
-public class JsonContentProcessor extends AbstractHttpContentProcessor<TreeNode> {
+public class JsonContentProcessor extends AbstractHttpContentProcessor<JsonNode> {
 
-    private final GenericDeserializationConfig deserializationConfig;
-    private Processor<byte[], ? extends TreeNode> jacksonProcessor;
+    private final JsonCodec jsonCodec;
+    private Processor<byte[], JsonNode> jacksonProcessor;
 
     /**
      * @param nettyHttpRequest The Netty Http request
      * @param configuration    The Http server configuration
-     * @param deserializationConfig The jackson deserialization configuration
+     * @param jsonCodec        The json codec
      */
     public JsonContentProcessor(
             NettyHttpRequest<?> nettyHttpRequest,
             HttpServerConfiguration configuration,
-            GenericDeserializationConfig deserializationConfig) {
+            JsonCodec jsonCodec) {
         super(nettyHttpRequest, configuration);
-        this.deserializationConfig = deserializationConfig;
+        this.jsonCodec = jsonCodec;
     }
 
     @Override
-    protected void doOnSubscribe(Subscription subscription, Subscriber<? super TreeNode> subscriber) {
+    protected void doOnSubscribe(Subscription subscription, Subscriber<? super JsonNode> subscriber) {
         if (parentSubscription == null) {
             return;
         }
@@ -89,14 +88,15 @@ public class JsonContentProcessor extends AbstractHttpContentProcessor<TreeNode>
             }
         }
 
-        this.jacksonProcessor = new JacksonJrProcessor(streamArray, deserializationConfig);
-        this.jacksonProcessor.subscribe(new CompletionAwareSubscriber<TreeNode>() {
+        this.jacksonProcessor = jsonCodec.createReactiveParser(p -> {}, streamArray);
+        this.jacksonProcessor.subscribe(new CompletionAwareSubscriber<JsonNode>() {
 
             @Override
             protected void doOnSubscribe(Subscription jsonSubscription) {
 
                 Subscription childSubscription = new Subscription() {
                     boolean first = true;
+
                     @Override
                     public synchronized void request(long n) {
                         // this is a hack. The first item emitted for arrays is already in the buffer
@@ -121,7 +121,7 @@ public class JsonContentProcessor extends AbstractHttpContentProcessor<TreeNode>
             }
 
             @Override
-            protected void doOnNext(TreeNode message) {
+            protected void doOnNext(JsonNode message) {
                 subscriber.onNext(message);
             }
 

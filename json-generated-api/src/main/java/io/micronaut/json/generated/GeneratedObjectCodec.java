@@ -1,37 +1,42 @@
 package io.micronaut.json.generated;
 
 import com.fasterxml.jackson.core.*;
-import com.fasterxml.jackson.core.type.ResolvedType;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.core.util.ByteArrayBuilder;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.context.annotation.Secondary;
-import io.micronaut.context.exceptions.NoSuchBeanException;
-import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.reflect.GenericTypeUtils;
 import io.micronaut.core.type.Argument;
+import io.micronaut.jackson.core.tree.MicronautTreeCodec;
+import io.micronaut.jackson.core.tree.TreeGenerator;
 import io.micronaut.json.*;
 import io.micronaut.json.generated.serializer.ObjectSerializer;
-import io.micronaut.json.tree.MicronautTreeCodec;
+import io.micronaut.jackson.core.parser.JacksonCoreProcessor;
+import io.micronaut.json.tree.JsonNode;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.reactivestreams.Processor;
+import org.reactivestreams.Subscriber;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Type;
-import java.util.Iterator;
+import java.util.function.Consumer;
 
 @Internal
 @Singleton
 @Secondary
 @BootstrapContextCompatible
-public final class GeneratedObjectCodec extends MicronautObjectCodec {
+public final class GeneratedObjectCodec implements JsonCodec {
+    private static final JsonFactory FACTORY = new JsonFactory();
+
     private final SerializerLocator locator;
-    private final GenericDeserializationConfig deserializationConfig;
+    private final JsonConfig deserializationConfig;
     private final MicronautTreeCodec treeCodec;
 
-    private GeneratedObjectCodec(SerializerLocator locator, GenericDeserializationConfig deserializationConfig) {
+    private GeneratedObjectCodec(SerializerLocator locator, JsonConfig deserializationConfig) {
         this.locator = locator;
         this.deserializationConfig = deserializationConfig;
         this.treeCodec = MicronautTreeCodec.getInstance().withConfig(deserializationConfig);
@@ -40,7 +45,7 @@ public final class GeneratedObjectCodec extends MicronautObjectCodec {
     @Inject
     @Internal
     public GeneratedObjectCodec(SerializerLocator locator) {
-        this(locator, GenericDeserializationConfig.DEFAULT);
+        this(locator, JsonConfig.DEFAULT);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -57,8 +62,7 @@ public final class GeneratedObjectCodec extends MicronautObjectCodec {
         serializer.serialize(gen, value);
     }
 
-    @Override
-    public <T> T readValue(JsonParser parser, Argument<T> type) throws IOException {
+    private <T> T readValue(JsonParser parser, Argument<T> type) throws IOException {
         return readValue0(parser, GenericTypeUtils.argumentToReflectType(type));
     }
 
@@ -76,118 +80,66 @@ public final class GeneratedObjectCodec extends MicronautObjectCodec {
     }
 
     @Override
-    public ObjectCodec getObjectCodec() {
-        return new ObjectCodecImpl();
+    public <T> T readValueFromTree(JsonNode tree, Argument<T> type) throws IOException {
+        try {
+            return readValue(treeCodec.treeAsTokens(tree), type);
+        } catch (JsonProcessingException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     @Override
-    public void updateValue(JsonParser parser, Object value) throws IOException {
-        throw new UnsupportedOperationException(); // TODO
+    public JsonNode writeValueToTree(Object value) throws IOException {
+        TreeGenerator treeGenerator = treeCodec.createTreeGenerator();
+        writeValue0(treeGenerator, value);
+        return treeGenerator.getCompletedValue();
     }
 
     @Override
-    public MicronautObjectCodec cloneWithFeatures(JsonFeatures features) {
-        throw new UnsupportedOperationException(); // TODO
+    public <T> T readValue(InputStream inputStream, Argument<T> type) throws IOException {
+        return readValue(FACTORY.createParser(inputStream), type);
     }
 
     @Override
-    public MicronautObjectCodec cloneWithViewClass(Class<?> viewClass) {
-        throw new UnsupportedOperationException(); // TODO
+    public <T> T readValue(byte[] byteArray, Argument<T> type) throws IOException {
+        return readValue(FACTORY.createParser(byteArray), type);
     }
 
     @Override
-    public GenericDeserializationConfig getDeserializationConfig() {
+    public void writeValue(OutputStream outputStream, Object object) throws IOException {
+        writeValue0(FACTORY.createGenerator(outputStream), object);
+    }
+
+    @Override
+    public byte[] writeValueAsBytes(Object object) throws IOException {
+        ByteArrayBuilder bb = new ByteArrayBuilder(FACTORY._getBufferRecycler());
+        try (JsonGenerator generator = FACTORY.createGenerator(bb)) {
+            writeValue0(generator, object);
+        } catch (JsonProcessingException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        byte[] bytes = bb.toByteArray();
+        bb.release();
+        return bytes;
+    }
+
+    @Override
+    public JsonConfig getDeserializationConfig() {
         return deserializationConfig;
     }
 
-    @Nullable
     @Override
-    public JsonFeatures detectFeatures(AnnotationMetadata annotations) {
-        return null;
-    }
-
-    private class ObjectCodecImpl extends ObjectCodec {
-        @Override
-        public Version version() {
-            return Version.unknownVersion();
-        }
-
-        @Override
-        public <T> T readValue(JsonParser p, Class<T> valueType) throws IOException {
-            return readValue0(p, valueType);
-        }
-
-        @Override
-        public <T> T readValue(JsonParser p, TypeReference<T> valueTypeRef) throws IOException {
-            return readValue0(p, valueTypeRef.getType());
-        }
-
-        @Override
-        public <T> T readValue(JsonParser p, ResolvedType valueType) throws IOException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> Iterator<T> readValues(JsonParser p, Class<T> valueType) throws IOException {
-            throw new UnsupportedOperationException(); // TODO
-        }
-
-        @Override
-        public <T> Iterator<T> readValues(JsonParser p, TypeReference<T> valueTypeRef) throws IOException {
-            throw new UnsupportedOperationException(); // TODO
-        }
-
-        @Override
-        public <T> Iterator<T> readValues(JsonParser p, ResolvedType valueType) throws IOException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void writeValue(JsonGenerator gen, Object value) throws IOException {
-            writeValue0(gen, value);
-        }
-
-        @Override
-        public <T extends TreeNode> T readTree(JsonParser p) throws IOException {
-            return treeCodec.readTree(p);
-        }
-
-        @Override
-        public void writeTree(JsonGenerator gen, TreeNode tree) throws IOException {
-            treeCodec.writeTree(gen, tree);
-        }
-
-        @Override
-        public TreeNode createObjectNode() {
-            return treeCodec.createObjectNode();
-        }
-
-        @Override
-        public TreeNode createArrayNode() {
-            return treeCodec.createArrayNode();
-        }
-
-        @Override
-        public JsonParser treeAsTokens(TreeNode n) {
-            return treeCodec.treeAsTokens(n);
-        }
-
-        @Override
-        public <T> T treeToValue(TreeNode n, Class<T> valueType) throws JsonProcessingException {
-            try {
-                return readValue(treeAsTokens(n), valueType);
-            } catch (JsonProcessingException e) {
-                throw e;
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
+    public Processor<byte[], JsonNode> createReactiveParser(Consumer<Processor<byte[], JsonNode>> onSubscribe, boolean streamArray) {
+        return new JacksonCoreProcessor(streamArray, new JsonFactory(), deserializationConfig) {
+            @Override
+            public void subscribe(Subscriber<? super JsonNode> downstreamSubscriber) {
+                onSubscribe.accept(this);
+                super.subscribe(downstreamSubscriber);
             }
-        }
-
-        @Override
-        public JsonFactory getFactory() {
-            JsonFactory factory = deserializationConfig.getFactory();
-            factory.setCodec(this);
-            return factory;
-        }
+        };
     }
 }

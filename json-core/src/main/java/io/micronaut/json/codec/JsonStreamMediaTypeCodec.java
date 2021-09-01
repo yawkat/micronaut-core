@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
-import io.micronaut.json.MicronautObjectCodec;
+import io.micronaut.json.JsonCodec;
 import io.micronaut.runtime.ApplicationConfiguration;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -50,7 +50,7 @@ public class JsonStreamMediaTypeCodec extends JsonMediaTypeCodec {
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      */
-    public JsonStreamMediaTypeCodec(MicronautObjectCodec objectMapper,
+    public JsonStreamMediaTypeCodec(JsonCodec objectMapper,
                                     ApplicationConfiguration applicationConfiguration,
                                     @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
         super(objectMapper, applicationConfiguration, null);
@@ -67,7 +67,7 @@ public class JsonStreamMediaTypeCodec extends JsonMediaTypeCodec {
      * @param codecConfiguration       The configuration for the codec
      */
     @Inject
-    public JsonStreamMediaTypeCodec(BeanProvider<MicronautObjectCodec> objectMapper,
+    public JsonStreamMediaTypeCodec(BeanProvider<JsonCodec> objectMapper,
                                     ApplicationConfiguration applicationConfiguration,
                                     @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
         super(objectMapper, applicationConfiguration, null);

@@ -19,10 +19,10 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.TreeCodec;
 import com.fasterxml.jackson.core.TreeNode;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.http.HttpMethod;
+import io.micronaut.jackson.core.tree.MicronautTreeCodec;
+import io.micronaut.json.tree.JsonNode;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,7 +43,7 @@ import java.util.Optional;
 public class ComputeInstanceMetadataResolverUtils {
 
     /**
-     * Reads the result of a URL and parses it using the given {@link ObjectMapper}.
+     * Reads the result of a URL and parses it using the given {@link JsonFactory}.
      *
      * @param url                 the URL to read
      * @param connectionTimeoutMs connection timeout, in milliseconds
@@ -54,7 +54,7 @@ public class ComputeInstanceMetadataResolverUtils {
      * @return a {@link JsonNode} instance
      * @throws IOException if any I/O error occurs
      */
-    public static TreeNode readMetadataUrl(URL url, int connectionTimeoutMs, int readTimeoutMs, TreeCodec treeCodec, JsonFactory jsonFactory, Map<String, String> requestProperties) throws IOException {
+    public static JsonNode readMetadataUrl(URL url, int connectionTimeoutMs, int readTimeoutMs, MicronautTreeCodec treeCodec, JsonFactory jsonFactory, Map<String, String> requestProperties) throws IOException {
         URLConnection urlConnection = url.openConnection();
 
         if (url.getProtocol().equalsIgnoreCase("file")) {
@@ -78,47 +78,6 @@ public class ComputeInstanceMetadataResolverUtils {
     }
 
     /**
-     * Resolve a value as a string from the metadata json.
-     *
-     * @param json The json
-     * @param key  The key
-     * @return An optional value
-     */
-    @Deprecated
-    public static Optional<String> stringValue(TreeNode json, String key) {
-        TreeNode value = json.get(key);
-        if (value != null) {
-            // TODO
-            if (value instanceof JsonNode) {
-                return Optional.of(((JsonNode) value).textValue());
-            } else {
-                return Optional.of(((io.micronaut.json.tree.JsonNode) value).getStringValue());
-            }
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Populates the instance instance metadata's {@link AbstractComputeInstanceMetadata#setMetadata(Map)} property.
-     * @param instanceMetadata The instance metadata
-     * @param metadata A map of metadata
-     */
-    public static void populateMetadata(AbstractComputeInstanceMetadata instanceMetadata, Map<?, ?> metadata) {
-        if (metadata != null) {
-            Map<String, String> finalMetadata = new HashMap<>(metadata.size());
-            for (Map.Entry<?, ?> entry : metadata.entrySet()) {
-                Object key = entry.getKey();
-                Object value = entry.getValue();
-                if (value instanceof String) {
-                    finalMetadata.put(key.toString(), value.toString());
-                }
-            }
-            instanceMetadata.setMetadata(finalMetadata);
-        }
-    }
-
-    /**
      * Populates the instance instance metadata's {@link AbstractComputeInstanceMetadata#setMetadata(Map)} property.
      *
      * @param instanceMetadata The instance metadata
@@ -127,12 +86,12 @@ public class ComputeInstanceMetadataResolverUtils {
     public static void populateMetadata(AbstractComputeInstanceMetadata instanceMetadata, io.micronaut.json.tree.JsonNode metadata) {
         if (metadata != null) {
             Map<String, String> finalMetadata = new HashMap<>(metadata.size());
-            metadata.fieldNames().forEachRemaining(key -> {
-                io.micronaut.json.tree.JsonNode value = metadata.get(key);
+            for (Map.Entry<String, io.micronaut.json.tree.JsonNode> entry : metadata.entries()) {
+                io.micronaut.json.tree.JsonNode value = entry.getValue();
                 if (value.isString()) {
-                    finalMetadata.put(key, value.getStringValue());
+                    finalMetadata.put(entry.getKey(), value.getStringValue());
                 }
-            });
+            }
             instanceMetadata.setMetadata(finalMetadata);
         }
     }

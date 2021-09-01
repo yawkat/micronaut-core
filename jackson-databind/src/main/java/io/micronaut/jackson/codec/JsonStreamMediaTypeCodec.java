@@ -37,6 +37,7 @@ import java.util.List;
  *
  * @author Graeme Rocher
  * @since 1.0
+ * @deprecated Use {@link io.micronaut.json.codec.JsonStreamMediaTypeCodec}
  */
 @Deprecated
 @Secondary

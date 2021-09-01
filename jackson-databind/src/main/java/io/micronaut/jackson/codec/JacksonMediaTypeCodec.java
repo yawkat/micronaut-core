@@ -7,17 +7,20 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
 import io.micronaut.http.codec.CodecException;
-import io.micronaut.jackson.DatabindObjectCodec;
-import io.micronaut.json.MicronautObjectCodec;
+import io.micronaut.jackson.databind.JacksonDatabindCodec;
+import io.micronaut.jackson.databind.JacksonFeatures;
+import io.micronaut.json.JsonCodec;
 import io.micronaut.json.JsonFeatures;
+import io.micronaut.json.codec.JsonCodecMediaTypeCodec;
 import io.micronaut.runtime.ApplicationConfiguration;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.io.IOException;
 
+/**
+ * @deprecated Use {@link #JsonCodecMediaTypeCodec}
+ */
 @Deprecated
-public abstract class JacksonMediaTypeCodec extends io.micronaut.json.codec.JacksonMediaTypeCodec {
+public abstract class JacksonMediaTypeCodec extends JsonCodecMediaTypeCodec {
     public static final String REGULAR_JSON_MEDIA_TYPE_CODEC_NAME = "json";
 
     public JacksonMediaTypeCodec(BeanProvider<ObjectMapper> objectMapperProvider,
@@ -25,7 +28,7 @@ public abstract class JacksonMediaTypeCodec extends io.micronaut.json.codec.Jack
                                  CodecConfiguration codecConfiguration,
                                  MediaType mediaType) {
         super(
-                () -> new DatabindObjectCodec(objectMapperProvider.get()),
+                () -> new JacksonDatabindCodec(objectMapperProvider.get()),
                 applicationConfiguration,
                 codecConfiguration,
                 mediaType
@@ -37,7 +40,7 @@ public abstract class JacksonMediaTypeCodec extends io.micronaut.json.codec.Jack
                                  CodecConfiguration codecConfiguration,
                                  MediaType mediaType) {
         super(
-                new DatabindObjectCodec(objectMapper),
+                new JacksonDatabindCodec(objectMapper),
                 applicationConfiguration,
                 codecConfiguration,
                 mediaType
@@ -45,18 +48,18 @@ public abstract class JacksonMediaTypeCodec extends io.micronaut.json.codec.Jack
     }
 
     public ObjectMapper getObjectMapper() {
-        return (ObjectMapper) getObjectCodec().getObjectCodec();
+        return ((JacksonDatabindCodec) getObjectCodec()).getObjectMapper();
     }
 
     @Override
-    public io.micronaut.json.codec.JacksonMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
+    public JsonCodecMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
         return cloneWithFeatures((JacksonFeatures) features);
     }
 
     public abstract JacksonMediaTypeCodec cloneWithFeatures(JacksonFeatures jacksonFeatures);
 
     @Override
-    protected io.micronaut.json.codec.JacksonMediaTypeCodec cloneWithMapper(MicronautObjectCodec mapper) {
+    protected JsonCodecMediaTypeCodec cloneWithMapper(JsonCodec mapper) {
         throw new UnsupportedOperationException();
     }
 
@@ -70,6 +73,10 @@ public abstract class JacksonMediaTypeCodec extends io.micronaut.json.codec.Jack
      * @throws CodecException When object cannot be decoded
      */
     public <T> T decode(Argument<T> type, JsonNode node) throws CodecException {
-        return super.decode(type, node);
+        try {
+            return getObjectMapper().treeToValue(node, type.getType());
+        } catch (IOException e) {
+            throw new CodecException("Error decoding JSON stream for type [" + type.getName() + "]: " + e.getMessage(), e);
+        }
     }
 }

@@ -16,15 +16,14 @@
 package io.micronaut.discovery.cloud.digitalocean;
 
 import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import io.micronaut.discovery.cloud.ComputeInstanceMetadata;
 import io.micronaut.discovery.cloud.ComputeInstanceMetadataResolver;
 import io.micronaut.discovery.cloud.NetworkInterface;
+import io.micronaut.jackson.core.tree.MicronautTreeCodec;
 import io.micronaut.json.tree.JsonNode;
-import io.micronaut.json.tree.MicronautTreeCodec;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -36,7 +35,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -96,7 +94,7 @@ public class DigitalOceanMetadataResolver implements ComputeInstanceMetadataReso
 
         try {
             String metadataUrl = configuration.getUrl();
-            JsonNode metadataJson = (JsonNode) readMetadataUrl(new URL(metadataUrl), CONNECTION_TIMEOUT_IN_MILLS, READ_TIMEOUT_IN_MILLS, MicronautTreeCodec.getInstance(), new JsonFactory(), new HashMap<>());
+            JsonNode metadataJson = readMetadataUrl(new URL(metadataUrl), CONNECTION_TIMEOUT_IN_MILLS, READ_TIMEOUT_IN_MILLS, MicronautTreeCodec.getInstance(), new JsonFactory(), new HashMap<>());
             if (metadataJson != null) {
                 instanceMetadata.setInstanceId(textValue(metadataJson, DROPLET_ID));
                 instanceMetadata.setName(textValue(metadataJson, HOSTNAME));
@@ -135,7 +133,7 @@ public class DigitalOceanMetadataResolver implements ComputeInstanceMetadataReso
 
         if (interfaces != null) {
             AtomicReference<Integer> networkCounter = new AtomicReference<>(0);
-            interfaces.valueIterator().forEachRemaining(
+            interfaces.values().forEach(
                     jsonNode -> {
                         DigitalOceanNetworkInterface networkInterface = new DigitalOceanNetworkInterface();
                         networkInterface.setId(networkCounter.toString());

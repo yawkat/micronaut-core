@@ -2,8 +2,6 @@ package io.micronaut.json.tree;
 
 import io.micronaut.core.annotation.NonNull;
 
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.Map;
 
 abstract class JsonScalar extends JsonNode {
@@ -14,13 +12,13 @@ abstract class JsonScalar extends JsonNode {
 
     @Override
     @NonNull
-    public Iterator<JsonNode> valueIterator() {
+    public Iterable<JsonNode> values() {
         throw new IllegalStateException("Not a container");
     }
 
     @Override
     @NonNull
-    public Iterator<Map.Entry<String, JsonNode>> entryIterator() {
+    public Iterable<Map.Entry<String, JsonNode>> entries() {
         throw new IllegalStateException("Not an object");
     }
 
@@ -37,20 +35,5 @@ abstract class JsonScalar extends JsonNode {
     @Override
     public JsonNode get(int index) {
         return null;
-    }
-
-    @Override
-    public JsonNode path(String fieldName) {
-        return JsonMissing.INSTANCE;
-    }
-
-    @Override
-    public JsonNode path(int index) {
-        return JsonMissing.INSTANCE;
-    }
-
-    @Override
-    public Iterator<String> fieldNames() {
-        return Collections.emptyIterator();
     }
 }

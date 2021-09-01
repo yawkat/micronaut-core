@@ -1,8 +1,5 @@
 package io.micronaut.json.tree
 
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.core.JsonPointer
-import com.fasterxml.jackson.core.JsonToken
 import spock.lang.Specification
 
 class JsonScalarSpec extends Specification {
@@ -17,21 +14,14 @@ class JsonScalarSpec extends Specification {
 
     def "common scalar methods"() {
         expect:
-        thrownException { node.valueIterator() } instanceof IllegalStateException
-        thrownException { node.entryIterator() } instanceof IllegalStateException
+        thrownException { node.values() } instanceof IllegalStateException
+        thrownException { node.entries() } instanceof IllegalStateException
         !node.isContainerNode()
         !node.isArray()
         !node.isObject()
-        node.at(JsonPointer.empty()) == node
-        node.at(JsonPointer.compile("/abc")).isMissingNode()
-        node.at("") == node
-        node.at("/abc").isMissingNode()
         node.get("foo") == null
         node.get(0) == null
-        node.path("foo").isMissingNode()
-        node.path(0).isMissingNode()
         node.size() == 0
-        !node.fieldNames().hasNext()
 
         where:
         node << [
@@ -42,7 +32,6 @@ class JsonScalarSpec extends Specification {
                 new JsonNumber(new BigInteger("123456789012345678901234567890")),
                 new JsonNumber(new BigDecimal("123456789012345678901234567890.5")),
                 JsonNull.INSTANCE,
-                JsonMissing.INSTANCE,
                 JsonBoolean.valueOf(true),
                 JsonBoolean.valueOf(false),
                 new JsonString("foo")
@@ -56,7 +45,6 @@ class JsonScalarSpec extends Specification {
         expect:
         node.isValueNode()
         node.isNumber()
-        !node.isMissingNode()
         !node.isString()
         !node.isBoolean()
         !node.isNull()
@@ -70,12 +58,9 @@ class JsonScalarSpec extends Specification {
         node.getDoubleValue() == 42.0D
         node.getBigIntegerValue() == BigInteger.valueOf(42)
         node.getBigDecimalValue() == BigDecimal.valueOf(42)
-        node.asToken() == JsonToken.VALUE_NUMBER_INT
-        node.numberType() == JsonParser.NumberType.INT
         node == new JsonNumber(42)
         node != new JsonNumber(43)
         node.hashCode() == new JsonNumber(42).hashCode()
-        node.toString() == '42'
     }
 
     def "long"() {
@@ -85,7 +70,6 @@ class JsonScalarSpec extends Specification {
         expect:
         node.isValueNode()
         node.isNumber()
-        !node.isMissingNode()
         !node.isString()
         !node.isBoolean()
         !node.isNull()
@@ -99,12 +83,9 @@ class JsonScalarSpec extends Specification {
         node.getDoubleValue() == 12345678901.0D
         node.getBigIntegerValue() == BigInteger.valueOf(12345678901L)
         node.getBigDecimalValue() == BigDecimal.valueOf(12345678901L)
-        node.asToken() == JsonToken.VALUE_NUMBER_INT
-        node.numberType() == JsonParser.NumberType.LONG
         node == new JsonNumber(12345678901L)
         node != new JsonNumber(12345678902L)
         node.hashCode() == new JsonNumber(12345678901L).hashCode()
-        node.toString() == '12345678901'
     }
 
     def "float"() {
@@ -114,7 +95,6 @@ class JsonScalarSpec extends Specification {
         expect:
         node.isValueNode()
         node.isNumber()
-        !node.isMissingNode()
         !node.isString()
         !node.isBoolean()
         !node.isNull()
@@ -128,12 +108,9 @@ class JsonScalarSpec extends Specification {
         node.getDoubleValue() == 42.5D
         node.getBigIntegerValue() == BigInteger.valueOf(42)
         node.getBigDecimalValue() == BigDecimal.valueOf(42.5)
-        node.asToken() == JsonToken.VALUE_NUMBER_FLOAT
-        node.numberType() == JsonParser.NumberType.FLOAT
         node == new JsonNumber(42.5F)
         node != new JsonNumber(42.6F)
         node.hashCode() == new JsonNumber(42.5F).hashCode()
-        node.toString() == '42.5'
     }
 
     def "double"() {
@@ -143,7 +120,6 @@ class JsonScalarSpec extends Specification {
         expect:
         node.isValueNode()
         node.isNumber()
-        !node.isMissingNode()
         !node.isString()
         !node.isBoolean()
         !node.isNull()
@@ -157,12 +133,9 @@ class JsonScalarSpec extends Specification {
         node.getDoubleValue() == 12345678901.5D
         node.getBigIntegerValue() == BigInteger.valueOf(12345678901L)
         node.getBigDecimalValue() == BigDecimal.valueOf(12345678901.5D)
-        node.asToken() == JsonToken.VALUE_NUMBER_FLOAT
-        node.numberType() == JsonParser.NumberType.DOUBLE
         node == new JsonNumber(12345678901.5D)
         node != new JsonNumber(12345678901.6D)
         node.hashCode() == new JsonNumber(12345678901.5D).hashCode()
-        node.toString() == '1.23456789015E10'
     }
 
     def "bigint"() {
@@ -172,7 +145,6 @@ class JsonScalarSpec extends Specification {
         expect:
         node.isValueNode()
         node.isNumber()
-        !node.isMissingNode()
         !node.isString()
         !node.isBoolean()
         !node.isNull()
@@ -186,12 +158,9 @@ class JsonScalarSpec extends Specification {
         node.getDoubleValue() == 123456789012345678901234567890.0D
         node.getBigIntegerValue() == new BigInteger("123456789012345678901234567890")
         node.getBigDecimalValue() == new BigDecimal("123456789012345678901234567890")
-        node.asToken() == JsonToken.VALUE_NUMBER_INT
-        node.numberType() == JsonParser.NumberType.BIG_INTEGER
         node == new JsonNumber(new BigInteger("123456789012345678901234567890"))
         node != new JsonNumber(new BigInteger("123456789012345678901234567891"))
         node.hashCode() == new JsonNumber(new BigInteger("123456789012345678901234567890")).hashCode()
-        node.toString() == '123456789012345678901234567890'
     }
 
     def "bigdec"() {
@@ -201,7 +170,6 @@ class JsonScalarSpec extends Specification {
         expect:
         node.isValueNode()
         node.isNumber()
-        !node.isMissingNode()
         !node.isString()
         !node.isBoolean()
         !node.isNull()
@@ -215,12 +183,9 @@ class JsonScalarSpec extends Specification {
         node.getDoubleValue() == 123456789012345678901234567890.0D // .5 doesn't fit, should be trimmed
         node.getBigIntegerValue() == new BigInteger("123456789012345678901234567890")
         node.getBigDecimalValue() == new BigDecimal("123456789012345678901234567890.5")
-        node.asToken() == JsonToken.VALUE_NUMBER_FLOAT
-        node.numberType() == JsonParser.NumberType.BIG_DECIMAL
         node == new JsonNumber(new BigDecimal("123456789012345678901234567890.5"))
         node != new JsonNumber(new BigDecimal("123456789012345678901234567890.6"))
         node.hashCode() == new JsonNumber(new BigDecimal("123456789012345678901234567890.5")).hashCode()
-        node.toString() == '123456789012345678901234567890.5'
     }
 
     def "bool"() {
@@ -230,7 +195,6 @@ class JsonScalarSpec extends Specification {
         expect:
         node.isValueNode()
         !node.isNumber()
-        !node.isMissingNode()
         !node.isString()
         node.isBoolean()
         !node.isNull()
@@ -244,12 +208,9 @@ class JsonScalarSpec extends Specification {
         thrownException { node.getDoubleValue() } instanceof IllegalStateException
         thrownException { node.getBigIntegerValue() } instanceof IllegalStateException
         thrownException { node.getBigDecimalValue() } instanceof IllegalStateException
-        node.asToken() == JsonToken.VALUE_TRUE
-        node.numberType() == null
         node == JsonBoolean.valueOf(true)
         node != JsonBoolean.valueOf(false)
         node.hashCode() == JsonBoolean.valueOf(true).hashCode()
-        node.toString() == 'true'
     }
 
     def "string"() {
@@ -259,7 +220,6 @@ class JsonScalarSpec extends Specification {
         expect:
         node.isValueNode()
         !node.isNumber()
-        !node.isMissingNode()
         node.isString()
         !node.isBoolean()
         !node.isNull()
@@ -273,12 +233,9 @@ class JsonScalarSpec extends Specification {
         thrownException { node.getDoubleValue() } instanceof IllegalStateException
         thrownException { node.getBigIntegerValue() } instanceof IllegalStateException
         thrownException { node.getBigDecimalValue() } instanceof IllegalStateException
-        node.asToken() == JsonToken.VALUE_STRING
-        node.numberType() == null
         node == new JsonString("foo")
         node != new JsonString("bar")
         node.hashCode() == new JsonString("foo").hashCode()
-        node.toString() == '"foo"'
     }
 
     def "null"() {
@@ -288,7 +245,6 @@ class JsonScalarSpec extends Specification {
         expect:
         node.isValueNode()
         !node.isNumber()
-        !node.isMissingNode()
         !node.isString()
         !node.isBoolean()
         node.isNull()
@@ -302,40 +258,7 @@ class JsonScalarSpec extends Specification {
         thrownException { node.getDoubleValue() } instanceof IllegalStateException
         thrownException { node.getBigIntegerValue() } instanceof IllegalStateException
         thrownException { node.getBigDecimalValue() } instanceof IllegalStateException
-        node.asToken() == JsonToken.VALUE_NULL
-        node.numberType() == null
         node == JsonNull.INSTANCE
         node.hashCode() == JsonNull.INSTANCE.hashCode()
-        node.toString() == 'null'
     }
-
-    def "missing"() {
-        given:
-        def node = JsonMissing.INSTANCE
-
-        expect:
-        !node.isValueNode()
-        !node.isNumber()
-        node.isMissingNode()
-        !node.isString()
-        !node.isBoolean()
-        !node.isNull()
-        thrownException { node.getStringValue() } instanceof IllegalStateException
-        thrownException { node.coerceStringValue() } instanceof IllegalStateException
-        thrownException { node.getBooleanValue() } instanceof IllegalStateException
-        thrownException { node.getNumberValue() } instanceof IllegalStateException
-        thrownException { node.getIntValue() } instanceof IllegalStateException
-        thrownException { node.getLongValue() } instanceof IllegalStateException
-        thrownException { node.getFloatValue() } instanceof IllegalStateException
-        thrownException { node.getDoubleValue() } instanceof IllegalStateException
-        thrownException { node.getBigIntegerValue() } instanceof IllegalStateException
-        thrownException { node.getBigDecimalValue() } instanceof IllegalStateException
-        node.asToken() == JsonToken.NOT_AVAILABLE
-        node.numberType() == null
-        node == JsonMissing.INSTANCE
-        node.hashCode() == JsonMissing.INSTANCE.hashCode()
-        node.toString() == 'null'
-    }
-
-
 }

@@ -3,9 +3,7 @@ dependencies {
 
     api project(':context')
     api project(":http")
-    api project(":json-core")
-
-    api("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
+    api project(":jackson-core")
 
     testAnnotationProcessor project(":inject-java")
     testAnnotationProcessor project(":inject-groovy")

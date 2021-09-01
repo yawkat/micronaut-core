@@ -37,8 +37,6 @@ import java.util.Optional;
  * @since 1.0
  */
 @Singleton
-@Secondary
-@Deprecated
 public class JacksonObjectSerializer implements ObjectSerializer {
 
     private final ObjectMapper objectMapper;

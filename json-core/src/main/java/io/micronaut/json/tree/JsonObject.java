@@ -1,12 +1,8 @@
 package io.micronaut.json.tree;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonToken;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 
-import java.io.IOException;
-import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -18,11 +14,6 @@ public class JsonObject extends JsonContainer {
 
     JsonObject(Map<String, JsonNode> values) {
         this.values = values;
-    }
-
-    @Override
-    public JsonToken asToken() {
-        return JsonToken.START_OBJECT;
     }
 
     @Override
@@ -46,40 +37,15 @@ public class JsonObject extends JsonContainer {
     }
 
     @Override
-    public JsonNode path(String fieldName) {
-        return values.getOrDefault(fieldName, JsonMissing.INSTANCE);
-    }
-
-    @Override
-    public JsonNode path(int index) {
-        return JsonMissing.INSTANCE;
-    }
-
-    @Override
-    public Iterator<String> fieldNames() {
-        return values.keySet().iterator();
+    @NonNull
+    public Iterable<JsonNode> values() {
+        return values.values();
     }
 
     @Override
     @NonNull
-    public Iterator<JsonNode> valueIterator() {
-        return values.values().iterator();
-    }
-
-    @Override
-    @NonNull
-    public Iterator<Map.Entry<String, JsonNode>> entryIterator() {
-        return values.entrySet().iterator();
-    }
-
-    @Override
-    void emit(JsonGenerator generator) throws IOException {
-        generator.writeStartObject();
-        for (Map.Entry<String, JsonNode> entry : values.entrySet()) {
-            generator.writeFieldName(entry.getKey());
-            entry.getValue().emit(generator);
-        }
-        generator.writeEndObject();
+    public Iterable<Map.Entry<String, JsonNode>> entries() {
+        return values.entrySet();
     }
 
     @Override

@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
-import io.micronaut.json.MicronautObjectCodec;
+import io.micronaut.json.JsonCodec;
 import io.micronaut.runtime.ApplicationConfiguration;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -32,10 +32,10 @@ import jakarta.inject.Singleton;
  * @author Graeme Rocher
  * @since 1.0.0
  */
-@Named(JacksonMediaTypeCodec.REGULAR_JSON_MEDIA_TYPE_CODEC_NAME)
+@Named(JsonCodecMediaTypeCodec.REGULAR_JSON_MEDIA_TYPE_CODEC_NAME)
 @Singleton
 @BootstrapContextCompatible
-public class JsonMediaTypeCodec extends JacksonMediaTypeCodec {
+public class JsonMediaTypeCodec extends JsonCodecMediaTypeCodec {
 
     public static final String CONFIGURATION_QUALIFIER = "json";
 
@@ -44,7 +44,7 @@ public class JsonMediaTypeCodec extends JacksonMediaTypeCodec {
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      */
-    public JsonMediaTypeCodec(MicronautObjectCodec objectMapper,
+    public JsonMediaTypeCodec(JsonCodec objectMapper,
                               ApplicationConfiguration applicationConfiguration,
                               @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
         super(objectMapper, applicationConfiguration, codecConfiguration, MediaType.APPLICATION_JSON_TYPE);
@@ -56,14 +56,14 @@ public class JsonMediaTypeCodec extends JacksonMediaTypeCodec {
      * @param codecConfiguration       The configuration for the codec
      */
     @Inject
-    public JsonMediaTypeCodec(BeanProvider<MicronautObjectCodec> objectMapper,
+    public JsonMediaTypeCodec(BeanProvider<JsonCodec> objectMapper,
                               ApplicationConfiguration applicationConfiguration,
                               @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
         super(objectMapper, applicationConfiguration, codecConfiguration, MediaType.APPLICATION_JSON_TYPE);
     }
 
     @Override
-    protected JacksonMediaTypeCodec cloneWithMapper(MicronautObjectCodec mapper) {
+    protected JsonCodecMediaTypeCodec cloneWithMapper(JsonCodec mapper) {
         return new JsonMediaTypeCodec(mapper, applicationConfiguration, codecConfiguration);
     }
 }
