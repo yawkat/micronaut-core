@@ -17,7 +17,6 @@ package io.micronaut.discovery.cloud;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.TreeCodec;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.http.HttpMethod;
 import io.micronaut.jackson.core.tree.MicronautTreeCodec;
