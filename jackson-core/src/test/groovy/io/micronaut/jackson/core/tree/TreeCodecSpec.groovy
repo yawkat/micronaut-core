@@ -1,7 +1,6 @@
 package io.micronaut.jackson.core.tree
 
 import com.fasterxml.jackson.core.JsonFactory
-import io.micronaut.jackson.core.tree.MicronautTreeCodec
 import io.micronaut.json.tree.JsonNode
 import spock.lang.Specification
 

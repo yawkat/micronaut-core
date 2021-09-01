@@ -23,6 +23,9 @@ import io.micronaut.discovery.cloud.ComputeInstanceMetadata;
 import io.micronaut.discovery.cloud.ComputeInstanceMetadataResolver;
 import io.micronaut.discovery.cloud.NetworkInterface;
 import io.micronaut.jackson.core.tree.MicronautTreeCodec;
+import io.micronaut.jackson.databind.JacksonDatabindCodec;
+import io.micronaut.json.JsonCodec;
+import io.micronaut.json.JsonConfig;
 import io.micronaut.json.tree.JsonNode;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -57,15 +60,25 @@ public class DigitalOceanMetadataResolver implements ComputeInstanceMetadataReso
     private static final int CONNECTION_TIMEOUT_IN_MILLS = 5000;
 
     private final DigitalOceanMetadataConfiguration configuration;
+    private final JsonFactory jsonFactory;
+    private final JsonConfig jsonConfig;
+
     private DigitalOceanInstanceMetadata cachedMetadata;
 
     /**
-     *
      * @param configuration Digital Ocean Metadata configuration
+     * @param jsonFactory   Factory to use for json parsing
+     * @param codec         Codec to use for deserialization
      */
     @Inject
-    public DigitalOceanMetadataResolver(DigitalOceanMetadataConfiguration configuration) {
+    public DigitalOceanMetadataResolver(
+            DigitalOceanMetadataConfiguration configuration,
+            JsonFactory jsonFactory,
+            JsonCodec codec
+    ) {
         this.configuration = configuration;
+        this.jsonFactory = jsonFactory;
+        this.jsonConfig = codec.getDeserializationConfig();
     }
 
     /**
@@ -73,11 +86,13 @@ public class DigitalOceanMetadataResolver implements ComputeInstanceMetadataReso
      */
     public DigitalOceanMetadataResolver() {
         configuration = new DigitalOceanMetadataConfiguration();
+        jsonFactory = new JsonFactory();
+        jsonConfig = JsonConfig.DEFAULT;
     }
 
     @Deprecated
     public DigitalOceanMetadataResolver(ObjectMapper objectMapper, DigitalOceanMetadataConfiguration configuration) {
-        this(configuration);
+        this(configuration, objectMapper.getFactory(), new JacksonDatabindCodec(objectMapper));
     }
 
     @Override
@@ -94,7 +109,7 @@ public class DigitalOceanMetadataResolver implements ComputeInstanceMetadataReso
 
         try {
             String metadataUrl = configuration.getUrl();
-            JsonNode metadataJson = readMetadataUrl(new URL(metadataUrl), CONNECTION_TIMEOUT_IN_MILLS, READ_TIMEOUT_IN_MILLS, MicronautTreeCodec.getInstance(), new JsonFactory(), new HashMap<>());
+            JsonNode metadataJson = readMetadataUrl(new URL(metadataUrl), CONNECTION_TIMEOUT_IN_MILLS, READ_TIMEOUT_IN_MILLS, MicronautTreeCodec.getInstance().withConfig(jsonConfig), jsonFactory, new HashMap<>());
             if (metadataJson != null) {
                 instanceMetadata.setInstanceId(textValue(metadataJson, DROPLET_ID));
                 instanceMetadata.setName(textValue(metadataJson, HOSTNAME));

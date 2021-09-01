@@ -1,8 +1,6 @@
 package io.micronaut.jackson.core.tree
 
 import com.fasterxml.jackson.core.JsonFactory
-import io.micronaut.jackson.core.tree.JsonStreamTransfer
-import io.micronaut.jackson.core.tree.MicronautTreeCodec
 import io.micronaut.json.JsonConfig
 import io.micronaut.json.tree.JsonArray
 import io.micronaut.json.tree.JsonBoolean

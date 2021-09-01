@@ -25,7 +25,6 @@ import io.micronaut.http.codec.CodecConfiguration;
 import io.micronaut.http.codec.CodecException;
 import io.micronaut.http.codec.MediaTypeCodec;
 import io.micronaut.json.JsonCodec;
-import io.micronaut.json.JsonConfig;
 import io.micronaut.json.JsonFeatures;
 import io.micronaut.json.tree.JsonNode;
 import io.micronaut.runtime.ApplicationConfiguration;
@@ -233,9 +232,5 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
         OutputStream outputStream = buffer.toOutputStream();
         encode(object, outputStream);
         return buffer;
-    }
-
-    public final JsonConfig getDeserializationConfig() {
-        return getObjectCodec().getDeserializationConfig();
     }
 }
