@@ -18,7 +18,6 @@ package io.micronaut.jackson.databind;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
-import io.micronaut.context.annotation.Primary;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.type.Argument;
@@ -44,7 +43,7 @@ import java.util.function.Consumer;
 @Internal
 @Singleton
 @BootstrapContextCompatible
-public class JacksonDatabindCodec implements JsonCodec {
+public final class JacksonDatabindCodec implements JsonCodec {
     private final ObjectMapper objectMapper;
     private final JsonConfig config;
     private final MicronautTreeCodec treeCodec;

@@ -62,6 +62,9 @@ public abstract class JacksonMediaTypeCodec extends JsonCodecMediaTypeCodec {
         );
     }
 
+    /**
+     * @return The object mapper
+     */
     public ObjectMapper getObjectMapper() {
         return ((JacksonDatabindCodec) getObjectCodec()).getObjectMapper();
     }
