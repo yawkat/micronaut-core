@@ -127,7 +127,6 @@ public final class JacksonDatabindCodec implements JsonCodec {
     public JsonCodec cloneWithViewClass(Class<?> viewClass) {
         ObjectMapper objectMapper = this.objectMapper.copy();
         objectMapper.setConfig(objectMapper.getSerializationConfig().withView(viewClass));
-        // todo: JsonViewMediaTypeCodecFactory doesn't set the deser config, is doing this an issue?
         objectMapper.setConfig(objectMapper.getDeserializationConfig().withView(viewClass));
 
         return new JacksonDatabindCodec(objectMapper);

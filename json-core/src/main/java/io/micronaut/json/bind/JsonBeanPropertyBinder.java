@@ -267,7 +267,6 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
         public JsonNode build() {
             Map<String, JsonNode> built = new LinkedHashMap<>();
             for (Map.Entry<String, ValueBuilder> entry : values.entrySet()) {
-                // todo: is it dangerous to recurse here?
                 built.put(entry.getKey(), entry.getValue().build());
             }
             return JsonNode.createObjectNode(built);
