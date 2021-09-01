@@ -88,7 +88,8 @@ public class JsonContentProcessor extends AbstractHttpContentProcessor<JsonNode>
             }
         }
 
-        this.jacksonProcessor = jsonCodec.createReactiveParser(p -> {}, streamArray);
+        this.jacksonProcessor = jsonCodec.createReactiveParser(p -> {
+        }, streamArray);
         this.jacksonProcessor.subscribe(new CompletionAwareSubscriber<JsonNode>() {
 
             @Override
