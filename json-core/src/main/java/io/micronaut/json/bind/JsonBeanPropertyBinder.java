@@ -41,15 +41,15 @@ import java.util.stream.Collectors;
 @Primary
 class JsonBeanPropertyBinder implements BeanPropertyBinder {
 
-    private final JsonCodec objectMapper;
+    private final JsonCodec jsonCodec;
     private final int arraySizeThreshhold;
 
     /**
-     * @param objectMapper  To read/write JSON
+     * @param jsonCodec  To read/write JSON
      * @param configuration The configuration for Jackson JSON parser
      */
-    JsonBeanPropertyBinder(JsonCodec objectMapper, JsonConfiguration configuration) {
-        this.objectMapper = objectMapper;
+    JsonBeanPropertyBinder(JsonCodec jsonCodec, JsonConfiguration configuration) {
+        this.jsonCodec = jsonCodec;
         this.arraySizeThreshhold = configuration.getArraySizeThreshold();
     }
 
@@ -57,7 +57,7 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
     public BindingResult<Object> bind(ArgumentConversionContext<Object> context, Map<CharSequence, ? super Object> source) {
         try {
             JsonNode objectNode = buildSourceObjectNode(source.entrySet());
-            Object result = objectMapper.readValueFromTree(objectNode, context.getArgument());
+            Object result = jsonCodec.readValueFromTree(objectNode, context.getArgument());
             return () -> Optional.of(result);
         } catch (Exception e) {
             context.reject(e);
@@ -84,7 +84,7 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
     public <T2> T2 bind(Class<T2> type, Set<? extends Map.Entry<? extends CharSequence, Object>> source) throws ConversionErrorException {
         try {
             JsonNode objectNode = buildSourceObjectNode(source);
-            return objectMapper.readValueFromTree(objectNode, type);
+            return jsonCodec.readValueFromTree(objectNode, type);
         } catch (Exception e) {
             throw newConversionError(null, e);
         }
@@ -94,7 +94,7 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
     public <T2> T2 bind(T2 object, ArgumentConversionContext<T2> context, Set<? extends Map.Entry<? extends CharSequence, Object>> source) {
         try {
             JsonNode objectNode = buildSourceObjectNode(source);
-            objectMapper.updateValueFromTree(object, objectNode);
+            jsonCodec.updateValueFromTree(object, objectNode);
         } catch (Exception e) {
             context.reject(e);
         }
@@ -105,7 +105,7 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
     public <T2> T2 bind(T2 object, Set<? extends Map.Entry<? extends CharSequence, Object>> source) throws ConversionErrorException {
         try {
             JsonNode objectNode = buildSourceObjectNode(source);
-            objectMapper.updateValueFromTree(object, objectNode);
+            jsonCodec.updateValueFromTree(object, objectNode);
         } catch (Exception e) {
             throw newConversionError(object, e);
         }
@@ -118,7 +118,7 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
      * @return The new conversion error
      */
     protected ConversionErrorException newConversionError(Object object, Exception e) {
-        return objectMapper.newConversionError(object, e);
+        return jsonCodec.newConversionError(object, e);
     }
 
     private JsonNode buildSourceObjectNode(Set<? extends Map.Entry<? extends CharSequence, Object>> source) throws IOException {
@@ -148,10 +148,10 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
                                 objectNode.values.put(index, existing);
                             }
                             ObjectBuilder node = (ObjectBuilder) existing;
-                            node.values.put(token, new FixedValue(objectMapper.writeValueToTree(value)));
+                            node.values.put(token, new FixedValue(jsonCodec.writeValueToTree(value)));
                             index = null;
                         } else {
-                            objectNode.values.put(token, new FixedValue(objectMapper.writeValueToTree(value)));
+                            objectNode.values.put(token, new FixedValue(jsonCodec.writeValueToTree(value)));
                         }
                     } else if (current instanceof ArrayBuilder && index != null) {
                         ArrayBuilder arrayNode = (ArrayBuilder) current;
@@ -166,7 +166,7 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
                                 jsonNode = new ObjectBuilder();
                                 arrayNode.values.set(arrayIndex, jsonNode);
                             }
-                            ((ObjectBuilder) jsonNode).values.put(token, new FixedValue(objectMapper.writeValueToTree(value)));
+                            ((ObjectBuilder) jsonNode).values.put(token, new FixedValue(jsonCodec.writeValueToTree(value)));
                         }
                         index = null;
                     }

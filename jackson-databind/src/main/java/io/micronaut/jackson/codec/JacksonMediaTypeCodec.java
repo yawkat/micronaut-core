@@ -66,7 +66,7 @@ public abstract class JacksonMediaTypeCodec extends JsonCodecMediaTypeCodec {
      * @return The object mapper
      */
     public ObjectMapper getObjectMapper() {
-        return ((JacksonDatabindCodec) getObjectCodec()).getObjectMapper();
+        return ((JacksonDatabindCodec) getJsonCodec()).getObjectMapper();
     }
 
     @Override
@@ -77,7 +77,7 @@ public abstract class JacksonMediaTypeCodec extends JsonCodecMediaTypeCodec {
     public abstract JacksonMediaTypeCodec cloneWithFeatures(JacksonFeatures jacksonFeatures);
 
     @Override
-    protected JsonCodecMediaTypeCodec cloneWithMapper(JsonCodec mapper) {
+    protected JsonCodecMediaTypeCodec cloneWithCodec(JsonCodec codec) {
         throw new UnsupportedOperationException();
     }
 

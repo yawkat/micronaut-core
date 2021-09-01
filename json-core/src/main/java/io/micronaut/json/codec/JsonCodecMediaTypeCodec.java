@@ -51,20 +51,20 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
     protected final List<MediaType> additionalTypes;
     protected final CodecConfiguration codecConfiguration;
     protected final MediaType mediaType;
-    private final BeanProvider<JsonCodec> objectMapperProvider;
-    private JsonCodec objectMapper;
+    private final BeanProvider<JsonCodec> codecProvider;
+    private volatile JsonCodec codec;
 
     /**
-     * @param objectMapperProvider     To read/write JSON
+     * @param codecProvider            To read/write JSON
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      * @param mediaType                Client request/response media type
      */
-    public JsonCodecMediaTypeCodec(BeanProvider<JsonCodec> objectMapperProvider,
+    public JsonCodecMediaTypeCodec(BeanProvider<JsonCodec> codecProvider,
                                    ApplicationConfiguration applicationConfiguration,
                                    CodecConfiguration codecConfiguration,
                                    MediaType mediaType) {
-        this.objectMapperProvider = objectMapperProvider;
+        this.codecProvider = codecProvider;
         this.applicationConfiguration = applicationConfiguration;
         this.codecConfiguration = codecConfiguration;
         this.mediaType = mediaType;
@@ -76,53 +76,53 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
     }
 
     /**
-     * @param objectMapper             To read/write JSON
+     * @param codec                    To read/write JSON
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      * @param mediaType                Client request/response media type
      */
-    public JsonCodecMediaTypeCodec(JsonCodec objectMapper,
+    public JsonCodecMediaTypeCodec(JsonCodec codec,
                                    ApplicationConfiguration applicationConfiguration,
                                    CodecConfiguration codecConfiguration,
                                    MediaType mediaType) {
-        this(() -> objectMapper, applicationConfiguration, codecConfiguration, mediaType);
-        ArgumentUtils.requireNonNull("objectMapper", objectMapper);
-        this.objectMapper = objectMapper;
+        this(() -> codec, applicationConfiguration, codecConfiguration, mediaType);
+        ArgumentUtils.requireNonNull("objectMapper", codec);
+        this.codec = codec;
     }
 
     /**
      * @return The object mapper
      */
-    public JsonCodec getObjectCodec() {
-        JsonCodec objectMapper = this.objectMapper;
-        if (objectMapper == null) {
+    public JsonCodec getJsonCodec() {
+        JsonCodec codec = this.codec;
+        if (codec == null) {
             synchronized (this) { // double check
-                objectMapper = this.objectMapper;
-                if (objectMapper == null) {
-                    objectMapper = objectMapperProvider.get();
-                    this.objectMapper = objectMapper;
+                codec = this.codec;
+                if (codec == null) {
+                    codec = codecProvider.get();
+                    this.codec = codec;
                 }
             }
         }
-        return objectMapper;
+        return codec;
     }
 
     /**
-     * Create a copy of this codec with the given features. Should not be extended, extend {@link #cloneWithMapper}
+     * Create a copy of this codec with the given features. Should not be extended, extend {@link #cloneWithCodec}
      * instead.
      *
      * @param features The features to apply.
      * @return A new codec with the features applied, leaving this codec unchanged.
      */
     public JsonCodecMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
-        return cloneWithMapper(getObjectCodec().cloneWithFeatures(features));
+        return cloneWithCodec(getJsonCodec().cloneWithFeatures(features));
     }
 
     public final JsonCodecMediaTypeCodec cloneWithViewClass(Class<?> viewClass) {
-        return cloneWithMapper(getObjectCodec().cloneWithViewClass(viewClass));
+        return cloneWithCodec(getJsonCodec().cloneWithViewClass(viewClass));
     }
 
-    protected abstract JsonCodecMediaTypeCodec cloneWithMapper(JsonCodec mapper);
+    protected abstract JsonCodecMediaTypeCodec cloneWithCodec(JsonCodec codec);
 
     @Override
     public Collection<MediaType> getMediaTypes() {
@@ -137,11 +137,10 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
         return !(CharSequence.class.isAssignableFrom(type));
     }
 
-    @SuppressWarnings("Duplicates")
     @Override
     public <T> T decode(Argument<T> type, InputStream inputStream) throws CodecException {
         try {
-            return getObjectCodec().readValue(inputStream, type);
+            return getJsonCodec().readValue(inputStream, type);
         } catch (IOException e) {
             throw new CodecException("Error decoding JSON stream for type [" + type.getName() + "]: " + e.getMessage(), e);
         }
@@ -158,7 +157,7 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
      */
     public <T> T decode(Argument<T> type, JsonNode node) throws CodecException {
         try {
-            JsonCodec om = getObjectCodec();
+            JsonCodec om = getJsonCodec();
             return om.readValueFromTree(node, type);
         } catch (IOException e) {
             throw new CodecException("Error decoding JSON stream for type [" + type.getName() + "]: " + e.getMessage(), e);
@@ -171,7 +170,7 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
             if (CharSequence.class.isAssignableFrom(type.getType())) {
                 return (T) buffer.toString(applicationConfiguration.getDefaultCharset());
             } else {
-                return getObjectCodec().readValue(buffer.toByteArray(), type);
+                return getJsonCodec().readValue(buffer.toByteArray(), type);
             }
         } catch (IOException e) {
             throw new CodecException("Error decoding stream for type [" + type.getType() + "]: " + e.getMessage(), e);
@@ -184,7 +183,7 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
             if (CharSequence.class.isAssignableFrom(type.getType())) {
                 return (T) new String(bytes, applicationConfiguration.getDefaultCharset());
             } else {
-                return getObjectCodec().readValue(bytes, type);
+                return getJsonCodec().readValue(bytes, type);
             }
         } catch (IOException e) {
             throw new CodecException("Error decoding stream for type [" + type.getType() + "]: " + e.getMessage(), e);
@@ -195,7 +194,7 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
     @Override
     public <T> T decode(Argument<T> type, String data) throws CodecException {
         try {
-            return getObjectCodec().readValue(data, type);
+            return getJsonCodec().readValue(data, type);
         } catch (IOException e) {
             throw new CodecException("Error decoding JSON stream for type [" + type.getName() + "]: " + e.getMessage(), e);
         }
@@ -204,7 +203,7 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
     @Override
     public <T> void encode(T object, OutputStream outputStream) throws CodecException {
         try {
-            getObjectCodec().writeValue(outputStream, object);
+            getJsonCodec().writeValue(outputStream, object);
         } catch (IOException e) {
             throw new CodecException("Error encoding object [" + object + "] to JSON: " + e.getMessage(), e);
         }
@@ -216,7 +215,7 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
             if (object instanceof byte[]) {
                 return (byte[]) object;
             } else {
-                return getObjectCodec().writeValueAsBytes(object);
+                return getJsonCodec().writeValueAsBytes(object);
             }
         } catch (IOException e) {
             throw new CodecException("Error encoding object [" + object + "] to JSON: " + e.getMessage(), e);

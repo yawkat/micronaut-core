@@ -46,14 +46,14 @@ public class JsonStreamMediaTypeCodec extends JsonMediaTypeCodec {
     private final List<MediaType> additionalTypes;
 
     /**
-     * @param objectMapper             To read/write JSON
+     * @param jsonCodec                To read/write JSON
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      */
-    public JsonStreamMediaTypeCodec(JsonCodec objectMapper,
+    public JsonStreamMediaTypeCodec(JsonCodec jsonCodec,
                                     ApplicationConfiguration applicationConfiguration,
                                     @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
-        super(objectMapper, applicationConfiguration, null);
+        super(jsonCodec, applicationConfiguration, null);
         if (codecConfiguration != null) {
             this.additionalTypes = codecConfiguration.getAdditionalTypes();
         } else {
@@ -62,15 +62,15 @@ public class JsonStreamMediaTypeCodec extends JsonMediaTypeCodec {
     }
 
     /**
-     * @param objectMapper             To read/write JSON
+     * @param jsonCodec                To read/write JSON
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      */
     @Inject
-    public JsonStreamMediaTypeCodec(BeanProvider<JsonCodec> objectMapper,
+    public JsonStreamMediaTypeCodec(BeanProvider<JsonCodec> jsonCodec,
                                     ApplicationConfiguration applicationConfiguration,
                                     @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
-        super(objectMapper, applicationConfiguration, null);
+        super(jsonCodec, applicationConfiguration, null);
         if (codecConfiguration != null) {
             this.additionalTypes = codecConfiguration.getAdditionalTypes();
         } else {
@@ -84,5 +84,10 @@ public class JsonStreamMediaTypeCodec extends JsonMediaTypeCodec {
         mediaTypes.add(MediaType.APPLICATION_JSON_STREAM_TYPE);
         mediaTypes.addAll(additionalTypes);
         return mediaTypes;
+    }
+
+    @Override
+    protected JsonCodecMediaTypeCodec cloneWithCodec(JsonCodec codec) {
+        return new JsonStreamMediaTypeCodec(codec, applicationConfiguration, codecConfiguration);
     }
 }

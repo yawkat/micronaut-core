@@ -80,11 +80,11 @@ public class ComputeInstanceMetadataResolverUtils {
      * @param instanceMetadata The instance metadata
      * @param metadata         A json object of metadata
      */
-    public static void populateMetadata(AbstractComputeInstanceMetadata instanceMetadata, io.micronaut.json.tree.JsonNode metadata) {
+    public static void populateMetadata(AbstractComputeInstanceMetadata instanceMetadata, JsonNode metadata) {
         if (metadata != null) {
             Map<String, String> finalMetadata = new HashMap<>(metadata.size());
-            for (Map.Entry<String, io.micronaut.json.tree.JsonNode> entry : metadata.entries()) {
-                io.micronaut.json.tree.JsonNode value = entry.getValue();
+            for (Map.Entry<String, JsonNode> entry : metadata.entries()) {
+                JsonNode value = entry.getValue();
                 if (value.isString()) {
                     finalMetadata.put(entry.getKey(), value.getStringValue());
                 }

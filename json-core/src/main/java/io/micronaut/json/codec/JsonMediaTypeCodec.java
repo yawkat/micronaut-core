@@ -40,30 +40,30 @@ public class JsonMediaTypeCodec extends JsonCodecMediaTypeCodec {
     public static final String CONFIGURATION_QUALIFIER = "json";
 
     /**
-     * @param objectMapper             To read/write JSON
+     * @param jsonCodec                To read/write JSON
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      */
-    public JsonMediaTypeCodec(JsonCodec objectMapper,
+    public JsonMediaTypeCodec(JsonCodec jsonCodec,
                               ApplicationConfiguration applicationConfiguration,
                               @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
-        super(objectMapper, applicationConfiguration, codecConfiguration, MediaType.APPLICATION_JSON_TYPE);
+        super(jsonCodec, applicationConfiguration, codecConfiguration, MediaType.APPLICATION_JSON_TYPE);
     }
 
     /**
-     * @param objectMapper             To read/write JSON
+     * @param jsonCodec                To read/write JSON
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      */
     @Inject
-    public JsonMediaTypeCodec(BeanProvider<JsonCodec> objectMapper,
+    public JsonMediaTypeCodec(BeanProvider<JsonCodec> jsonCodec,
                               ApplicationConfiguration applicationConfiguration,
                               @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
-        super(objectMapper, applicationConfiguration, codecConfiguration, MediaType.APPLICATION_JSON_TYPE);
+        super(jsonCodec, applicationConfiguration, codecConfiguration, MediaType.APPLICATION_JSON_TYPE);
     }
 
     @Override
-    protected JsonCodecMediaTypeCodec cloneWithMapper(JsonCodec mapper) {
-        return new JsonMediaTypeCodec(mapper, applicationConfiguration, codecConfiguration);
+    protected JsonCodecMediaTypeCodec cloneWithCodec(JsonCodec codec) {
+        return new JsonMediaTypeCodec(codec, applicationConfiguration, codecConfiguration);
     }
 }
