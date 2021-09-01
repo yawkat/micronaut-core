@@ -8,7 +8,6 @@ dependencies {
 
     testAnnotationProcessor project(":inject-java")
     testAnnotationProcessor project(":inject-groovy")
-    testAnnotationProcessor project(":serialization-generator")
     testImplementation project(":inject-java")
     testImplementation project(":inject-java-test")
     testImplementation project(":inject-groovy")
