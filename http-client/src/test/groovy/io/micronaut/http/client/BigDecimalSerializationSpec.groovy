@@ -46,12 +46,9 @@ class BigDecimalSerializationSpec extends Specification {
     @Client("/")
     HttpClient client
 
-    // todo: looks like this test case only tests for float<->double conversion. This issue is unmasked by
-    //  jackson-jr-stree, which converts the intermediate double value to 48.66996900000000000...something.
-    //  my fix for now is to change the rounding below. This should still cover the float conversion
     void "test that big decimal precision is retained during JSON ser-de"() {
         given:
-        BigDecimal bigDecimal = new BigDecimal('48.669969')
+        BigDecimal bigDecimal = BigDecimal.valueOf(48.669969)
 
         def pojo = new TestPojo(bigDecimal)
         pojo.f = 1.12345f
@@ -105,7 +102,7 @@ class BigDecimalSerializationSpec extends Specification {
 
         @Override
         BigDecimal deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-            return p.getDecimalValue().setScale(6, RoundingMode.HALF_UP)
+            return p.getDecimalValue().setScale(6, RoundingMode.UP)
         }
     }
 
@@ -115,7 +112,7 @@ class BigDecimalSerializationSpec extends Specification {
 
         @Override
         void serialize(BigDecimal value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-            gen.writeNumber(value.setScale(6, RoundingMode.HALF_UP))
+            gen.writeNumber(value.setScale(6, RoundingMode.UP))
         }
     }
 }
