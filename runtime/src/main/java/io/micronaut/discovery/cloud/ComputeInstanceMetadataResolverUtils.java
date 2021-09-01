@@ -18,7 +18,6 @@ package io.micronaut.discovery.cloud;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.TreeCodec;
-import com.fasterxml.jackson.core.TreeNode;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.http.HttpMethod;
 import io.micronaut.jackson.core.tree.MicronautTreeCodec;
@@ -31,7 +30,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Utility class for {@link ComputeInstanceMetadataResolver}'s.
@@ -48,7 +46,7 @@ public class ComputeInstanceMetadataResolverUtils {
      * @param url                 the URL to read
      * @param connectionTimeoutMs connection timeout, in milliseconds
      * @param readTimeoutMs       read timeout, in milliseconds
-     * @param treeCodec           Jackson's {@link TreeCodec}
+     * @param treeCodec           Tree codec to use (contains deserialization config)
      * @param jsonFactory         Jackson's {@link JsonFactory}
      * @param requestProperties   any request properties to pass
      * @return a {@link JsonNode} instance
