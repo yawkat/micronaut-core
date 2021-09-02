@@ -18,21 +18,41 @@ package io.micronaut.jackson.core.tree;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.json.JsonConfig;
+import io.micronaut.json.JsonStreamConfig;
 
 import java.io.IOException;
 
+/**
+ * Utility functions for transferring from a {@link JsonParser} to a {@link JsonGenerator}.
+ *
+ * @author Jonas Konrad
+ * @since 3.1
+ */
 @Internal
 public final class JsonStreamTransfer {
     private JsonStreamTransfer() {
     }
 
-    public static void transferNext(JsonParser from, JsonGenerator to, JsonConfig config) throws IOException {
+    /**
+     * Transfer tokens, starting with the next token.
+     *
+     * @param from   Parser to transfer data from.
+     * @param to     Generator to transfer data to.
+     * @param config Configuration to use for copying.
+     */
+    public static void transferNext(JsonParser from, JsonGenerator to, JsonStreamConfig config) throws IOException {
         from.nextToken();
         transfer(from, to, config);
     }
 
-    public static void transfer(JsonParser from, JsonGenerator to, JsonConfig config) throws IOException {
+    /**
+     * Transfer tokens, starting with the current token.
+     *
+     * @param from   Parser to transfer data from.
+     * @param to     Generator to transfer data to.
+     * @param config Configuration to use for copying.
+     */
+    public static void transfer(JsonParser from, JsonGenerator to, JsonStreamConfig config) throws IOException {
         if (!from.hasCurrentToken()) {
             throw new IllegalArgumentException("Parser not positioned at token. Try transferNext");
         }
@@ -41,10 +61,17 @@ public final class JsonStreamTransfer {
         } while (from.nextToken() != null);
     }
 
+    /**
+     * Transfer a single token.
+     *
+     * @param from   Parser to transfer data from.
+     * @param to     Generator to transfer data to.
+     * @param config Configuration to use for copying.
+     */
     public static void transferCurrentToken(
             JsonParser from,
             JsonGenerator to,
-            JsonConfig config
+            JsonStreamConfig config
     ) throws IOException {
         switch (from.currentToken()) {
             case START_OBJECT:

@@ -26,14 +26,14 @@ import io.micronaut.core.async.processor.SingleThreadedBufferingProcessor;
 import io.micronaut.jackson.core.tree.JsonStreamTransfer;
 import io.micronaut.jackson.core.tree.MicronautTreeCodec;
 import io.micronaut.jackson.core.tree.TreeGenerator;
-import io.micronaut.json.JsonConfig;
+import io.micronaut.json.JsonStreamConfig;
 import io.micronaut.json.tree.JsonNode;
 import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Optional;
 
 /**
  * A Reactive streams publisher that publishes a {@link JsonNode} once the JSON has been fully consumed.
@@ -52,7 +52,7 @@ public class JacksonCoreProcessor extends SingleThreadedBufferingProcessor<byte[
     private TreeGenerator currentGenerator = null;
 
     private final JsonFactory jsonFactory;
-    private final JsonConfig deserializationConfig;
+    private final JsonStreamConfig deserializationConfig;
     private final MicronautTreeCodec treeCodec;
 
     private final boolean streamArray;
@@ -68,7 +68,7 @@ public class JacksonCoreProcessor extends SingleThreadedBufferingProcessor<byte[
      * @param jsonFactory           Factory to use for creating the parser
      * @param deserializationConfig The deserialization configuration (in particular bignum handling)
      */
-    public JacksonCoreProcessor(boolean streamArray, JsonFactory jsonFactory, @NonNull JsonConfig deserializationConfig) {
+    public JacksonCoreProcessor(boolean streamArray, JsonFactory jsonFactory, @NonNull JsonStreamConfig deserializationConfig) {
         this.jsonFactory = jsonFactory;
         this.streamArray = streamArray;
         this.treeCodec = MicronautTreeCodec.getInstance().withConfig(deserializationConfig);

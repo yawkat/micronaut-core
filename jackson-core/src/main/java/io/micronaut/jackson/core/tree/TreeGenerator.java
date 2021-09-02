@@ -15,19 +15,38 @@
  */
 package io.micronaut.jackson.core.tree;
 
-import com.fasterxml.jackson.core.*;
-import io.micronaut.core.annotation.Internal;
+import com.fasterxml.jackson.core.Base64Variant;
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonStreamContext;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.ObjectCodec;
+import com.fasterxml.jackson.core.SerializableString;
+import com.fasterxml.jackson.core.TreeNode;
+import com.fasterxml.jackson.core.Version;
+import io.micronaut.core.annotation.Experimental;
 import io.micronaut.core.annotation.NonNull;
-import io.micronaut.json.JsonConfig;
+import io.micronaut.json.JsonStreamConfig;
 import io.micronaut.json.tree.JsonNode;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-@Internal
+/**
+ * A {@link JsonGenerator} that returns tokens as a {@link JsonNode}.
+ *
+ * @author Jonas Konrad
+ * @since 3.1
+ */
+@Experimental
 public final class TreeGenerator extends JsonGenerator {
     private ObjectCodec codec;
     private int generatorFeatures;
@@ -128,10 +147,17 @@ public final class TreeGenerator extends JsonGenerator {
         completed = value;
     }
 
+    /**
+     * @return Whether this generator has visited a complete node.
+     */
     public boolean isComplete() {
         return completed != null;
     }
 
+    /**
+     * @return The completed node.
+     * @throws IllegalStateException If there is still data missing. Check with {@link #isComplete()}.
+     */
     @NonNull
     public JsonNode getCompletedValue() {
         if (!isComplete()) {
@@ -318,7 +344,7 @@ public final class TreeGenerator extends JsonGenerator {
         } else if (rootNode instanceof JsonNode) {
             writeScalar(JsonToken.VALUE_EMBEDDED_OBJECT, (JsonNode) rootNode);
         } else {
-            JsonStreamTransfer.transferNext(rootNode.traverse(), this, JsonConfig.DEFAULT);
+            JsonStreamTransfer.transferNext(rootNode.traverse(), this, JsonStreamConfig.DEFAULT);
         }
     }
 

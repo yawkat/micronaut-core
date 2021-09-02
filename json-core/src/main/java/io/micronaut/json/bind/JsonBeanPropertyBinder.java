@@ -15,14 +15,16 @@
  */
 package io.micronaut.json.bind;
 
+import io.micronaut.context.BeanLocator;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.core.bind.BeanPropertyBinder;
 import io.micronaut.core.convert.ArgumentConversionContext;
 import io.micronaut.core.convert.ConversionError;
 import io.micronaut.core.convert.exceptions.ConversionErrorException;
+import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.core.util.StringUtils;
-import io.micronaut.json.JsonCodec;
+import io.micronaut.json.JsonMapper;
 import io.micronaut.json.JsonConfiguration;
 import io.micronaut.json.tree.JsonNode;
 import jakarta.inject.Singleton;
@@ -39,25 +41,28 @@ import java.util.stream.Collectors;
  */
 @Singleton
 @Primary
-class JsonBeanPropertyBinder implements BeanPropertyBinder {
+final class JsonBeanPropertyBinder implements BeanPropertyBinder {
 
-    private final JsonCodec jsonCodec;
+    private final JsonMapper jsonMapper;
     private final int arraySizeThreshhold;
+    private final Iterable<JsonBeanPropertyBinderExceptionHandler> exceptionHandlers;
 
     /**
-     * @param jsonCodec  To read/write JSON
+     * @param jsonMapper    To read/write JSON
      * @param configuration The configuration for Jackson JSON parser
+     * @param locator       Locator for exception handlers.
      */
-    JsonBeanPropertyBinder(JsonCodec jsonCodec, JsonConfiguration configuration) {
-        this.jsonCodec = jsonCodec;
+    JsonBeanPropertyBinder(JsonMapper jsonMapper, JsonConfiguration configuration, BeanLocator locator) {
+        this.jsonMapper = jsonMapper;
         this.arraySizeThreshhold = configuration.getArraySizeThreshold();
+        this.exceptionHandlers = locator.getBeansOfType(JsonBeanPropertyBinderExceptionHandler.class);
     }
 
     @Override
     public BindingResult<Object> bind(ArgumentConversionContext<Object> context, Map<CharSequence, ? super Object> source) {
         try {
             JsonNode objectNode = buildSourceObjectNode(source.entrySet());
-            Object result = jsonCodec.readValueFromTree(objectNode, context.getArgument());
+            Object result = jsonMapper.readValueFromTree(objectNode, context.getArgument());
             return () -> Optional.of(result);
         } catch (Exception e) {
             context.reject(e);
@@ -84,7 +89,7 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
     public <T2> T2 bind(Class<T2> type, Set<? extends Map.Entry<? extends CharSequence, Object>> source) throws ConversionErrorException {
         try {
             JsonNode objectNode = buildSourceObjectNode(source);
-            return jsonCodec.readValueFromTree(objectNode, type);
+            return jsonMapper.readValueFromTree(objectNode, type);
         } catch (Exception e) {
             throw newConversionError(null, e);
         }
@@ -94,7 +99,7 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
     public <T2> T2 bind(T2 object, ArgumentConversionContext<T2> context, Set<? extends Map.Entry<? extends CharSequence, Object>> source) {
         try {
             JsonNode objectNode = buildSourceObjectNode(source);
-            jsonCodec.updateValueFromTree(object, objectNode);
+            jsonMapper.updateValueFromTree(object, objectNode);
         } catch (Exception e) {
             context.reject(e);
         }
@@ -105,7 +110,7 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
     public <T2> T2 bind(T2 object, Set<? extends Map.Entry<? extends CharSequence, Object>> source) throws ConversionErrorException {
         try {
             JsonNode objectNode = buildSourceObjectNode(source);
-            jsonCodec.updateValueFromTree(object, objectNode);
+            jsonMapper.updateValueFromTree(object, objectNode);
         } catch (Exception e) {
             throw newConversionError(object, e);
         }
@@ -118,7 +123,26 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
      * @return The new conversion error
      */
     protected ConversionErrorException newConversionError(Object object, Exception e) {
-        return jsonCodec.newConversionError(object, e);
+        for (JsonBeanPropertyBinderExceptionHandler exceptionHandler : exceptionHandlers) {
+            Optional<ConversionErrorException> handled = exceptionHandler.toConversionError(object, e);
+            if (handled.isPresent()) {
+                return handled.get();
+            }
+        }
+
+        ConversionError conversionError = new ConversionError() {
+            @Override
+            public Exception getCause() {
+                return e;
+            }
+
+            @Override
+            public Optional<Object> getOriginalValue() {
+                return Optional.empty();
+            }
+        };
+        Class type = object != null ? object.getClass() : Object.class;
+        return new ConversionErrorException(Argument.of(type), conversionError);
     }
 
     private JsonNode buildSourceObjectNode(Set<? extends Map.Entry<? extends CharSequence, Object>> source) throws IOException {
@@ -148,10 +172,10 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
                                 objectNode.values.put(index, existing);
                             }
                             ObjectBuilder node = (ObjectBuilder) existing;
-                            node.values.put(token, new FixedValue(jsonCodec.writeValueToTree(value)));
+                            node.values.put(token, new FixedValue(jsonMapper.writeValueToTree(value)));
                             index = null;
                         } else {
-                            objectNode.values.put(token, new FixedValue(jsonCodec.writeValueToTree(value)));
+                            objectNode.values.put(token, new FixedValue(jsonMapper.writeValueToTree(value)));
                         }
                     } else if (current instanceof ArrayBuilder && index != null) {
                         ArrayBuilder arrayNode = (ArrayBuilder) current;
@@ -166,7 +190,7 @@ class JsonBeanPropertyBinder implements BeanPropertyBinder {
                                 jsonNode = new ObjectBuilder();
                                 arrayNode.values.set(arrayIndex, jsonNode);
                             }
-                            ((ObjectBuilder) jsonNode).values.put(token, new FixedValue(jsonCodec.writeValueToTree(value)));
+                            ((ObjectBuilder) jsonNode).values.put(token, new FixedValue(jsonMapper.writeValueToTree(value)));
                         }
                         index = null;
                     }

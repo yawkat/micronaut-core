@@ -21,7 +21,10 @@ import io.micronaut.core.annotation.NonNull;
 import java.util.Map;
 
 /**
- * Public to allow special handling for conversion service.
+ * Public to allow special handling for conversion service. Use {@link JsonNode#isObject()} to distinguish nodes.
+ *
+ * @author Jonas Konrad
+ * @since 3.1
  */
 @Internal
 public class JsonObject extends JsonContainer {
@@ -42,7 +45,7 @@ public class JsonObject extends JsonContainer {
     }
 
     @Override
-    public JsonNode get(String fieldName) {
+    public JsonNode get(@NonNull String fieldName) {
         return values.get(fieldName);
     }
 

@@ -58,9 +58,9 @@ import io.micronaut.http.netty.channel.EventLoopGroupFactory;
 import io.micronaut.http.netty.channel.EventLoopGroupRegistry;
 import io.micronaut.inject.InjectionPoint;
 import io.micronaut.inject.qualifiers.Qualifiers;
-import io.micronaut.json.JsonCodec;
+import io.micronaut.json.JsonMapper;
 import io.micronaut.json.JsonFeatures;
-import io.micronaut.json.codec.JsonCodecMediaTypeCodec;
+import io.micronaut.json.codec.MapperMediaTypeCodec;
 import io.micronaut.scheduling.instrument.InvocationInstrumenterFactory;
 import io.micronaut.websocket.WebSocketClient;
 import io.micronaut.websocket.WebSocketClientRegistry;
@@ -350,8 +350,8 @@ class DefaultNettyHttpClientRegistry implements AutoCloseable,
                 List<MediaTypeCodec> codecs = new ArrayList<>(2);
                 MediaTypeCodecRegistry codecRegistry = client.getMediaTypeCodecRegistry();
                 for (MediaTypeCodec codec : codecRegistry.getCodecs()) {
-                    if (codec instanceof JsonCodecMediaTypeCodec) {
-                        codecs.add(((JsonCodecMediaTypeCodec) codec).cloneWithFeatures(jsonFeatures));
+                    if (codec instanceof MapperMediaTypeCodec) {
+                        codecs.add(((MapperMediaTypeCodec) codec).cloneWithFeatures(jsonFeatures));
                     } else {
                         codecs.add(codec);
                     }
@@ -470,7 +470,7 @@ class DefaultNettyHttpClientRegistry implements AutoCloseable,
                 .getAnnotationNamesByStereotype(FilterMatcher.class);
         final Class configurationClass =
                 metadata.classValue(Client.class, "configuration").orElse(null);
-        JsonFeatures jsonFeatures = beanContext.getBean(JsonCodec.class).detectFeatures(metadata).orElse(null);
+        JsonFeatures jsonFeatures = beanContext.getBean(JsonMapper.class).detectFeatures(metadata).orElse(null);
 
         return new ClientKey(httpVersion, clientId, filterAnnotation, path, configurationClass, jsonFeatures);
     }
@@ -479,8 +479,8 @@ class DefaultNettyHttpClientRegistry implements AutoCloseable,
         return getJsonCodec(beanContext).cloneWithFeatures(jsonFeatures);
     }
 
-    private static JsonCodecMediaTypeCodec getJsonCodec(BeanContext beanContext) {
-        return beanContext.getBean(JsonCodecMediaTypeCodec.class, Qualifiers.byName(JsonCodecMediaTypeCodec.REGULAR_JSON_MEDIA_TYPE_CODEC_NAME));
+    private static MapperMediaTypeCodec getJsonCodec(BeanContext beanContext) {
+        return beanContext.getBean(MapperMediaTypeCodec.class, Qualifiers.byName(MapperMediaTypeCodec.REGULAR_JSON_MEDIA_TYPE_CODEC_NAME));
     }
 
     /**

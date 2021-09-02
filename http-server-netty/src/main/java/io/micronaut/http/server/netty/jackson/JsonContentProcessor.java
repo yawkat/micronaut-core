@@ -24,7 +24,7 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.server.HttpServerConfiguration;
 import io.micronaut.http.server.netty.AbstractHttpContentProcessor;
 import io.micronaut.http.server.netty.NettyHttpRequest;
-import io.micronaut.json.JsonCodec;
+import io.micronaut.json.JsonMapper;
 import io.micronaut.json.tree.JsonNode;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -46,20 +46,20 @@ import java.util.Optional;
 @Internal
 public class JsonContentProcessor extends AbstractHttpContentProcessor<JsonNode> {
 
-    private final JsonCodec jsonCodec;
+    private final JsonMapper jsonMapper;
     private Processor<byte[], JsonNode> jacksonProcessor;
 
     /**
      * @param nettyHttpRequest The Netty Http request
      * @param configuration    The Http server configuration
-     * @param jsonCodec        The json codec
+     * @param jsonMapper        The json codec
      */
     public JsonContentProcessor(
             NettyHttpRequest<?> nettyHttpRequest,
             HttpServerConfiguration configuration,
-            JsonCodec jsonCodec) {
+            JsonMapper jsonMapper) {
         super(nettyHttpRequest, configuration);
-        this.jsonCodec = jsonCodec;
+        this.jsonMapper = jsonMapper;
     }
 
     @Override
@@ -88,7 +88,7 @@ public class JsonContentProcessor extends AbstractHttpContentProcessor<JsonNode>
             }
         }
 
-        this.jacksonProcessor = jsonCodec.createReactiveParser(p -> {
+        this.jacksonProcessor = jsonMapper.createReactiveParser(p -> {
         }, streamArray);
         this.jacksonProcessor.subscribe(new CompletionAwareSubscriber<JsonNode>() {
 

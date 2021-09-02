@@ -43,7 +43,7 @@ abstract class JsonScalar extends JsonNode {
     }
 
     @Override
-    public JsonNode get(String fieldName) {
+    public JsonNode get(@NonNull String fieldName) {
         return null;
     }
 

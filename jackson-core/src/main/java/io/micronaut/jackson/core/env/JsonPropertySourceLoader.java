@@ -23,7 +23,12 @@ import io.micronaut.json.tree.JsonNode;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>A {@link io.micronaut.context.env.PropertySourceLoader} that reads <tt>application.json</tt> files if they exist.</p>

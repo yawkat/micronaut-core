@@ -24,7 +24,7 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
 import io.micronaut.http.codec.CodecException;
 import io.micronaut.http.codec.MediaTypeCodec;
-import io.micronaut.json.JsonCodec;
+import io.micronaut.json.JsonMapper;
 import io.micronaut.json.JsonFeatures;
 import io.micronaut.json.tree.JsonNode;
 import io.micronaut.runtime.ApplicationConfiguration;
@@ -38,33 +38,34 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * A {@link MediaTypeCodec} Jackson based implementations.
+ * A {@link MediaTypeCodec} for {@link JsonMapper} based implementations.
  *
  * @author Graeme Rocher
  * @author svishnyakov
  * @since 1.3.0
  */
-public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
+public abstract class MapperMediaTypeCodec implements MediaTypeCodec {
     public static final String REGULAR_JSON_MEDIA_TYPE_CODEC_NAME = "json";
 
     protected final ApplicationConfiguration applicationConfiguration;
     protected final List<MediaType> additionalTypes;
     protected final CodecConfiguration codecConfiguration;
     protected final MediaType mediaType;
-    private final BeanProvider<JsonCodec> codecProvider;
-    private volatile JsonCodec codec;
+
+    private final BeanProvider<JsonMapper> mapperProvider;
+    private volatile JsonMapper mapper;
 
     /**
-     * @param codecProvider            To read/write JSON
+     * @param mapperProvider           To read/write JSON
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      * @param mediaType                Client request/response media type
      */
-    public JsonCodecMediaTypeCodec(BeanProvider<JsonCodec> codecProvider,
-                                   ApplicationConfiguration applicationConfiguration,
-                                   CodecConfiguration codecConfiguration,
-                                   MediaType mediaType) {
-        this.codecProvider = codecProvider;
+    public MapperMediaTypeCodec(BeanProvider<JsonMapper> mapperProvider,
+                                ApplicationConfiguration applicationConfiguration,
+                                CodecConfiguration codecConfiguration,
+                                MediaType mediaType) {
+        this.mapperProvider = mapperProvider;
         this.applicationConfiguration = applicationConfiguration;
         this.codecConfiguration = codecConfiguration;
         this.mediaType = mediaType;
@@ -76,31 +77,31 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
     }
 
     /**
-     * @param codec                    To read/write JSON
+     * @param mapper                    To read/write JSON
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      * @param mediaType                Client request/response media type
      */
-    public JsonCodecMediaTypeCodec(JsonCodec codec,
-                                   ApplicationConfiguration applicationConfiguration,
-                                   CodecConfiguration codecConfiguration,
-                                   MediaType mediaType) {
-        this(() -> codec, applicationConfiguration, codecConfiguration, mediaType);
-        ArgumentUtils.requireNonNull("objectMapper", codec);
-        this.codec = codec;
+    public MapperMediaTypeCodec(JsonMapper mapper,
+                                ApplicationConfiguration applicationConfiguration,
+                                CodecConfiguration codecConfiguration,
+                                MediaType mediaType) {
+        this(() -> mapper, applicationConfiguration, codecConfiguration, mediaType);
+        ArgumentUtils.requireNonNull("objectMapper", mapper);
+        this.mapper = mapper;
     }
 
     /**
      * @return The object mapper
      */
-    public JsonCodec getJsonCodec() {
-        JsonCodec codec = this.codec;
+    public JsonMapper getJsonCodec() {
+        JsonMapper codec = this.mapper;
         if (codec == null) {
             synchronized (this) { // double check
-                codec = this.codec;
+                codec = this.mapper;
                 if (codec == null) {
-                    codec = codecProvider.get();
-                    this.codec = codec;
+                    codec = mapperProvider.get();
+                    this.mapper = codec;
                 }
             }
         }
@@ -108,21 +109,21 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
     }
 
     /**
-     * Create a copy of this codec with the given features. Should not be extended, extend {@link #cloneWithCodec}
+     * Create a copy of this codec with the given features. Should not be extended, extend {@link #cloneWithMapper}
      * instead.
      *
      * @param features The features to apply.
      * @return A new codec with the features applied, leaving this codec unchanged.
      */
-    public JsonCodecMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
-        return cloneWithCodec(getJsonCodec().cloneWithFeatures(features));
+    public MapperMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
+        return cloneWithMapper(getJsonCodec().cloneWithFeatures(features));
     }
 
-    public final JsonCodecMediaTypeCodec cloneWithViewClass(Class<?> viewClass) {
-        return cloneWithCodec(getJsonCodec().cloneWithViewClass(viewClass));
+    public final MapperMediaTypeCodec cloneWithViewClass(Class<?> viewClass) {
+        return cloneWithMapper(getJsonCodec().cloneWithViewClass(viewClass));
     }
 
-    protected abstract JsonCodecMediaTypeCodec cloneWithCodec(JsonCodec codec);
+    protected abstract MapperMediaTypeCodec cloneWithMapper(JsonMapper mapper);
 
     @Override
     public Collection<MediaType> getMediaTypes() {
@@ -157,7 +158,7 @@ public abstract class JsonCodecMediaTypeCodec implements MediaTypeCodec {
      */
     public <T> T decode(Argument<T> type, JsonNode node) throws CodecException {
         try {
-            JsonCodec om = getJsonCodec();
+            JsonMapper om = getJsonCodec();
             return om.readValueFromTree(node, type);
         } catch (IOException e) {
             throw new CodecException("Error decoding JSON stream for type [" + type.getName() + "]: " + e.getMessage(), e);

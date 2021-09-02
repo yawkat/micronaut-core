@@ -16,12 +16,14 @@
 package io.micronaut.json.bind
 
 import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import io.micronaut.context.ApplicationContext
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.convert.ConversionService
+import io.micronaut.core.convert.exceptions.ConversionErrorException
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
@@ -112,4 +114,23 @@ class JsonBeanPropertyBinderSpec extends Specification {
         }
     }
 
+    void 'mapping exceptions have proper metadata'() {
+        given:
+        JsonBeanPropertyBinder binder = context.getBean(JsonBeanPropertyBinder)
+
+        when:
+        binder.bind(FailingType, ['foo': '123blob'])
+
+        then:
+        def e = thrown ConversionErrorException
+
+        expect:
+        e.argument.type == int
+        e.argument.name == 'foo'
+        e.conversionError.originalValue == Optional.of('123blob')
+    }
+
+    static class FailingType {
+        int foo
+    }
 }

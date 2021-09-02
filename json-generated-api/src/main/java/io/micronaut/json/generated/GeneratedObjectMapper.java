@@ -16,10 +16,14 @@
 package io.micronaut.json.generated;
 
 import com.fasterxml.jackson.core.*;
+import com.fasterxml.jackson.core.type.ResolvedType;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.core.util.ByteArrayBuilder;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.context.annotation.Secondary;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.reflect.GenericTypeUtils;
 import io.micronaut.core.type.Argument;
 import io.micronaut.jackson.core.tree.MicronautTreeCodec;
@@ -38,20 +42,22 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Type;
+import java.util.Iterator;
 import java.util.function.Consumer;
 
 @Internal
 @Singleton
 @Secondary
 @BootstrapContextCompatible
-public final class GeneratedObjectCodec implements JsonCodec {
+public final class GeneratedObjectMapper implements JsonMapper {
     private static final JsonFactory FACTORY = new JsonFactory();
 
     private final SerializerLocator locator;
-    private final JsonConfig deserializationConfig;
+    private final JsonStreamConfig deserializationConfig;
     private final MicronautTreeCodec treeCodec;
+    private final ObjectCodecImpl objectCodecImpl = new ObjectCodecImpl();
 
-    private GeneratedObjectCodec(SerializerLocator locator, JsonConfig deserializationConfig) {
+    private GeneratedObjectMapper(SerializerLocator locator, JsonStreamConfig deserializationConfig) {
         this.locator = locator;
         this.deserializationConfig = deserializationConfig;
         this.treeCodec = MicronautTreeCodec.getInstance().withConfig(deserializationConfig);
@@ -59,8 +65,8 @@ public final class GeneratedObjectCodec implements JsonCodec {
 
     @Inject
     @Internal
-    public GeneratedObjectCodec(SerializerLocator locator) {
-        this(locator, JsonConfig.DEFAULT);
+    public GeneratedObjectMapper(SerializerLocator locator) {
+        this(locator, JsonStreamConfig.DEFAULT);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -70,6 +76,7 @@ public final class GeneratedObjectCodec implements JsonCodec {
 
     // type-safe helper method
     private <T> void writeValue0(JsonGenerator gen, T value, Class<T> type) throws IOException {
+        gen.setCodec(objectCodecImpl);
         Serializer<? super T> serializer = locator.findContravariantSerializer(type);
         if (serializer instanceof ObjectSerializer) {
             throw new ObjectMappingException("No serializer for type " + type.getName());
@@ -83,6 +90,7 @@ public final class GeneratedObjectCodec implements JsonCodec {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private <T> T readValue0(JsonParser parser, Type type) throws IOException {
+        parser.setCodec(objectCodecImpl);
         Deserializer deserializer = locator.findInvariantDeserializer(type);
         if (!parser.hasCurrentToken()) {
             parser.nextToken();
@@ -95,7 +103,7 @@ public final class GeneratedObjectCodec implements JsonCodec {
     }
 
     @Override
-    public <T> T readValueFromTree(JsonNode tree, Argument<T> type) throws IOException {
+    public <T> T readValueFromTree(@NonNull JsonNode tree, @NonNull Argument<T> type) throws IOException {
         try {
             return readValue(treeCodec.treeAsTokens(tree), type);
         } catch (JsonProcessingException e) {
@@ -106,29 +114,29 @@ public final class GeneratedObjectCodec implements JsonCodec {
     }
 
     @Override
-    public JsonNode writeValueToTree(Object value) throws IOException {
+    public @NonNull JsonNode writeValueToTree(@Nullable Object value) throws IOException {
         TreeGenerator treeGenerator = treeCodec.createTreeGenerator();
         writeValue0(treeGenerator, value);
         return treeGenerator.getCompletedValue();
     }
 
     @Override
-    public <T> T readValue(InputStream inputStream, Argument<T> type) throws IOException {
+    public <T> T readValue(@NonNull InputStream inputStream, @NonNull Argument<T> type) throws IOException {
         return readValue(FACTORY.createParser(inputStream), type);
     }
 
     @Override
-    public <T> T readValue(byte[] byteArray, Argument<T> type) throws IOException {
+    public <T> T readValue(byte @NonNull [] byteArray, @NonNull Argument<T> type) throws IOException {
         return readValue(FACTORY.createParser(byteArray), type);
     }
 
     @Override
-    public void writeValue(OutputStream outputStream, Object object) throws IOException {
+    public void writeValue(@NonNull OutputStream outputStream, @Nullable Object object) throws IOException {
         writeValue0(FACTORY.createGenerator(outputStream), object);
     }
 
     @Override
-    public byte[] writeValueAsBytes(Object object) throws IOException {
+    public byte[] writeValueAsBytes(@Nullable Object object) throws IOException {
         ByteArrayBuilder bb = new ByteArrayBuilder(FACTORY._getBufferRecycler());
         try (JsonGenerator generator = FACTORY.createGenerator(bb)) {
             writeValue0(generator, object);
@@ -142,13 +150,14 @@ public final class GeneratedObjectCodec implements JsonCodec {
         return bytes;
     }
 
+    @NonNull
     @Override
-    public JsonConfig getDeserializationConfig() {
+    public JsonStreamConfig getStreamConfig() {
         return deserializationConfig;
     }
 
     @Override
-    public Processor<byte[], JsonNode> createReactiveParser(Consumer<Processor<byte[], JsonNode>> onSubscribe, boolean streamArray) {
+    public @NonNull Processor<byte[], JsonNode> createReactiveParser(Consumer<Processor<byte[], JsonNode>> onSubscribe, boolean streamArray) {
         return new JacksonCoreProcessor(streamArray, new JsonFactory(), deserializationConfig) {
             @Override
             public void subscribe(Subscriber<? super JsonNode> downstreamSubscriber) {
@@ -156,5 +165,77 @@ public final class GeneratedObjectCodec implements JsonCodec {
                 super.subscribe(downstreamSubscriber);
             }
         };
+    }
+
+    private class ObjectCodecImpl extends ObjectCodec {
+        @Override
+        public Version version() {
+            return Version.unknownVersion();
+        }
+
+        @Override
+        public <T> T readValue(JsonParser p, Class<T> valueType) throws IOException {
+            return readValue0(p, valueType);
+        }
+
+        @Override
+        public <T> T readValue(JsonParser p, TypeReference<T> valueTypeRef) throws IOException {
+            return readValue0(p, valueTypeRef.getType());
+        }
+
+        @Override
+        public <T> T readValue(JsonParser p, ResolvedType valueType) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <T> Iterator<T> readValues(JsonParser p, Class<T> valueType) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <T> Iterator<T> readValues(JsonParser p, TypeReference<T> valueTypeRef) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <T> Iterator<T> readValues(JsonParser p, ResolvedType valueType) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void writeValue(JsonGenerator gen, Object value) throws IOException {
+            writeValue0(gen, value);
+        }
+
+        @Override
+        public <T extends TreeNode> T readTree(JsonParser p) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void writeTree(JsonGenerator gen, TreeNode tree) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public TreeNode createObjectNode() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public TreeNode createArrayNode() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public JsonParser treeAsTokens(TreeNode n) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <T> T treeToValue(TreeNode n, Class<T> valueType) throws JsonProcessingException {
+            throw new UnsupportedOperationException();
+        }
     }
 }

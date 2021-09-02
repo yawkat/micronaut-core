@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
-import io.micronaut.json.JsonCodec;
+import io.micronaut.json.JsonMapper;
 import io.micronaut.runtime.ApplicationConfiguration;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -46,14 +46,14 @@ public class JsonStreamMediaTypeCodec extends JsonMediaTypeCodec {
     private final List<MediaType> additionalTypes;
 
     /**
-     * @param jsonCodec                To read/write JSON
+     * @param jsonMapper                To read/write JSON
      * @param applicationConfiguration The common application configurations
      * @param codecConfiguration       The configuration for the codec
      */
-    public JsonStreamMediaTypeCodec(JsonCodec jsonCodec,
+    public JsonStreamMediaTypeCodec(JsonMapper jsonMapper,
                                     ApplicationConfiguration applicationConfiguration,
                                     @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
-        super(jsonCodec, applicationConfiguration, null);
+        super(jsonMapper, applicationConfiguration, null);
         if (codecConfiguration != null) {
             this.additionalTypes = codecConfiguration.getAdditionalTypes();
         } else {
@@ -67,7 +67,7 @@ public class JsonStreamMediaTypeCodec extends JsonMediaTypeCodec {
      * @param codecConfiguration       The configuration for the codec
      */
     @Inject
-    public JsonStreamMediaTypeCodec(BeanProvider<JsonCodec> jsonCodec,
+    public JsonStreamMediaTypeCodec(BeanProvider<JsonMapper> jsonCodec,
                                     ApplicationConfiguration applicationConfiguration,
                                     @Named(CONFIGURATION_QUALIFIER) @Nullable CodecConfiguration codecConfiguration) {
         super(jsonCodec, applicationConfiguration, null);
@@ -87,7 +87,7 @@ public class JsonStreamMediaTypeCodec extends JsonMediaTypeCodec {
     }
 
     @Override
-    protected JsonCodecMediaTypeCodec cloneWithCodec(JsonCodec codec) {
-        return new JsonStreamMediaTypeCodec(codec, applicationConfiguration, codecConfiguration);
+    protected MapperMediaTypeCodec cloneWithMapper(JsonMapper mapper) {
+        return new JsonStreamMediaTypeCodec(mapper, applicationConfiguration, codecConfiguration);
     }
 }

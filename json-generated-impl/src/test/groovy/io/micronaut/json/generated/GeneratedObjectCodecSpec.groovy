@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
 import com.fasterxml.jackson.core.JsonFactory
-import com.fasterxml.jackson.core.type.TypeReference
 import io.micronaut.context.ApplicationContext
 import io.micronaut.core.type.Argument
 
@@ -17,20 +16,17 @@ class GeneratedObjectCodecSpec extends Specification {
     def readValue() {
         when:
         def ctx = ApplicationContext.run()
-        def codec = ctx.getBean(GeneratedObjectCodec)
+        def codec = ctx.getBean(GeneratedObjectMapper)
         def factory = new JsonFactory()
 
         then:
-        codec.readValue(factory.createParser('{"foo":"bar"}'), TestCls.class).foo == 'bar'
-        codec.readValue(factory.createParser('{"foo":"bar"}'), Argument.of(TestCls.class)).foo == 'bar'
-        codec.objectCodec.readValue(factory.createParser('{"foo":"bar"}'), TestCls.class).foo == 'bar'
-        codec.objectCodec.readValue(factory.createParser('{"foo":"bar"}'), new TypeReference<TestCls>() {}).foo == 'bar'
+        codec.readValue('{"foo":"bar"}', Argument.of(TestCls.class)).foo == 'bar'
     }
 
     def writeValueAsBytes() {
         when:
         def ctx = ApplicationContext.run()
-        def codec = ctx.getBean(GeneratedObjectCodec)
+        def codec = ctx.getBean(GeneratedObjectMapper)
 
         then:
         new String(codec.writeValueAsBytes(new TestCls("bar")), StandardCharsets.UTF_8) == '{"foo":"bar"}'
@@ -49,7 +45,7 @@ class GeneratedObjectCodecSpec extends Specification {
     def "super type serializable"() {
         given:
         def ctx = ApplicationContext.run()
-        def codec = ctx.getBean(GeneratedObjectCodec)
+        def codec = ctx.getBean(GeneratedObjectMapper)
 
         def value = new Subclass()
         value.foo = "42"
@@ -77,11 +73,10 @@ class GeneratedObjectCodecSpec extends Specification {
     def "generic bean deser"() {
         given:
         def ctx = ApplicationContext.run()
-        def codec = ctx.getBean(GeneratedObjectCodec)
-        def factory = codec.objectCodec.factory
+        def codec = ctx.getBean(GeneratedObjectMapper)
 
         when:
-        def parsed = codec.readValue(factory.createParser('{"naked":"foo","list":["bar"]}'), Argument.of(GenericBean.class, String.class))
+        def parsed = codec.readValue('{"naked":"foo","list":["bar"]}', Argument.of(GenericBean.class, String.class))
 
         then:
         parsed.naked == 'foo'
@@ -91,8 +86,7 @@ class GeneratedObjectCodecSpec extends Specification {
     def "generic bean ser"() {
         given:
         def ctx = ApplicationContext.run()
-        def codec = ctx.getBean(GeneratedObjectCodec)
-        def factory = codec.objectCodec.factory
+        def codec = ctx.getBean(GeneratedObjectMapper)
 
         def bean = new GenericBean<String>()
         bean.naked = "foo"
@@ -123,11 +117,10 @@ class GeneratedObjectCodecSpec extends Specification {
     def "raw map"() {
         given:
         def ctx = ApplicationContext.run()
-        def codec = ctx.getBean(GeneratedObjectCodec)
-        def factory = codec.objectCodec.factory
+        def codec = ctx.getBean(GeneratedObjectMapper)
 
         when:
-        def parsed = codec.readValue(factory.createParser('{"string":"foo","list":["bar"]}'), Map.class)
+        def parsed = codec.readValue('{"string":"foo","list":["bar"]}', Argument.of(Map.class))
 
         then:
         parsed == [string: 'foo', list: ['bar']]
@@ -142,16 +135,15 @@ class GeneratedObjectCodecSpec extends Specification {
     def "top-level null"() {
         given:
         def ctx = ApplicationContext.run()
-        def codec = ctx.getBean(GeneratedObjectCodec)
-        def factory = codec.objectCodec.factory
+        def codec = ctx.getBean(GeneratedObjectMapper)
 
         when:
-        def parsedNaked = codec.readValue(factory.createParser('null'), String.class)
+        def parsedNaked = codec.readValue('null', Argument.of(String.class))
         then:
         parsedNaked == null
 
         when:
-        def parsedOpt = codec.readValue(factory.createParser('null'), Argument.of(Optional.class, String.class))
+        def parsedOpt = codec.readValue('null', Argument.of(Optional.class, String.class))
         then:
         parsedOpt == Optional.empty()
     }
@@ -159,11 +151,10 @@ class GeneratedObjectCodecSpec extends Specification {
     def "Map<Object, V>"() {
         given:
         def ctx = ApplicationContext.run()
-        def codec = ctx.getBean(GeneratedObjectCodec)
-        def factory = codec.objectCodec.factory
+        def codec = ctx.getBean(GeneratedObjectMapper)
 
         when:
-        def parsed = codec.readValue(factory.createParser('{"foo":42}'), Argument.mapOf(Object, Integer))
+        def parsed = codec.readValue('{"foo":42}', Argument.mapOf(Object, Integer))
         then:
         parsed == [foo: 42]
     }

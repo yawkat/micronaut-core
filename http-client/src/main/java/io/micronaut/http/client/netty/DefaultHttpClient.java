@@ -92,9 +92,9 @@ import io.micronaut.http.netty.stream.StreamingInboundHttp2ToHttpAdapter;
 import io.micronaut.http.sse.Event;
 import io.micronaut.http.uri.UriBuilder;
 import io.micronaut.http.uri.UriTemplate;
-import io.micronaut.jackson.databind.JacksonDatabindCodec;
-import io.micronaut.json.JsonCodec;
-import io.micronaut.json.codec.JsonCodecMediaTypeCodec;
+import io.micronaut.jackson.databind.JacksonDatabindMapper;
+import io.micronaut.json.JsonMapper;
+import io.micronaut.json.codec.MapperMediaTypeCodec;
 import io.micronaut.json.codec.JsonMediaTypeCodec;
 import io.micronaut.json.codec.JsonStreamMediaTypeCodec;
 import io.micronaut.json.tree.JsonNode;
@@ -960,7 +960,7 @@ public class DefaultHttpClient implements
                     throw new IllegalStateException("Response has been wrapped in non streaming type. Do not wrap the response in client filters for stream requests");
                 }
 
-                JsonCodecMediaTypeCodec mediaTypeCodec = (JsonCodecMediaTypeCodec) mediaTypeCodecRegistry.findCodec(MediaType.APPLICATION_JSON_TYPE)
+                MapperMediaTypeCodec mediaTypeCodec = (MapperMediaTypeCodec) mediaTypeCodecRegistry.findCodec(MediaType.APPLICATION_JSON_TYPE)
                         .orElseThrow(() -> new IllegalStateException("No JSON codec found"));
 
                 StreamedHttpResponse streamResponse = NettyHttpResponseBuilder.toStreamResponse(response);
@@ -2550,7 +2550,7 @@ public class DefaultHttpClient implements
     }
 
     private static MediaTypeCodecRegistry createDefaultMediaTypeRegistry() {
-        JsonCodec mapper = new JacksonDatabindCodec();
+        JsonMapper mapper = new JacksonDatabindMapper();
         ApplicationConfiguration configuration = new ApplicationConfiguration();
         return MediaTypeCodecRegistry.of(
                 new JsonMediaTypeCodec(mapper, configuration, null),

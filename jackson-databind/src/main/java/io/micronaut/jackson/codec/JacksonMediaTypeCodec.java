@@ -22,20 +22,20 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.codec.CodecConfiguration;
 import io.micronaut.http.codec.CodecException;
-import io.micronaut.jackson.databind.JacksonDatabindCodec;
+import io.micronaut.jackson.databind.JacksonDatabindMapper;
 import io.micronaut.jackson.databind.JacksonFeatures;
-import io.micronaut.json.JsonCodec;
+import io.micronaut.json.JsonMapper;
 import io.micronaut.json.JsonFeatures;
-import io.micronaut.json.codec.JsonCodecMediaTypeCodec;
+import io.micronaut.json.codec.MapperMediaTypeCodec;
 import io.micronaut.runtime.ApplicationConfiguration;
 
 import java.io.IOException;
 
 /**
- * @deprecated Use {@link #JsonCodecMediaTypeCodec}
+ * @deprecated Use {@link #MapperMediaTypeCodec}
  */
 @Deprecated
-public abstract class JacksonMediaTypeCodec extends JsonCodecMediaTypeCodec {
+public abstract class JacksonMediaTypeCodec extends MapperMediaTypeCodec {
     public static final String REGULAR_JSON_MEDIA_TYPE_CODEC_NAME = "json";
 
     public JacksonMediaTypeCodec(BeanProvider<ObjectMapper> objectMapperProvider,
@@ -43,7 +43,7 @@ public abstract class JacksonMediaTypeCodec extends JsonCodecMediaTypeCodec {
                                  CodecConfiguration codecConfiguration,
                                  MediaType mediaType) {
         super(
-                () -> new JacksonDatabindCodec(objectMapperProvider.get()),
+                () -> new JacksonDatabindMapper(objectMapperProvider.get()),
                 applicationConfiguration,
                 codecConfiguration,
                 mediaType
@@ -55,7 +55,7 @@ public abstract class JacksonMediaTypeCodec extends JsonCodecMediaTypeCodec {
                                  CodecConfiguration codecConfiguration,
                                  MediaType mediaType) {
         super(
-                new JacksonDatabindCodec(objectMapper),
+                new JacksonDatabindMapper(objectMapper),
                 applicationConfiguration,
                 codecConfiguration,
                 mediaType
@@ -66,18 +66,18 @@ public abstract class JacksonMediaTypeCodec extends JsonCodecMediaTypeCodec {
      * @return The object mapper
      */
     public ObjectMapper getObjectMapper() {
-        return ((JacksonDatabindCodec) getJsonCodec()).getObjectMapper();
+        return ((JacksonDatabindMapper) getJsonCodec()).getObjectMapper();
     }
 
     @Override
-    public JsonCodecMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
+    public MapperMediaTypeCodec cloneWithFeatures(JsonFeatures features) {
         return cloneWithFeatures((JacksonFeatures) features);
     }
 
     public abstract JacksonMediaTypeCodec cloneWithFeatures(JacksonFeatures jacksonFeatures);
 
     @Override
-    protected JsonCodecMediaTypeCodec cloneWithCodec(JsonCodec codec) {
+    protected MapperMediaTypeCodec cloneWithMapper(JsonMapper mapper) {
         throw new UnsupportedOperationException();
     }
 

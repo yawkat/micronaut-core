@@ -15,8 +15,10 @@
  */
 package io.micronaut.json.tree;
 
+import io.micronaut.core.annotation.Experimental;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.annotation.Nullable;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -24,27 +26,60 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-@Internal
+/**
+ * Immutable class representing a json node. Json nodes can be either scalar (string, number, boolean, null) or
+ * containers (object, array).
+ *
+ * @author Jonas Konrad
+ * @since 3.1
+ */
+@Experimental
 public abstract class JsonNode {
     JsonNode() {
     }
 
+    /**
+     * @return The singleton node representing {@code null}.
+     */
+    @NonNull
     public static JsonNode nullNode() {
         return JsonNull.INSTANCE;
     }
 
-    public static JsonNode createArrayNode(List<JsonNode> nodes) {
+    /**
+     * @param nodes The nodes in this array. Must not be modified after this method is called.
+     * @return The immutable array node.
+     */
+    @NonNull
+    public static JsonNode createArrayNode(@NonNull List<JsonNode> nodes) {
+        Objects.requireNonNull(nodes, "nodes");
         return new JsonArray(nodes);
     }
 
+    /**
+     * @param nodes The nodes in this object. Must not be modified after this method is called.
+     * @return The immutable array node.
+     */
+    @NonNull
     public static JsonNode createObjectNode(Map<String, JsonNode> nodes) {
+        Objects.requireNonNull(nodes, "nodes");
         return new JsonObject(nodes);
     }
 
+    /**
+     * @param value The value of the node.
+     * @return A json node representing the given boolean value.
+     */
+    @NonNull
     public static JsonNode createBooleanNode(boolean value) {
         return JsonBoolean.valueOf(value);
     }
 
+    /**
+     * @param value The value of the node.
+     * @return A json node representing the given string value.
+     */
+    @NonNull
     public static JsonNode createStringNode(@NonNull String value) {
         Objects.requireNonNull(value, "value");
         return new JsonString(value);
@@ -62,26 +97,56 @@ public abstract class JsonNode {
         return new JsonNumber(value);
     }
 
+    /**
+     * @param value The value of the node.
+     * @return A json node representing the given numeric value.
+     */
+    @NonNull
     public static JsonNode createNumberNode(int value) {
         return createNumberNodeImpl(value);
     }
 
+    /**
+     * @param value The value of the node.
+     * @return A json node representing the given numeric value.
+     */
+    @NonNull
     public static JsonNode createNumberNode(long value) {
         return createNumberNodeImpl(value);
     }
 
+    /**
+     * @param value The value of the node.
+     * @return A json node representing the given numeric value.
+     */
+    @NonNull
     public static JsonNode createNumberNode(@NonNull BigDecimal value) {
         return createNumberNodeImpl(value);
     }
 
+    /**
+     * @param value The value of the node.
+     * @return A json node representing the given numeric value.
+     */
+    @NonNull
     public static JsonNode createNumberNode(float value) {
         return createNumberNodeImpl(value);
     }
 
+    /**
+     * @param value The value of the node.
+     * @return A json node representing the given numeric value.
+     */
+    @NonNull
     public static JsonNode createNumberNode(double value) {
         return createNumberNodeImpl(value);
     }
 
+    /**
+     * @param value The value of the node.
+     * @return A json node representing the given numeric value.
+     */
+    @NonNull
     public static JsonNode createNumberNode(@NonNull BigInteger value) {
         return createNumberNodeImpl(value);
     }
@@ -269,11 +334,13 @@ public abstract class JsonNode {
      * @param fieldName The field name.
      * @return The field with the given name, or {@code null} if there is no such field or this is not an object.
      */
-    public abstract JsonNode get(String fieldName);
+    @Nullable
+    public abstract JsonNode get(@NonNull String fieldName);
 
     /**
      * @param index The index into this array.
      * @return The field at the given index, or {@code null} if there is no such field or this is not an array.
      */
+    @Nullable
     public abstract JsonNode get(int index);
 }

@@ -15,32 +15,58 @@
  */
 package io.micronaut.jackson.core.tree;
 
-import com.fasterxml.jackson.core.*;
-import io.micronaut.json.JsonConfig;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import io.micronaut.core.annotation.Experimental;
+import io.micronaut.json.JsonStreamConfig;
 import io.micronaut.json.tree.JsonNode;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
+/**
+ * Codec for transforming {@link JsonNode} from and to json streams.
+ *
+ * @author Jonas Konrad
+ * @since 3.1
+ */
+@Experimental
 public final class MicronautTreeCodec {
-    private static final MicronautTreeCodec INSTANCE = new MicronautTreeCodec(JsonConfig.DEFAULT);
+    private static final MicronautTreeCodec INSTANCE = new MicronautTreeCodec(JsonStreamConfig.DEFAULT);
 
-    private final JsonConfig config;
+    private final JsonStreamConfig config;
 
-    private MicronautTreeCodec(JsonConfig config) {
+    private MicronautTreeCodec(JsonStreamConfig config) {
         this.config = config;
     }
 
+    /**
+     * @return The default instance, using {@link JsonStreamConfig#DEFAULT}.
+     */
     public static MicronautTreeCodec getInstance() {
         return INSTANCE;
     }
 
-    public MicronautTreeCodec withConfig(JsonConfig config) {
+    /**
+     * @param config The stream config to use.
+     * @return A new codec that will use the given stream config.
+     */
+    public MicronautTreeCodec withConfig(JsonStreamConfig config) {
         return new MicronautTreeCodec(config);
     }
 
+    /**
+     * Read a json node from a stream.
+     *
+     * @param p The stream to parse.
+     * @return The parsed json node.
+     */
     public JsonNode readTree(JsonParser p) throws IOException {
         switch (p.hasCurrentToken() ? p.currentToken() : p.nextToken()) {
             case START_OBJECT:
@@ -84,12 +110,18 @@ public final class MicronautTreeCodec {
         }
     }
 
-    public void writeTree(JsonGenerator generator, JsonNode tree) throws IOException, JsonProcessingException {
+    /**
+     * Write a json node to a json stream.
+     *
+     * @param generator The output json stream.
+     * @param tree      The node to write.
+     */
+    public void writeTree(JsonGenerator generator, JsonNode tree) throws IOException {
         if (tree.isObject()) {
             generator.writeStartObject();
             for (Map.Entry<String, JsonNode> entry : tree.entries()) {
                 generator.writeFieldName(entry.getKey());
-                writeTree(generator, tree);
+                writeTree(generator, entry.getValue());
             }
             generator.writeEndObject();
         } else if (tree.isArray()) {
@@ -104,30 +136,46 @@ public final class MicronautTreeCodec {
             generator.writeNull();
         } else if (tree.isNumber()) {
             Number value = tree.getNumberValue();
-            if (value instanceof BigDecimal) {
-                generator.writeNumber((BigDecimal) value);
+            // integer, long, double are the most common. Check those first.
+            if (value instanceof Integer) {
+                generator.writeNumber(value.intValue());
+            } else if (value instanceof Long) {
+                generator.writeNumber(value.longValue());
             } else if (value instanceof Double) {
                 generator.writeNumber(value.doubleValue());
             } else if (value instanceof Float) {
                 generator.writeNumber(value.floatValue());
-            } else if (value instanceof Integer) {
-                generator.writeNumber(value.intValue());
+            } else if (value instanceof BigDecimal) {
+                generator.writeNumber((BigDecimal) value);
             } else if (value instanceof Byte || value instanceof Short) {
                 generator.writeNumber(value.shortValue());
-            } else if (value instanceof Long) {
-                generator.writeNumber(value.longValue());
             } else if (value instanceof BigInteger) {
                 generator.writeNumber((BigInteger) value);
             } else {
                 throw new IllegalStateException("Unknown number type " + value.getClass().getName());
             }
+        } else if (tree.isString()) {
+            generator.writeString(tree.getStringValue());
+        } else {
+            throw new AssertionError();
         }
     }
 
+    /**
+     * Create a new parser that traverses over the given json node.
+     *
+     * @param node The json node to traverse over.
+     * @return The parser that will visit the json node.
+     */
     public JsonParser treeAsTokens(JsonNode node) {
         return new TraversingParser(node);
     }
 
+    /**
+     * Create a {@link JsonGenerator} that will return a {@link JsonNode} when completed.
+     *
+     * @return The generator.
+     */
     public TreeGenerator createTreeGenerator() {
         return new TreeGenerator();
     }

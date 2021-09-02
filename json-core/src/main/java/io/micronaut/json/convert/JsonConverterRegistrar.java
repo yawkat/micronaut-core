@@ -23,7 +23,7 @@ import io.micronaut.core.convert.*;
 import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.naming.NameUtils;
 import io.micronaut.core.type.Argument;
-import io.micronaut.json.JsonCodec;
+import io.micronaut.json.JsonMapper;
 import io.micronaut.json.tree.JsonArray;
 import io.micronaut.json.tree.JsonNode;
 import jakarta.inject.Inject;
@@ -34,13 +34,13 @@ import java.util.*;
 
 @Singleton
 public final class JsonConverterRegistrar implements TypeConverterRegistrar {
-    private final BeanProvider<JsonCodec> objectCodec;
+    private final BeanProvider<JsonMapper> objectCodec;
     private final ConversionService<?> conversionService;
     private final BeanProvider<BeanPropertyBinder> beanPropertyBinder;
 
     @Inject
     public JsonConverterRegistrar(
-            BeanProvider<JsonCodec> objectCodec,
+            BeanProvider<JsonMapper> objectCodec,
             ConversionService<?> conversionService,
             BeanProvider<BeanPropertyBinder> beanPropertyBinder
     ) {
@@ -116,7 +116,7 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
     public TypeConverter<JsonArray, Object[]> arrayNodeToObjectConverter() {
         return (node, targetType, context) -> {
             try {
-                JsonCodec om = this.objectCodec.get();
+                JsonMapper om = this.objectCodec.get();
                 Object[] result = om.readValueFromTree(node, targetType);
                 return Optional.of(result);
             } catch (IOException e) {
@@ -200,7 +200,7 @@ public final class JsonConverterRegistrar implements TypeConverterRegistrar {
                     if (argument == null) {
                         argument = Argument.of(targetType);
                     }
-                    JsonCodec om = this.objectCodec.get();
+                    JsonMapper om = this.objectCodec.get();
                     return Optional.ofNullable(om.readValueFromTree(node, argument));
                 }
             } catch (IOException e) {

@@ -22,7 +22,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Public to allow special handling for conversion service.
+ * Public to allow special handling for conversion service. Use {@link JsonNode#isArray()} to distinguish nodes.
+ *
+ * @author Jonas Konrad
+ * @since 3.1
  */
 @Internal
 public class JsonArray extends JsonContainer {
@@ -43,7 +46,7 @@ public class JsonArray extends JsonContainer {
     }
 
     @Override
-    public JsonNode get(String fieldName) {
+    public JsonNode get(@NonNull String fieldName) {
         return null;
     }
 

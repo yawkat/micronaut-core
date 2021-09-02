@@ -15,7 +15,14 @@
  */
 package io.micronaut.jackson.core.tree;
 
-import com.fasterxml.jackson.core.*;
+import com.fasterxml.jackson.core.Base64Variant;
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonStreamContext;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.ObjectCodec;
+import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.core.base.ParserMinimalBase;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.json.tree.JsonNode;
@@ -28,7 +35,7 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.Map;
 
-class TraversingParser extends ParserMinimalBase {
+final class TraversingParser extends ParserMinimalBase {
     private final Deque<Context> contextStack = new ArrayDeque<>();
 
     private boolean first = true;
