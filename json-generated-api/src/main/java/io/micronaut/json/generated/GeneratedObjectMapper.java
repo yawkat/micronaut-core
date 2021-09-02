@@ -126,7 +126,7 @@ public final class GeneratedObjectMapper implements JsonMapper {
     }
 
     @Override
-    public <T> T readValue(byte @NonNull [] byteArray, @NonNull Argument<T> type) throws IOException {
+    public <T> T readValue(@NonNull byte[] byteArray, @NonNull Argument<T> type) throws IOException {
         return readValue(FACTORY.createParser(byteArray), type);
     }
 
