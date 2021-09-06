@@ -3,6 +3,7 @@ package io.micronaut.json.generator
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonFactoryBuilder
 import io.micronaut.json.Deserializer
+import io.micronaut.json.JacksonDecoder
 import io.micronaut.json.JacksonEncoder
 import io.micronaut.json.Serializer
 import org.intellij.lang.annotations.Language
@@ -22,6 +23,6 @@ trait SerializerUtils {
     static <T> T deserializeFromString(Deserializer<T> serializer, @Language("json") String json) {
         def parser = JSON_FACTORY.createParser(json)
         parser.nextToken() // place parser at first token
-        return serializer.deserialize(parser)
+        return serializer.deserialize(JacksonDecoder.create(parser))
     }
 }

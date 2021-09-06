@@ -99,7 +99,7 @@ public final class GeneratedObjectMapper implements JsonMapper {
         if (parser.currentToken() == JsonToken.VALUE_NULL && !deserializer.supportsNullDeserialization()) {
             return null;
         }
-        return (T) deserializer.deserialize(parser);
+        return (T) deserializer.deserialize(JacksonDecoder.create(parser));
     }
 
     @Override
