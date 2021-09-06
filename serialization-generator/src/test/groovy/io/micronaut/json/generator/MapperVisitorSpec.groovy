@@ -520,6 +520,7 @@ enum Foo {
 package example;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.micronaut.json.Encoder;
 import io.micronaut.json.annotation.SerializableBean;
 import jakarta.inject.Singleton;
 
@@ -536,8 +537,8 @@ class B {
 @Singleton
 class BSerializer implements io.micronaut.json.Serializer<B> {
     @Override
-    public void serialize(com.fasterxml.jackson.core.JsonGenerator encoder, B value) throws java.io.IOException {
-        encoder.writeBoolean(value.present);
+    public void serialize(Encoder encoder, B value) throws java.io.IOException {
+        encoder.encodeBoolean(value.present);
     }
 
     @Override

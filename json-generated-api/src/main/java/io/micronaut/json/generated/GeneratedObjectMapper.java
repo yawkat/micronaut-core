@@ -81,7 +81,7 @@ public final class GeneratedObjectMapper implements JsonMapper {
         if (serializer instanceof ObjectSerializer) {
             throw new ObjectMappingException("No serializer for type " + type.getName());
         }
-        serializer.serialize(gen, value);
+        serializer.serialize(JacksonEncoder.create(gen), value);
     }
 
     private <T> T readValue(JsonParser parser, Argument<T> type) throws IOException {

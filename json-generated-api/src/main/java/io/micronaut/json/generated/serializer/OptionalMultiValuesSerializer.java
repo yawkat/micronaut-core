@@ -15,10 +15,10 @@
  */
 package io.micronaut.json.generated.serializer;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import io.micronaut.core.reflect.GenericTypeFactory;
 import io.micronaut.core.value.OptionalMultiValues;
 import io.micronaut.http.hateoas.JsonError;
+import io.micronaut.json.Encoder;
 import io.micronaut.json.JsonConfiguration;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
@@ -43,22 +43,22 @@ class OptionalMultiValuesSerializer<V> implements Serializer<OptionalMultiValues
     }
 
     @Override
-    public void serialize(JsonGenerator encoder, OptionalMultiValues<V> value) throws IOException {
-        encoder.writeStartObject();
+    public void serialize(Encoder encoder, OptionalMultiValues<V> value) throws IOException {
+        Encoder objectEncoder = encoder.encodeObject();
         for (CharSequence key : value) {
             Optional<? extends List<V>> opt = value.get(key);
             if (opt.isPresent()) {
                 String fieldName = key.toString();
-                encoder.writeFieldName(fieldName);
+                objectEncoder.encodeKey(fieldName);
                 List<V> list = opt.get();
                 if (list.size() == 1 && (list.get(0).getClass() != JsonError.class || !alwaysSerializeErrorsAsList)) {
-                    valueSerializer.serialize(encoder, list.get(0));
+                    valueSerializer.serialize(objectEncoder, list.get(0));
                 } else {
-                    listSerializer.serialize(encoder, list);
+                    listSerializer.serialize(objectEncoder, list);
                 }
             }
         }
-        encoder.writeEndObject();
+        objectEncoder.finishStructure();
     }
 
     @Override

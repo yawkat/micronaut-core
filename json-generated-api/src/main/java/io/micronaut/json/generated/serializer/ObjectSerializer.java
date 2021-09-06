@@ -21,6 +21,7 @@ import io.micronaut.context.annotation.Secondary;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
+import io.micronaut.json.Encoder;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.generated.JsonParseException;
 
@@ -51,7 +52,7 @@ public final class ObjectSerializer implements Serializer<Object>, Deserializer<
     }
 
     @Override
-    public void serialize(JsonGenerator encoder, Object value) throws IOException {
-        encoder.writeObject(value);
+    public void serialize(Encoder encoder, Object value) throws IOException {
+        encoder.encodeArbitrary(value);
     }
 }

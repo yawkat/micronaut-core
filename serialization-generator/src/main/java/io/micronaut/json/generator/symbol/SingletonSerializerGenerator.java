@@ -16,7 +16,6 @@
 package io.micronaut.json.generator.symbol;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.squareup.javapoet.*;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Internal;
@@ -26,6 +25,7 @@ import io.micronaut.inject.ast.Element;
 import io.micronaut.inject.ast.MnType;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
+import io.micronaut.json.Encoder;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
 import jakarta.inject.Singleton;
@@ -35,8 +35,6 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.Function;
-
-import static io.micronaut.json.generator.symbol.Names.ENCODER;
 
 @Internal
 public final class SingletonSerializerGenerator {
@@ -306,10 +304,10 @@ public final class SingletonSerializerGenerator {
         return MethodSpec.methodBuilder("serialize")
                 .addAnnotation(Override.class)
                 .addModifiers(Modifier.PUBLIC)
-                .addParameter(JsonGenerator.class, ENCODER)
+                .addParameter(Encoder.class, "encoder")
                 .addParameter(valueReferenceName, "value")
                 .addException(IOException.class)
-                .addCode(symbol.serialize(classContext.newMethodContext("value", ENCODER), valueType, CodeBlock.of("value")))
+                .addCode(symbol.serialize(classContext.newMethodContext("value", "encoder"), "encoder", valueType, CodeBlock.of("value")))
                 .build();
     }
 

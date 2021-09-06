@@ -20,8 +20,6 @@ import com.squareup.javapoet.CodeBlock;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-import static io.micronaut.json.generator.symbol.Names.ENCODER;
-
 final class PrimitiveSerializerSymbol implements SerializerSymbol {
     static final PrimitiveSerializerSymbol INSTANCE = new PrimitiveSerializerSymbol();
 
@@ -40,12 +38,8 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
-        if (type.isRawTypeEquals(boolean.class)) {
-            return CodeBlock.of("$N.writeBoolean($L);\n", ENCODER, readExpression);
-        } else {
-            return CodeBlock.of("$N.writeNumber($L);\n", ENCODER, readExpression);
-        }
+    public CodeBlock serialize(GeneratorContext generatorContext, String encoderVariable, GeneratorType type, CodeBlock readExpression) {
+        return CodeBlock.of("$N.encode$N($L);\n", encoderVariable, suffix(type), readExpression);
     }
 
     @Override
@@ -53,7 +47,7 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
         if (!canSerialize(type)) {
             throw new UnsupportedOperationException("This symbol can only handle primitives");
         }
-        return setter.createSetStatement(CodeBlock.of("$N.$N()", decoderVariable, deserializeMethod(type)));
+        return setter.createSetStatement(CodeBlock.of("$N.decode$N()", decoderVariable, suffix(type)));
     }
 
     @Override
@@ -68,55 +62,27 @@ final class PrimitiveSerializerSymbol implements SerializerSymbol {
         }
     }
 
-    private String deserializeMethod(GeneratorType type) {
+    private String suffix(GeneratorType type) {
         if (type.isRawTypeEquals(boolean.class)) {
-            return "decodeBoolean";
+            return "Boolean";
         } else if (type.isRawTypeEquals(byte.class)) {
-            return "decodeByte";
+            return "Byte";
         } else if (type.isRawTypeEquals(short.class)) {
-            return "decodeShort";
+            return "Short";
         } else if (type.isRawTypeEquals(char.class)) {
-            return "decodeChar";
+            return "Char";
         } else if (type.isRawTypeEquals(int.class)) {
-            return "decodeInt";
+            return "Int";
         } else if (type.isRawTypeEquals(long.class)) {
-            return "decodeLong";
+            return "Long";
         } else if (type.isRawTypeEquals(float.class)) {
-            return "decodeFloat";
+            return "Float";
         } else if (type.isRawTypeEquals(double.class)) {
-            return "decodeDouble";
+            return "Double";
         } else if (type.isRawTypeEquals(BigInteger.class)) {
-            return "decodeBigInteger";
+            return "BigInteger";
         } else if (type.isRawTypeEquals(BigDecimal.class)) {
-            return "decodeBigDecimal";
-        } else {
-            throw new AssertionError("unknown primitive type " + type);
-        }
-    }
-
-    private CodeBlock coerceFromString(GeneratorType type, CodeBlock expression) {
-        // todo: make coercion configurable
-
-        if (type.isRawTypeEquals(boolean.class)) {
-            return CodeBlock.of("$L.equalsIgnoreCase(\"true\")", expression);
-        } else if (type.isRawTypeEquals(byte.class)) {
-            return CodeBlock.of("(byte) $T.parseLong($L)", Long.class, expression);
-        } else if (type.isRawTypeEquals(short.class)) {
-            return CodeBlock.of("(short) $T.parseLong($L)", Long.class, expression);
-        } else if (type.isRawTypeEquals(char.class)) {
-            return CodeBlock.of("(char) $T.parseLong($L)", Long.class, expression);
-        } else if (type.isRawTypeEquals(int.class)) {
-            return CodeBlock.of("(int) $T.parseLong($L)", Long.class, expression);
-        } else if (type.isRawTypeEquals(long.class)) {
-            return CodeBlock.of("$T.parseLong($L)", Long.class, expression);
-        } else if (type.isRawTypeEquals(float.class)) {
-            return CodeBlock.of("$T.parseFloat($L)", Float.class, expression);
-        } else if (type.isRawTypeEquals(double.class)) {
-            return CodeBlock.of("$T.parseDouble($L)", Double.class, expression);
-        }  else if (type.isRawTypeEquals(BigInteger.class)) {
-            return CodeBlock.of("new $T($L)", BigInteger.class, expression);
-        } else if (type.isRawTypeEquals(BigDecimal.class)) {
-            return CodeBlock.of("new $T($L)", BigDecimal.class, expression);
+            return "BigDecimal";
         } else {
             throw new AssertionError("unknown primitive type " + type);
         }

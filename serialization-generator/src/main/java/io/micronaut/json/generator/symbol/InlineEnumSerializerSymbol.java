@@ -41,7 +41,7 @@ public class InlineEnumSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
+    public CodeBlock serialize(GeneratorContext generatorContext, String encoderVariable, GeneratorType type, CodeBlock readExpression) {
         EnumDefinition enumDefinition = new EnumDefinition((EnumElement) type.getClassElement());
 
         CodeBlock.Builder builder = CodeBlock.builder();
@@ -49,10 +49,9 @@ public class InlineEnumSerializerSymbol implements SerializerSymbol {
         for (int i = 0; i < enumDefinition.constants.size(); i++) {
             builder.beginControlFlow("case $N:", enumDefinition.constants.get(i));
             builder.add(enumDefinition.valueSerializer.serialize(
-                    generatorContext,
+                    generatorContext, encoderVariable,
                     enumDefinition.valueType,
-                    enumDefinition.serializedLiterals.get(i)
-            ));
+                    enumDefinition.serializedLiterals.get(i)));
             builder.addStatement("break");
             builder.endControlFlow();
         }

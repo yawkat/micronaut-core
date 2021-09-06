@@ -15,11 +15,11 @@
  */
 package io.micronaut.json.generated.serializer;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import io.micronaut.core.reflect.GenericTypeFactory;
 import io.micronaut.core.reflect.GenericTypeToken;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
+import io.micronaut.json.Encoder;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
 import jakarta.inject.Singleton;
@@ -64,7 +64,7 @@ class PrimitiveGenerators {
 
         @SuppressWarnings("unchecked")
         @Override
-        public void serialize(JsonGenerator encoder, T value) throws IOException {
+        public void serialize(Encoder encoder, T value) throws IOException {
             implSer.serialize(encoder, value);
         }
     }

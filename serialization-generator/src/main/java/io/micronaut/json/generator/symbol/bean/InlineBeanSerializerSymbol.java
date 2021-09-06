@@ -19,13 +19,12 @@ import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.json.Encoder;
 import io.micronaut.json.annotation.SerializableBean;
 import io.micronaut.json.generator.symbol.*;
 
 import java.util.*;
 import java.util.function.Consumer;
-
-import static io.micronaut.json.generator.symbol.Names.ENCODER;
 
 @Internal
 public class InlineBeanSerializerSymbol implements SerializerSymbol {
@@ -169,18 +168,19 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
+    public CodeBlock serialize(GeneratorContext generatorContext, String encoderVariable, GeneratorType type, CodeBlock readExpression) {
         if (!supportsDirection(type, true)) {
             throw new UnsupportedOperationException();
         }
 
-        return serializeImpl(generatorContext, type, readExpression, true, false);
+        return serializeImpl(generatorContext, encoderVariable, type, readExpression, true, false);
     }
 
     /**
      * Serialize the given type.
      *
      * @param generatorContext   The generator context
+     * @param encoderVariable    Encoder to serialize to
      * @param type               The type to serialize
      * @param readExpression     The expression containing the value to serialize
      * @param copyReadExpression Whether the expression must only be read once, and thus should be copied if used multiple times
@@ -188,6 +188,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
      */
     private CodeBlock serializeImpl(
             GeneratorContext generatorContext,
+            String encoderVariable,
             GeneratorType type,
             CodeBlock readExpression,
             boolean copyReadExpression,
@@ -207,11 +208,10 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
 
             // @JsonValue
             return findSymbol(PropWithType.fromContext(type, definition.valueProperty)).serialize(
-                    generatorContext,
-                    definition.valueProperty.getType(type.typeParametersAsFoldFunction()),
+                    generatorContext, encoderVariable,
                     // we don't need a temp variable here, getPropertyAccessExpression only evaluates the read expression once
-                    getPropertyAccessExpression(readExpression, definition.valueProperty)
-            );
+                    definition.valueProperty.getType(type.typeParametersAsFoldFunction()),
+                    getPropertyAccessExpression(readExpression, definition.valueProperty));
         } else {
             CodeBlock.Builder serialize = CodeBlock.builder();
             if (copyReadExpression) {
@@ -223,42 +223,53 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             if (definition.subtyping != null) {
                 if (definition.subtyping.deduce) {
                     // just serialize the value directly
-                    serializeSubTyping(generatorContext, serialize, readExpression, definition.subtyping, s -> {
+                    serializeSubTyping(generatorContext, encoderVariable, serialize, readExpression, definition.subtyping, s -> {
                     }, nakedProperties);
                 } else {
                     switch (definition.subtyping.as) {
                         case PROPERTY:
+                            String propertyObjectEncoder;
                             if (!nakedProperties) {
-                                // passing the value to writeStartObject helps with debugging, but will not affect functionality
-                                serialize.addStatement("$N.writeStartObject($L)", ENCODER, readExpression);
+                                propertyObjectEncoder = generatorContext.newLocalVariable("subtypeWrapperObject_" + type.getTypeName());
+                                serialize.addStatement("$T $N = $N.encodeObject()", Encoder.class, propertyObjectEncoder, encoderVariable);
+                            } else {
+                                propertyObjectEncoder = encoderVariable;
                             }
                             serializeSubTyping(
                                     generatorContext,
+                                    propertyObjectEncoder,
                                     serialize,
                                     readExpression,
                                     definition.subtyping,
-                                    tag -> serialize.addStatement("$N.writeStringField($S, $S)", ENCODER, definition.subtyping.propertyName, tag),
+                                    tag -> {
+                                        serialize.addStatement("$N.encodeKey($S)", propertyObjectEncoder, definition.subtyping.propertyName);
+                                        serialize.addStatement("$N.encodeString($S)", propertyObjectEncoder, tag);
+                                    },
                                     true
                             );
                             if (!nakedProperties) {
-                                serialize.addStatement("$N.writeEndObject()", ENCODER);
+                                serialize.addStatement("$N.finishStructure()", propertyObjectEncoder);
                             }
                             break;
                         case WRAPPER_OBJECT:
+                            String wrapperObjectEncoder;
                             if (!nakedProperties) {
-                                // passing the value to writeStartObject helps with debugging, but will not affect functionality
-                                serialize.addStatement("$N.writeStartObject($L)", ENCODER, readExpression);
+                                wrapperObjectEncoder = generatorContext.newLocalVariable("subtypeWrapperObject_" + type.getTypeName());
+                                serialize.addStatement("$T $N = $N.encodeObject()", Encoder.class, wrapperObjectEncoder, encoderVariable);
+                            } else {
+                                wrapperObjectEncoder = encoderVariable;
                             }
                             serializeSubTyping(
                                     generatorContext,
+                                    wrapperObjectEncoder,
                                     serialize,
                                     readExpression,
                                     definition.subtyping,
-                                    tag -> serialize.addStatement("$N.writeFieldName($S)", ENCODER, tag),
+                                    tag -> serialize.addStatement("$N.encodeKey($S)", wrapperObjectEncoder, tag),
                                     false
                             );
                             if (!nakedProperties) {
-                                serialize.addStatement("$N.writeEndObject()", ENCODER);
+                                serialize.addStatement("$N.finishStructure()", wrapperObjectEncoder);
                             }
                             break;
                         case WRAPPER_ARRAY:
@@ -266,16 +277,18 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                                 generatorContext.getProblemReporter().fail("Cannot unwrap WRAPPER_ARRAY, but required in this context", type.getClassElement());
                                 return CodeBlock.of("");
                             }
-                            serialize.addStatement("$N.writeStartArray($L)", ENCODER, readExpression);
+                            String arrayEncoder = generatorContext.newLocalVariable("subtypeWrapperArray_" + type.getTypeName());
+                            serialize.addStatement("$T $N = $N.encodeArray()", Encoder.class, arrayEncoder, encoderVariable);
                             serializeSubTyping(
                                     generatorContext,
+                                    arrayEncoder,
                                     serialize,
                                     readExpression,
                                     definition.subtyping,
-                                    tag -> serialize.addStatement("$N.writeString($S)", ENCODER, tag),
+                                    tag -> serialize.addStatement("$N.encodeString($S)", arrayEncoder, tag),
                                     false
                             );
-                            serialize.addStatement("$N.writeEndArray()", ENCODER);
+                            serialize.addStatement("$N.finishStructure()", arrayEncoder);
                             break;
                         default:
                             generatorContext.getProblemReporter().fail("Unsupported subtyping strategy " + definition.subtyping.as, type.getClassElement());
@@ -283,16 +296,19 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                     }
                 }
             } else {
+                String propEncoder;
                 if (!nakedProperties) {
-                    // passing the value to writeStartObject helps with debugging, but will not affect functionality
-                    serialize.addStatement("$N.writeStartObject($L)", ENCODER, readExpression);
+                    propEncoder = generatorContext.newLocalVariable("encoder_" + type.getTypeName());
+                    serialize.addStatement("$T $N = $N.encodeObject()", Encoder.class, propEncoder, encoderVariable);
+                } else {
+                    propEncoder = encoderVariable;
                 }
                 for (BeanDefinition.Property prop : definition.props) {
                     CodeBlock propRead = getPropertyAccessExpression(readExpression, prop);
                     GeneratorContext subGenerator = generatorContext.withSubPath(prop.name);
                     PropWithType propWithType = PropWithType.fromContext(type, prop);
                     if (prop.unwrapped) {
-                        serialize.add(serializeImpl(subGenerator, propWithType.type, propRead, true, true));
+                        serialize.add(serializeImpl(subGenerator, propEncoder, propWithType.type, propRead, true, true));
                     } else {
                         SerializerSymbol symbol = findSymbol(propWithType);
                         ConditionExpression<CodeBlock> shouldIncludeCheck = symbol.shouldIncludeCheck(generatorContext, propWithType.type, prop.valueInclusionPolicy);
@@ -303,8 +319,8 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                             serialize.beginControlFlow("if ($L)", shouldIncludeCheck.build(propRead));
                         }
 
-                        serialize.addStatement("$N.writeFieldName($S)", ENCODER, prop.name);
-                        serialize.add(symbol.serialize(subGenerator, propWithType.type, propRead));
+                        serialize.addStatement("$N.encodeKey($S)", propEncoder, prop.name);
+                        serialize.add(symbol.serialize(subGenerator, propEncoder, propWithType.type, propRead));
 
                         if (!shouldIncludeCheck.isAlwaysTrue()) {
                             serialize.endControlFlow();
@@ -312,7 +328,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                     }
                 }
                 if (!nakedProperties) {
-                    serialize.addStatement("$N.writeEndObject()", ENCODER);
+                    serialize.addStatement("$N.finishStructure()", propEncoder);
                 }
             }
             return serialize.build();
@@ -323,6 +339,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
      * Generate serialization code for multiple subtypes.
      *
      * @param generatorContext The generator context
+     * @param encoderVariable  Encoder to serialize to
      * @param builder          The target code builder
      * @param readExpression   The expression to read the object from, will be evaluated multiple times
      * @param subtyping        The subtyping metadata
@@ -331,6 +348,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
      */
     private void serializeSubTyping(
             GeneratorContext generatorContext,
+            String encoderVariable,
             CodeBlock.Builder builder,
             CodeBlock readExpression,
             BeanDefinition.Subtyping subtyping,
@@ -353,7 +371,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                 writeTag.accept(subtyping.subTypeNames.get(subType).iterator().next());
             }
 
-            builder.add(serializeImpl(generatorContext, subType, CodeBlock.of("$N", castVariable), false, innerNaked));
+            builder.add(serializeImpl(generatorContext, encoderVariable, subType, CodeBlock.of("$N", castVariable), false, innerNaked));
         }
         builder.nextControlFlow("else");
         builder.addStatement("throw new $T(\"Unrecognized subtype: \" + $L.getClass().getName())", IllegalArgumentException.class, readExpression);

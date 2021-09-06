@@ -16,7 +16,6 @@
 package io.micronaut.json.generator.symbol;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
 
 import java.util.Optional;
@@ -68,7 +67,7 @@ class OptionalSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
+    public CodeBlock serialize(GeneratorContext generatorContext, String encoderVariable, GeneratorType type, CodeBlock readExpression) {
         Optional<GeneratorType> delegateType = findDelegateType(type);
         if (!delegateType.isPresent()) {
             generatorContext.getProblemReporter().fail("Could not resolve optional type", null);
@@ -78,9 +77,9 @@ class OptionalSerializerSymbol implements SerializerSymbol {
         return CodeBlock.builder()
                 .addStatement("$T $N = $L", PoetUtil.toTypeName(type), variable, readExpression)
                 .beginControlFlow("if ($N.isPresent())", variable)
-                .add(getDelegateSerializer(delegateType.get()).serialize(generatorContext, delegateType.get(), CodeBlock.of("$N.get()", variable)))
+                .add(getDelegateSerializer(delegateType.get()).serialize(generatorContext, encoderVariable, delegateType.get(), CodeBlock.of("$N.get()", variable)))
                 .nextControlFlow("else")
-                .addStatement("$N.writeNull()", Names.ENCODER)
+                .addStatement("$N.encodeNull()", encoderVariable)
                 .endControlFlow()
                 .build();
     }

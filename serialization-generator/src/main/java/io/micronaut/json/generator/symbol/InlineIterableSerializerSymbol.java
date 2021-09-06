@@ -16,18 +16,15 @@
 package io.micronaut.json.generator.symbol;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.json.Decoder;
+import io.micronaut.json.Encoder;
 import io.micronaut.json.Serializer;
-import io.micronaut.json.generated.JsonParseException;
 
 import java.lang.reflect.TypeVariable;
 import java.util.*;
-
-import static io.micronaut.json.generator.symbol.Names.ENCODER;
 
 /**
  * {@link SerializerSymbol} that deserializes iterables (and arrays) inline, i.e. without a separate
@@ -55,16 +52,17 @@ abstract class InlineIterableSerializerSymbol extends AbstractInlineContainerSer
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
+    public CodeBlock serialize(GeneratorContext generatorContext, String encoderVariable, GeneratorType type, CodeBlock readExpression) {
         GeneratorType elementType = getElementType(type);
         SerializerSymbol elementSerializer = getElementSymbol(elementType);
         String itemName = generatorContext.newLocalVariable("item");
+        String arrayEncoder = generatorContext.newLocalVariable("arrayEncoder");
         return CodeBlock.builder()
-                .addStatement("$N.writeStartArray()", ENCODER)
+                .addStatement("$T $N = $N.encodeArray()", Encoder.class, arrayEncoder, encoderVariable)
                 .beginControlFlow("for ($T $N : $L)", PoetUtil.toTypeName(elementType), itemName, readExpression)
-                .add(elementSerializer.serialize(generatorContext.withSubPath("[*]"), elementType, CodeBlock.of("$N", itemName)))
+                .add(elementSerializer.serialize(generatorContext.withSubPath("[*]"), arrayEncoder, elementType, CodeBlock.of("$N", itemName)))
                 .endControlFlow()
-                .addStatement("$N.writeEndArray()", ENCODER)
+                .addStatement("$N.finishStructure()", arrayEncoder)
                 .build();
     }
 

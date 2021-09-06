@@ -18,8 +18,6 @@ package io.micronaut.json.generator.symbol;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.squareup.javapoet.CodeBlock;
 
-import static io.micronaut.json.generator.symbol.Names.ENCODER;
-
 final class StringSerializerSymbol implements SerializerSymbol {
     static final StringSerializerSymbol INSTANCE = new StringSerializerSymbol();
 
@@ -37,9 +35,11 @@ final class StringSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
-        // todo: handle charsequence
-        return CodeBlock.of("$N.writeString($L);\n", ENCODER, readExpression);
+    public CodeBlock serialize(GeneratorContext generatorContext, String encoderVariable, GeneratorType type, CodeBlock readExpression) {
+        if (!type.isRawTypeEquals(String.class)) {
+            readExpression = CodeBlock.of("$L.toString()", readExpression);
+        }
+        return CodeBlock.of("$N.encodeString($L);\n", encoderVariable, readExpression);
     }
 
     @Override

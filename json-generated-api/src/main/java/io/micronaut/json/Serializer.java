@@ -15,17 +15,12 @@
  */
 package io.micronaut.json;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import io.micronaut.core.reflect.GenericTypeUtils;
-
 import java.io.IOException;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.function.Function;
 
 public interface Serializer<T> {
-    void serialize(JsonGenerator encoder, T value) throws IOException;
+    void serialize(Encoder encoder, T value) throws IOException;
 
     /**
      * Used for {@code JsonInclude.Include#NON_EMPTY} checking.

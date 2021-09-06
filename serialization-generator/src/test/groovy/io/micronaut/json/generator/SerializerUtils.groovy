@@ -3,6 +3,7 @@ package io.micronaut.json.generator
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonFactoryBuilder
 import io.micronaut.json.Deserializer
+import io.micronaut.json.JacksonEncoder
 import io.micronaut.json.Serializer
 import org.intellij.lang.annotations.Language
 
@@ -13,7 +14,7 @@ trait SerializerUtils {
     static <T> String serializeToString(Serializer<T> serializer, T value) {
         def writer = new StringWriter()
         def generator = JSON_FACTORY.createGenerator(writer)
-        serializer.serialize(generator, value)
+        serializer.serialize(JacksonEncoder.create(generator), value)
         generator.close()
         return writer.toString()
     }

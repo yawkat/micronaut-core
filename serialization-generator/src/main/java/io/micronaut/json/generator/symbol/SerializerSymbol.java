@@ -41,17 +41,18 @@ public interface SerializerSymbol {
     void visitDependencies(DependencyVisitor visitor, GeneratorType type);
 
     /**
-     * Generate code that writes the value returned by {@code readExpression} into {@link Names#ENCODER}.
+     * Generate code that writes the value returned by {@code readExpression} into {@code encoderVariable}.
      *
      * @param generatorContext The context of the generator, e.g. declared local variables.
+     * @param encoderVariable The variable name of the encoder to use for serialization
      * @param type The type of the value being serialized.
      * @param readExpression The expression that reads the value. Must only be evaluated once.
      * @return The code block containing statements that perform the serialization.
      */
-    CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression);
+    CodeBlock serialize(GeneratorContext generatorContext, String encoderVariable, GeneratorType type, CodeBlock readExpression);
 
     /**
-     * Generate code that reads a value from {@link Names#DECODER}.
+     * Generate code that reads a value from {@code decoderVariable}.
      * <p>
      * Decoder should be positioned at the first token of the value (as specified by
      * {@link io.micronaut.json.Deserializer#deserialize})

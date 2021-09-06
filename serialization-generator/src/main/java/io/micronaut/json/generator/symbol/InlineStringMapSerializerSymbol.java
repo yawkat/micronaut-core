@@ -15,19 +15,16 @@
  */
 package io.micronaut.json.generator.symbol;
 
-import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterizedTypeName;
 import io.micronaut.json.Decoder;
-import io.micronaut.json.generated.JsonParseException;
+import io.micronaut.json.Encoder;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
-
-import static io.micronaut.json.generator.symbol.Names.ENCODER;
 
 final class InlineStringMapSerializerSymbol extends AbstractInlineContainerSerializerSymbol implements SerializerSymbol {
     InlineStringMapSerializerSymbol(SerializerLinker linker) {
@@ -62,12 +59,13 @@ final class InlineStringMapSerializerSymbol extends AbstractInlineContainerSeria
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
+    public CodeBlock serialize(GeneratorContext generatorContext, String encoderVariable, GeneratorType type, CodeBlock readExpression) {
         GeneratorType elementType = getType(type, "V");
         SerializerSymbol elementSerializer = getElementSymbol(elementType);
         String entryName = generatorContext.newLocalVariable("entry");
+        String objectEncoder = generatorContext.newLocalVariable("mapEncoder");
         return CodeBlock.builder()
-                .addStatement("$N.writeStartObject()", ENCODER)
+                .addStatement("$T $N = $N.encodeObject()", Encoder.class, objectEncoder, encoderVariable)
                 .beginControlFlow("for ($T $N : $L.entrySet())",
                         ParameterizedTypeName.get(
                                 ClassName.get(Map.Entry.class),
@@ -77,10 +75,10 @@ final class InlineStringMapSerializerSymbol extends AbstractInlineContainerSeria
                         entryName,
                         readExpression
                 )
-                .addStatement("$N.writeFieldName($N.getKey())", ENCODER, entryName)
-                .add(elementSerializer.serialize(generatorContext.withSubPath("[*]"), elementType, CodeBlock.of("$N.getValue()", entryName)))
+                .addStatement("$N.encodeKey($N.getKey())", objectEncoder, entryName)
+                .add(elementSerializer.serialize(generatorContext.withSubPath("[*]"), objectEncoder, elementType, CodeBlock.of("$N.getValue()", entryName)))
                 .endControlFlow()
-                .addStatement("$N.writeEndObject()", ENCODER)
+                .addStatement("$N.finishStructure()", objectEncoder)
                 .build();
     }
 

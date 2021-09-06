@@ -19,6 +19,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
+import io.micronaut.json.Encoder;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
 import io.netty.handler.codec.http.HttpMethod;
@@ -48,7 +49,7 @@ class NettyHttpMethodSerializer implements Serializer<HttpMethod>, Deserializer<
     }
 
     @Override
-    public void serialize(JsonGenerator encoder, HttpMethod value) throws IOException {
+    public void serialize(Encoder encoder, HttpMethod value) throws IOException {
         stringSerializer.serialize(encoder, value.name());
     }
 }

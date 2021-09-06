@@ -55,8 +55,8 @@ public final class InjectingSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
-        return CodeBlock.of("$L.serialize($N, $L);\n", getSerializerAccess(generatorContext, type, true), Names.ENCODER, readExpression);
+    public CodeBlock serialize(GeneratorContext generatorContext, String encoderVariable, GeneratorType type, CodeBlock readExpression) {
+        return CodeBlock.of("$L.serialize($N, $L);\n", getSerializerAccess(generatorContext, type, true), encoderVariable, readExpression);
     }
 
     @Override

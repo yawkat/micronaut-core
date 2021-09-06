@@ -16,7 +16,6 @@
 package io.micronaut.json.generator.symbol;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonToken;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.Internal;
 
@@ -49,14 +48,14 @@ public class NullableSerializerSymbol implements SerializerSymbol {
     }
 
     @Override
-    public CodeBlock serialize(GeneratorContext generatorContext, GeneratorType type, CodeBlock readExpression) {
+    public CodeBlock serialize(GeneratorContext generatorContext, String encoderVariable, GeneratorType type, CodeBlock readExpression) {
         String variable = generatorContext.newLocalVariable("tmp");
         return CodeBlock.builder()
                 .addStatement("$T $N = $L", PoetUtil.toTypeName(type), variable, readExpression)
                 .beginControlFlow("if ($N == null)", variable)
-                .addStatement("$N.writeNull()", Names.ENCODER)
+                .addStatement("$N.encodeNull()", encoderVariable)
                 .nextControlFlow("else")
-                .add(delegate.serialize(generatorContext, type, CodeBlock.of("$N", variable)))
+                .add(delegate.serialize(generatorContext, encoderVariable, type, CodeBlock.of("$N", variable)))
                 .endControlFlow()
                 .build();
     }

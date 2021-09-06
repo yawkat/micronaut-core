@@ -15,9 +15,9 @@
  */
 package io.micronaut.json.generated.serializer;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import io.micronaut.core.reflect.GenericTypeFactory;
 import io.micronaut.core.value.OptionalValues;
+import io.micronaut.json.Encoder;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
 import jakarta.inject.Singleton;
@@ -35,16 +35,16 @@ class OptionalValuesSerializer<V> implements Serializer<OptionalValues<V>> {
     }
 
     @Override
-    public void serialize(JsonGenerator encoder, OptionalValues<V> value) throws IOException {
-        encoder.writeStartObject();
+    public void serialize(Encoder encoder, OptionalValues<V> value) throws IOException {
+        Encoder objectEncoder = encoder.encodeObject();
         for (CharSequence key : value) {
             Optional<V> opt = value.get(key);
             if (opt.isPresent()) {
-                encoder.writeFieldName(key.toString());
-                valueSerializer.serialize(encoder, opt.get());
+                objectEncoder.encodeKey(key.toString());
+                valueSerializer.serialize(objectEncoder, opt.get());
             }
         }
-        encoder.writeEndObject();
+        objectEncoder.finishStructure();
     }
 
     @Override

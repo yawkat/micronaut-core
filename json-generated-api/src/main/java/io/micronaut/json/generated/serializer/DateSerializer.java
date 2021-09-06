@@ -18,6 +18,7 @@ package io.micronaut.json.generated.serializer;
 import com.fasterxml.jackson.core.JsonGenerator;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
+import io.micronaut.json.Encoder;
 import io.micronaut.json.Serializer;
 import io.micronaut.json.SerializerLocator;
 import jakarta.inject.Singleton;
@@ -41,7 +42,7 @@ class DateSerializer implements Serializer<Date>, Deserializer<Date> {
     }
 
     @Override
-    public void serialize(JsonGenerator encoder, Date value) throws IOException {
+    public void serialize(Encoder encoder, Date value) throws IOException {
         longSerializer.serialize(encoder, value.getTime());
     }
 }
