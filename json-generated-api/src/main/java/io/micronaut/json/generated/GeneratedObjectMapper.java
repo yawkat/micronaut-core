@@ -26,7 +26,7 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.reflect.GenericTypeUtils;
 import io.micronaut.core.type.Argument;
-import io.micronaut.jackson.core.tree.MicronautTreeCodec;
+import io.micronaut.jackson.core.tree.JsonNodeTreeCodec;
 import io.micronaut.jackson.core.tree.TreeGenerator;
 import io.micronaut.json.*;
 import io.micronaut.json.generated.serializer.ObjectSerializer;
@@ -54,13 +54,13 @@ public final class GeneratedObjectMapper implements JsonMapper {
 
     private final SerializerLocator locator;
     private final JsonStreamConfig deserializationConfig;
-    private final MicronautTreeCodec treeCodec;
+    private final JsonNodeTreeCodec treeCodec;
     private final ObjectCodecImpl objectCodecImpl = new ObjectCodecImpl();
 
     private GeneratedObjectMapper(SerializerLocator locator, JsonStreamConfig deserializationConfig) {
         this.locator = locator;
         this.deserializationConfig = deserializationConfig;
-        this.treeCodec = MicronautTreeCodec.getInstance().withConfig(deserializationConfig);
+        this.treeCodec = JsonNodeTreeCodec.getInstance().withConfig(deserializationConfig);
     }
 
     @Inject

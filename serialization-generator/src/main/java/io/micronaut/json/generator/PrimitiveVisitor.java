@@ -66,6 +66,7 @@ public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implement
 
         for (Class<?> t : Arrays.asList(
                 String.class,
+                CharSequence.class,
                 BigDecimal.class,
                 BigInteger.class
         )) {

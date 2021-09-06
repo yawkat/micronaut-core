@@ -30,4 +30,12 @@ class StringSerializerSymbolSpec extends AbstractSymbolSpec {
         expect:
         deserializeFromString(serializer, '42') == '42'
     }
+
+    def "char sequence"() {
+        given:
+        def serializer = buildBasicSerializer(CharSequence.class, StringSerializerSymbol.INSTANCE)
+
+        expect:
+        serializeToString(serializer, new StringBuilder('foo')) == '"foo"'
+    }
 }
