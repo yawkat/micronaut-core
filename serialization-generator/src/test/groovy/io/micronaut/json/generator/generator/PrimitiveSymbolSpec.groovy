@@ -2,7 +2,7 @@ package io.micronaut.json.generator.generator
 
 import io.micronaut.inject.ast.ClassElement
 import io.micronaut.inject.ast.PrimitiveElement
-import io.micronaut.json.generated.JsonParseException
+import io.micronaut.json.DeserializationException
 import io.micronaut.json.generator.symbol.PrimitiveSerializerSymbol
 
 class PrimitiveSymbolSpec extends AbstractSymbolSpec {
@@ -105,7 +105,7 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
         when:
         deserializeFromString(serializer, "{}")
         then:
-        thrown JsonParseException
+        thrown DeserializationException
     }
 
     def "number wrong token error"() {
@@ -114,7 +114,7 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
         when:
         deserializeFromString(serializer, "{}")
         then:
-        thrown JsonParseException
+        thrown DeserializationException
     }
 
     def "big integer"() {

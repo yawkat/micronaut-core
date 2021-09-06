@@ -72,4 +72,6 @@ public interface Decoder {
     void skipValue() throws IOException;
 
     void finishStructure() throws IOException;
+
+    IOException createDeserializationException(String message);
 }

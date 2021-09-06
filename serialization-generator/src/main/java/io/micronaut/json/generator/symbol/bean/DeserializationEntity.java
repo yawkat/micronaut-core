@@ -20,7 +20,6 @@ import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ConstructorElement;
 import io.micronaut.json.Decoder;
-import io.micronaut.json.generated.JsonParseException;
 import io.micronaut.json.generator.symbol.GeneratorContext;
 import io.micronaut.json.generator.symbol.GeneratorType;
 import io.micronaut.json.generator.symbol.PoetUtil;
@@ -205,8 +204,8 @@ abstract class DeserializationEntity {
             builder.addStatement("$N.skipValue()", decoder);
         } else {
             // todo: do we really want to output a potentially attacker-controlled field name to the logs here?
-            builder.addStatement("throw $T.from($N, $S + $N)",
-                    JsonParseException.class, decoder, "Unknown property for type " + type.getTypeName() + ": ", keyVariable);
+            builder.addStatement("throw $N.createDeserializationException($S + $N)",
+                    decoder, "Unknown property for type " + type.getTypeName() + ": ", keyVariable);
         }
     }
 
@@ -332,8 +331,7 @@ abstract class DeserializationEntity {
                 }
                 readProperties.onMissing(builder, required.stream().collect(Collectors.toMap(
                         req -> req,
-                        req -> CodeBlock.of("throw $T.from($N, $S);\n",
-                                JsonParseException.class,
+                        req -> CodeBlock.of("throw $N.createDeserializationException($S);\n",
                                 decoderVariable,
                                 "Missing property " + propertyNames.get(req))
                 )));
@@ -412,9 +410,8 @@ abstract class DeserializationEntity {
         @Override
         void deserialize(GeneratorContext generatorContext, CodeBlock.Builder builder, InlineBitSet<DeserializationEntity> readProperties, String decoderVariable) {
             builder.add(
-                    "if ($L) throw $T.from($N, $S);\n",
+                    "if ($L) throw $N.createDeserializationException($S);\n",
                     readProperties.isSet(this),
-                    JsonParseException.class,
                     decoderVariable,
                     "Duplicate property " + prop.property.name
             );
@@ -466,7 +463,7 @@ abstract class DeserializationEntity {
             } else {
                 String tagVar = generatorContext.newLocalVariable("tag");
                 builder.addStatement("$T $N = $N.decodeKey()", String.class, tagVar, wrapperDecoder);
-                builder.addStatement("if ($N == null) throw $T.from($N, \"Expected type tag, but got object end\")", tagVar, JsonParseException.class, wrapperDecoder);
+                builder.addStatement("if ($N == null) throw $N.createDeserializationException(\"Expected type tag, but got object end\")", tagVar, wrapperDecoder);
                 builder.beginControlFlow("switch ($N)", tagVar);
             }
             for (Map.Entry<DeserializationEntity, Collection<String>> entry : subTypes.entrySet()) {
@@ -480,7 +477,7 @@ abstract class DeserializationEntity {
             }
             builder.add("default:\n");
             builder.indent();
-            builder.addStatement("throw $T.from($N, \"Unknown type tag\")", JsonParseException.class, wrapperDecoder);
+            builder.addStatement("throw $N.createDeserializationException(\"Unknown type tag\")", wrapperDecoder);
             builder.unindent();
             builder.endControlFlow();
 
@@ -596,14 +593,14 @@ abstract class DeserializationEntity {
             builder.addStatement("$T $N", PoetUtil.toTypeName(superType), localVariableName);
 
             builder.beginControlFlow("if ($L > 1)", possibleTypes.bitCount());
-            builder.addStatement("throw $T.from($N, \"Ambiguous type\")", JsonParseException.class, decoderVariable);
+            builder.addStatement("throw $N.createDeserializationException(\"Ambiguous type\")", decoderVariable);
             for (DeserializationEntity subType : subTypes) {
                 builder.nextControlFlow("else if ($L)", possibleTypes.isSet(subType));
                 subType.generateEpilogue(builder, readProperties, decoderVariable);
                 builder.addStatement("$N = $N", localVariableName, subType.localVariableName);
             }
             builder.nextControlFlow("else");
-            builder.addStatement("throw $T.from($N, \"No matching type candidate\")", JsonParseException.class, decoderVariable);
+            builder.addStatement("throw $N.createDeserializationException(\"No matching type candidate\")", decoderVariable);
             builder.endControlFlow();
         }
 
@@ -666,9 +663,9 @@ abstract class DeserializationEntity {
                     Set<DeserializationEntity> otherTypes = paths.stream().filter(p -> p != path).flatMap(p -> p.subTypes.stream()).collect(Collectors.toSet());
                     if (!otherTypes.isEmpty()) {
                         builder.addStatement(
-                                "if ($L) throw $T.from($N, \"Ambiguous property\")",
+                                "if ($L) throw $N.createDeserializationException(\"Ambiguous property\")",
                                 possibleTypes.anySet(otherTypes),
-                                JsonParseException.class, decoderVariable
+                                decoderVariable
                         );
                     }
 
@@ -680,8 +677,8 @@ abstract class DeserializationEntity {
                 builder.nextControlFlow("else");
                 // todo: is this technically an unknown property and should use that handling?
                 builder.addStatement(
-                        "throw $T.from($N, \"Property not allowed for these types\")",
-                        JsonParseException.class, decoderVariable
+                        "throw $N.createDeserializationException(\"Property not allowed for these types\")",
+                        decoderVariable
                 );
                 builder.endControlFlow();
             }
@@ -749,7 +746,7 @@ abstract class DeserializationEntity {
 
                 builder.add("default:\n");
                 builder.indent();
-                builder.addStatement("throw $T.from($N, \"Unknown type tag\")", JsonParseException.class, decoderVariable);
+                builder.addStatement("throw $N.createDeserializationException(\"Unknown type tag\")", decoderVariable);
                 builder.unindent();
                 builder.endControlFlow();
             }

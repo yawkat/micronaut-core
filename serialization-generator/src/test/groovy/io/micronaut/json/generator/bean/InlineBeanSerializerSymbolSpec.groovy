@@ -1,6 +1,6 @@
 package io.micronaut.json.generator.bean
 
-import io.micronaut.json.generated.JsonParseException
+import io.micronaut.json.DeserializationException
 import spock.lang.Ignore
 
 class InlineBeanSerializerSymbolSpec extends AbstractBeanSerializerSpec {
@@ -275,7 +275,7 @@ class Test {
         deserializeFromString(compiled.serializer, '{"foo": "42", "foo": "43"}')
 
         then:
-        thrown JsonParseException
+        thrown DeserializationException
     }
 
     @SuppressWarnings('JsonDuplicatePropertyKeys')
@@ -299,7 +299,7 @@ class Test {
         deserializeFromString(compiled.serializer, '{}')
 
         then:
-        thrown JsonParseException
+        thrown DeserializationException
     }
 
     void "missing required property throws exception, many variables"() {
@@ -332,7 +332,7 @@ class Test {
         deserializeFromString(compiled.serializer, '{"v7": "42", "v75": "43"}')
 
         then:
-        def e = thrown JsonParseException
+        def e = thrown DeserializationException
         // with the right message please
         e.message.contains("v14")
     }
@@ -353,7 +353,7 @@ class Test {
         deserializeFromString(compiled.serializer, '{"foo": "1", "bar": "2"}')
 
         then:
-        thrown JsonParseException
+        thrown DeserializationException
     }
 
     void "unknown properties with proper annotation"() {

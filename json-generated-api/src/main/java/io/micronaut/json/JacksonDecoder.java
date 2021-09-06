@@ -20,7 +20,6 @@ import com.fasterxml.jackson.core.JsonToken;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.json.generated.JsonParseException;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -29,7 +28,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 @Internal
 public class JacksonDecoder implements Decoder {
@@ -107,6 +105,11 @@ public class JacksonDecoder implements Decoder {
     }
 
     @Override
+    public IOException createDeserializationException(String message) {
+        return new DeserializationException(message + " \n at " + parser.getCurrentLocation());
+    }
+
+    @Override
     public final boolean hasNextArrayValue() throws IOException {
         checkChild();
         return parser.currentToken() != JsonToken.END_ARRAY;
@@ -134,7 +137,7 @@ public class JacksonDecoder implements Decoder {
     public final Decoder decodeArray() throws IOException {
         preDecodeValue();
         if (parser.currentToken() != JsonToken.START_ARRAY) {
-            throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected array");
+            throw createDeserializationException("Unexpected token " + parser.currentToken() + ", expected array");
         }
         parser.nextToken();
         return child = new JacksonDecoder(parser, this);
@@ -145,7 +148,7 @@ public class JacksonDecoder implements Decoder {
     public final Decoder decodeObject() throws IOException {
         preDecodeValue();
         if (parser.currentToken() != JsonToken.START_OBJECT) {
-            throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected object");
+            throw ((Decoder) this).createDeserializationException("Unexpected token " + parser.currentToken() + ", expected object");
         }
         parser.nextToken();
         return child = new JacksonDecoder(parser, this);
@@ -170,11 +173,11 @@ public class JacksonDecoder implements Decoder {
                     if (endUnwrapArray()) {
                         return unwrapped;
                     } else {
-                        throw JsonParseException.from(this, "Expected one string, but got array of multiple values");
+                        throw ((Decoder) this).createDeserializationException("Expected one string, but got array of multiple values");
                     }
                 }
             default:
-                throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected string");
+                throw ((Decoder) this).createDeserializationException("Unexpected token " + parser.currentToken() + ", expected string");
         }
     }
 
@@ -198,7 +201,7 @@ public class JacksonDecoder implements Decoder {
                     }
                 }
             default:
-                throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected boolean");
+                throw ((Decoder) this).createDeserializationException("Unexpected token " + parser.currentToken() + ", expected boolean");
         }
     }
 
@@ -246,11 +249,11 @@ public class JacksonDecoder implements Decoder {
                     if (endUnwrapArray()) {
                         return unwrapped;
                     } else {
-                        throw JsonParseException.from(this, "Expected one integer, but got array of multiple values");
+                        throw ((Decoder) this).createDeserializationException("Expected one integer, but got array of multiple values");
                     }
                 }
             default:
-                throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected integer");
+                throw ((Decoder) this).createDeserializationException("Unexpected token " + parser.currentToken() + ", expected integer");
         }
     }
 
@@ -278,11 +281,11 @@ public class JacksonDecoder implements Decoder {
                     if (endUnwrapArray()) {
                         return unwrapped;
                     } else {
-                        throw JsonParseException.from(this, "Expected one float, but got array of multiple values");
+                        throw ((Decoder) this).createDeserializationException("Expected one float, but got array of multiple values");
                     }
                 }
             default:
-                throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected float");
+                throw ((Decoder) this).createDeserializationException("Unexpected token " + parser.currentToken() + ", expected float");
         }
     }
 
@@ -316,11 +319,11 @@ public class JacksonDecoder implements Decoder {
                     if (endUnwrapArray()) {
                         return unwrapped;
                     } else {
-                        throw JsonParseException.from(this, "Expected one integer, but got array of multiple values");
+                        throw ((Decoder) this).createDeserializationException("Expected one integer, but got array of multiple values");
                     }
                 }
             default:
-                throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected integer");
+                throw ((Decoder) this).createDeserializationException("Unexpected token " + parser.currentToken() + ", expected integer");
         }
         parser.nextToken();
         return value;
@@ -356,11 +359,11 @@ public class JacksonDecoder implements Decoder {
                     if (endUnwrapArray()) {
                         return unwrapped;
                     } else {
-                        throw JsonParseException.from(this, "Expected one float, but got array of multiple values");
+                        throw ((Decoder) this).createDeserializationException("Expected one float, but got array of multiple values");
                     }
                 }
             default:
-                throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected float");
+                throw ((Decoder) this).createDeserializationException("Unexpected token " + parser.currentToken() + ", expected float");
         }
         parser.nextToken();
         return value;
@@ -415,7 +418,7 @@ public class JacksonDecoder implements Decoder {
                 decodeNull();
                 return null;
             default:
-                throw JsonParseException.from(this, "Unexpected token " + parser.currentToken() + ", expected value");
+                throw ((Decoder) this).createDeserializationException("Unexpected token " + parser.currentToken() + ", expected value");
         }
     }
 

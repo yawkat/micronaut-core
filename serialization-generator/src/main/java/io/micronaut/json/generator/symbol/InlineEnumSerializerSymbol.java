@@ -19,7 +19,6 @@ import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.inject.ast.EnumElement;
-import io.micronaut.json.generated.JsonParseException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -105,8 +104,8 @@ public class InlineEnumSerializerSymbol implements SerializerSymbol {
 
         builder.beginControlFlow("default:");
         builder.addStatement(
-                "throw $T.from($N, $S)",
-                JsonParseException.class, decoderVariable,
+                "throw $N.createDeserializationException($S)",
+                decoderVariable,
                 "Bad enum value for field " + generatorContext.getReadablePath()
         );
         builder.endControlFlow();

@@ -1,7 +1,6 @@
 package io.micronaut.json.generator.generator
 
-
-import io.micronaut.json.generated.JsonParseException
+import io.micronaut.json.DeserializationException
 import io.micronaut.json.generator.symbol.StringSerializerSymbol
 
 class StringSerializerSymbolSpec extends AbstractSymbolSpec {
@@ -20,7 +19,7 @@ class StringSerializerSymbolSpec extends AbstractSymbolSpec {
         when:
         deserializeFromString(serializer, '{}')
         then:
-        thrown JsonParseException
+        thrown DeserializationException
     }
 
     def "coercion"() {

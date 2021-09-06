@@ -23,7 +23,6 @@ import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Encoder;
 import io.micronaut.json.Serializer;
-import io.micronaut.json.generated.JsonParseException;
 
 import java.io.IOException;
 import java.util.List;
@@ -46,7 +45,7 @@ public final class ObjectSerializer implements Serializer<Object>, Deserializer<
     @Override
     public Object deserialize(Decoder decoder) throws IOException {
         if (decoder.decodeNull()) {
-            throw JsonParseException.from(decoder, "Unexpected null value");
+            throw decoder.createDeserializationException("Unexpected null value");
         }
         return decoder.decodeArbitrary();
     }

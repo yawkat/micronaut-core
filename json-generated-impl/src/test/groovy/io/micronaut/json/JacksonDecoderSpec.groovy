@@ -2,7 +2,6 @@ package io.micronaut.json
 
 
 import com.fasterxml.jackson.core.JsonFactoryBuilder
-import io.micronaut.json.generated.JsonParseException
 import spock.lang.Specification
 
 class JacksonDecoderSpec extends Specification {
@@ -27,7 +26,7 @@ class JacksonDecoderSpec extends Specification {
         JacksonDecoder.create(factory.createParser('[["a"]]')).decodeString()
 
         then:
-        thrown JsonParseException
+        thrown DeserializationException
     }
 
     def "unwrapping places the cursor correctly"() {
