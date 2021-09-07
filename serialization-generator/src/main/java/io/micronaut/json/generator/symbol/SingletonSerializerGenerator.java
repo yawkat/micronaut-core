@@ -18,6 +18,7 @@ package io.micronaut.json.generator.symbol;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.squareup.javapoet.*;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ClassElement;
@@ -108,7 +109,7 @@ public final class SingletonSerializerGenerator {
         return this;
     }
 
-    public SingletonSerializerGenerator originatingElement(Element element) {
+    public SingletonSerializerGenerator originatingElement(Element originatingElement) {
         this.originatingElement = originatingElement;
         return this;
     }
@@ -177,7 +178,7 @@ public final class SingletonSerializerGenerator {
         GeneratorContext classContext = GeneratorContext.create(problemReporter, valueReferenceName.toString());
 
         TypeSpec.Builder builder = TypeSpec.classBuilder(generatedName.simpleName())
-                .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
+                .addModifiers(Modifier.FINAL);
 
         if (originatingElement != null) {
             Object nativeType = originatingElement.getNativeType();
@@ -263,6 +264,10 @@ public final class SingletonSerializerGenerator {
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
                 .addAnnotation(Singleton.class)
                 .addAnnotation(BootstrapContextCompatible.class)
+                .addAnnotation(AnnotationSpec.builder(Requires.class)
+                        .addMember("classes", "$T.class", PoetUtil.toTypeNameRaw(valueType.getRawClass()))
+                        .addMember("beans", "$T.class", SerializerLocator.class)
+                        .build())
                 .addField(FieldSpec.builder(Type.class, "TYPE", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
                         .initializer(valueType.toRuntimeFactory(v -> CodeBlock.of("$T.class.getTypeParameters()[$L]", generatedName, freeVariables.indexOf(v))))
                         .build())

@@ -15,7 +15,6 @@
  */
 package io.micronaut.json.generated.serializer;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Encoder;

@@ -20,7 +20,7 @@ import com.fasterxml.jackson.core.type.ResolvedType;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.core.util.ByteArrayBuilder;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
-import io.micronaut.context.annotation.Secondary;
+import io.micronaut.context.annotation.Primary;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
@@ -47,8 +47,9 @@ import java.util.function.Consumer;
 
 @Internal
 @Singleton
-@Secondary
+@Primary
 @BootstrapContextCompatible
+@DatabindChoice.RequiresGenerator
 public final class GeneratedObjectMapper implements JsonMapper {
     private static final JsonFactory FACTORY = new JsonFactory();
 

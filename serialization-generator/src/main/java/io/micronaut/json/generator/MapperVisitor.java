@@ -58,11 +58,8 @@ public class MapperVisitor extends AbstractGeneratorVisitor<Object> implements T
         if (!linker.inlineBean.canSerializeStandalone(generatorType)) {
             return;
         }
-        SerializerSymbol symbol;
-        if (element.isEnum()) {
-            // todo: maybe we want a separate annotation for this case?
-            symbol = InlineEnumSerializerSymbol.INSTANCE;
-        } else {
+        SerializerSymbol symbol = linker.findSymbol(generatorType);
+        if (symbol instanceof InjectingSerializerSymbol) {
             symbol = linker.inlineBean;
         }
         generate(element, context, linker, generatorType, symbol);

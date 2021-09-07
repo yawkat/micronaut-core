@@ -15,8 +15,6 @@
  */
 package io.micronaut.json.generated.serializer;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.ObjectCodec;
 import io.micronaut.context.annotation.Secondary;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.json.Decoder;
@@ -31,12 +29,12 @@ import java.util.Map;
 /**
  * Fallback {@link Serializer} for general {@link Object} values. For deserialization, deserializes to standard types
  * like {@link Number}, {@link String}, {@link Boolean}, {@link Map} and {@link List}. For serialization, serializes
- * using the configured object codec ({@link JsonGenerator#getCodec()}).
+ * using {@link Encoder#encodeArbitrary}.
  * <p>
  * This class is used in multiple scenarios:
  * <ul>
  *     <li>When the user has an {@link Object} property in a serializable bean.</li>
- *     <li>When the user explicitly calls {@link ObjectCodec#writeValue}{@code (gen, }{@link Object}{@code .class)}</li>
+ *     <li>When the user explicitly calls {@link io.micronaut.json.JsonMapper#writeValue}{@code (gen, }{@link Object}{@code .class)}</li>
  * </ul>
  */
 @Internal

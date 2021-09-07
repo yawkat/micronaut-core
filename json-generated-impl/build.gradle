@@ -10,6 +10,7 @@ dependencies {
 
     // NettyHttpMethodSerializer
     compileOnly("io.netty:netty-codec-http:$nettyVersion")
+    compileOnly project(':management')
 
     testAnnotationProcessor project(":inject-java")
     testAnnotationProcessor project(":inject-groovy")

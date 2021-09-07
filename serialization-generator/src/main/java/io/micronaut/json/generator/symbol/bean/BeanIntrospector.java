@@ -84,7 +84,7 @@ class BeanIntrospector {
         beanDefinition.props = new ArrayList<>(completeProps.values());
         if (scanner.creator == null) {
             if (scanner.defaultConstructor == null && !forSerialization) {
-                problemReporter.fail("Missing default constructor or @JsonCreator", clazz);
+                problemReporter.fail("Missing default constructor or @JsonCreator on " + clazz.getName(), clazz);
             }
 
             // use the default constructor as an "empty creator"

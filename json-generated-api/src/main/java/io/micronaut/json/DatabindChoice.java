@@ -65,4 +65,10 @@ public class DatabindChoice {
     @Requires(property = PROPERTY_KEY, notEquals = PROPERTY_VALUE)
     public @interface RequiresJackson {
     }
+
+    @Target(ElementType.TYPE)
+    @Retention(RetentionPolicy.RUNTIME)
+    @Requires(property = PROPERTY_KEY, value = PROPERTY_VALUE)
+    public @interface RequiresGenerator {
+    }
 }
