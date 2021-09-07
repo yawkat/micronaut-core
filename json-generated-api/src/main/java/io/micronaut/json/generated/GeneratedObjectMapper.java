@@ -123,17 +123,23 @@ public final class GeneratedObjectMapper implements JsonMapper {
 
     @Override
     public <T> T readValue(@NonNull InputStream inputStream, @NonNull Argument<T> type) throws IOException {
-        return readValue(FACTORY.createParser(inputStream), type);
+        try (JsonParser parser = FACTORY.createParser(inputStream)) {
+            return readValue(parser, type);
+        }
     }
 
     @Override
     public <T> T readValue(@NonNull byte[] byteArray, @NonNull Argument<T> type) throws IOException {
-        return readValue(FACTORY.createParser(byteArray), type);
+        try (JsonParser parser = FACTORY.createParser(byteArray)) {
+            return readValue(parser, type);
+        }
     }
 
     @Override
     public void writeValue(@NonNull OutputStream outputStream, @Nullable Object object) throws IOException {
-        writeValue0(FACTORY.createGenerator(outputStream), object);
+        try (JsonGenerator generator = FACTORY.createGenerator(outputStream)) {
+            writeValue0(generator, object);
+        }
     }
 
     @Override
