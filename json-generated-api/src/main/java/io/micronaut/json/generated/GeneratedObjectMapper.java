@@ -28,7 +28,14 @@ import io.micronaut.core.reflect.GenericTypeUtils;
 import io.micronaut.core.type.Argument;
 import io.micronaut.jackson.core.tree.JsonNodeTreeCodec;
 import io.micronaut.jackson.core.tree.TreeGenerator;
-import io.micronaut.json.*;
+import io.micronaut.json.DatabindChoice;
+import io.micronaut.json.Deserializer;
+import io.micronaut.json.JacksonDecoder;
+import io.micronaut.json.JacksonEncoder;
+import io.micronaut.json.JsonMapper;
+import io.micronaut.json.JsonStreamConfig;
+import io.micronaut.json.Serializer;
+import io.micronaut.json.SerializerLocator;
 import io.micronaut.json.generated.serializer.ObjectSerializer;
 import io.micronaut.jackson.core.parser.JacksonCoreProcessor;
 import io.micronaut.json.tree.JsonNode;
@@ -40,7 +47,6 @@ import org.reactivestreams.Subscriber;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UncheckedIOException;
 import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.function.Consumer;
@@ -105,13 +111,7 @@ public final class GeneratedObjectMapper implements JsonMapper {
 
     @Override
     public <T> T readValueFromTree(@NonNull JsonNode tree, @NonNull Argument<T> type) throws IOException {
-        try {
-            return readValue(treeCodec.treeAsTokens(tree), type);
-        } catch (JsonProcessingException e) {
-            throw e;
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return readValue(treeCodec.treeAsTokens(tree), type);
     }
 
     @Override
@@ -147,10 +147,6 @@ public final class GeneratedObjectMapper implements JsonMapper {
         ByteArrayBuilder bb = new ByteArrayBuilder(FACTORY._getBufferRecycler());
         try (JsonGenerator generator = FACTORY.createGenerator(bb)) {
             writeValue0(generator, object);
-        } catch (JsonProcessingException e) {
-            throw e;
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
         }
         byte[] bytes = bb.toByteArray();
         bb.release();
