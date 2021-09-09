@@ -41,7 +41,14 @@ class BeanDefinition {
     Property valueProperty;
 
     /**
+     * If there is an any setter (@JsonAnySetter), the method. Already verified to have exactly two parameters (but not
+     * their types).
+     */
+    MethodElement anySetter;
+
+    /**
      * {@link com.fasterxml.jackson.annotation.JsonTypeName}
+     * todo
      */
     String subTypeName;
 

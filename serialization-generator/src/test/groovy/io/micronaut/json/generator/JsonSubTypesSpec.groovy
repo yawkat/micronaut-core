@@ -1,6 +1,7 @@
 package io.micronaut.json.generator
 
 import io.micronaut.annotation.processing.test.AbstractTypeElementSpec
+import io.micronaut.json.DeserializationException
 import io.micronaut.json.Deserializer
 import io.micronaut.json.Serializer
 
@@ -262,5 +263,39 @@ class B2 extends Base2 {
         parsed.base2.fieldA2 == 'bar'
 
         serializeToString(serializer, a1) == '{"fieldA1":"foo","fieldA2":"bar","sup":"x"}'
+    }
+
+    void 'unknown property handling on subtypes'() {
+        given:
+        def compiled = buildClassLoader('example.Base', '''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+import io.micronaut.json.annotation.SerializableBean;
+
+@SerializableBean
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = A.class),
+    @JsonSubTypes.Type(value = B.class)
+})
+@JsonTypeInfo(use = JsonTypeInfo.Id.MINIMAL_CLASS, include = JsonTypeInfo.As.PROPERTY, property = "type")
+class Base {
+}
+@JsonIgnoreProperties(ignoreUnknown = true)
+class A extends Base {
+}
+@JsonIgnoreProperties(ignoreUnknown = false)
+class B extends Base {
+}
+''')
+        def deserializer = (Deserializer) compiled.loadClass('example.$Base$Deserializer').newInstance()
+
+        expect:
+        deserializeFromString(deserializer, '{"type":".A","foo":"bar"}').class.simpleName == 'A'
+
+        when:
+        deserializeFromString(deserializer, '{"type":".B","foo":"bar"}')
+        then:
+        thrown DeserializationException
     }
 }

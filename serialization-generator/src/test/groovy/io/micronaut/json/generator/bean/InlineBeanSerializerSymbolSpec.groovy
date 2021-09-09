@@ -757,17 +757,78 @@ import java.util.*;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 class Test {
-    Map<String, String> anySetter = new HashMap<>();
+    private Map<String, String> anySetter = new HashMap<>();
     
     @JsonAnySetter
     void put(String key, String value) {
-        
+        anySetter.put(key, value);
     }
 }
 ''')
-        def test = compiled.newInstance()
 
         expect:
-        serializeToString(compiled.serializer, test) == '{"foo":"bar","123":"456"}'
+        deserializeFromString(compiled.serializer, '{"foo":"bar","123":"456"}').anySetter == ['foo': 'bar', '123': '456']
+    }
+
+    void 'unwrapped ignore unknown outer'() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+@JsonIgnoreProperties(ignoreUnknown = true)
+class A {
+    @JsonUnwrapped B b;
+}
+@JsonIgnoreProperties(ignoreUnknown = false)
+class B {
+}
+''')
+
+        expect:
+        deserializeFromString(compiled.serializer, '{"foo":"bar"}') != null
+    }
+
+    void 'unwrapped ignore unknown inner'() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+@JsonIgnoreProperties(ignoreUnknown = false)
+class A {
+    @JsonUnwrapped B b;
+}
+@JsonIgnoreProperties(ignoreUnknown = true)
+class B {
+}
+''')
+
+        expect:
+        deserializeFromString(compiled.serializer, '{"foo":"bar"}') != null
+    }
+
+    void 'unwrapped ignore unknown neither'() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+@JsonIgnoreProperties(ignoreUnknown = false)
+class Outer {
+    @JsonUnwrapped B b;
+}
+@JsonIgnoreProperties(ignoreUnknown = false)
+class B {
+}
+''')
+
+        when:
+        deserializeFromString(compiled.serializer, '{"foo":"bar"}')
+
+        then:
+        def e = thrown DeserializationException
+        expect:'error should have the name of the outer class'
+        e.message.contains("Outer")
     }
 }

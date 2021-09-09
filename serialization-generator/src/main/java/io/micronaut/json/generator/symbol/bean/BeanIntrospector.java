@@ -102,6 +102,7 @@ class BeanIntrospector {
         }
         beanDefinition.ignoreUnknownProperties = scanner.ignoreUnknownProperties;
         beanDefinition.valueProperty = completeProps.get(scanner.valueProperty);
+        beanDefinition.anySetter = scanner.anySetter;
         return beanDefinition;
     }
 
@@ -188,6 +189,7 @@ class BeanIntrospector {
         Map<String, PropBuilder> byName;
 
         MethodElement defaultConstructor;
+        MethodElement anySetter;
 
         MethodElement creator = null;
         /**
@@ -374,6 +376,19 @@ class BeanIntrospector {
             }
             for (ConstructorElement constructor : clazz.getEnclosedElements(ElementQuery.of(ConstructorElement.class).annotated(m -> m.hasAnnotation(JsonCreator.class)))) {
                 handleCreator(constructor);
+            }
+
+            List<MethodElement> anySetters = clazz.getEnclosedElements(ElementQuery.ALL_METHODS.annotated(m -> m.hasAnnotation(JsonAnySetter.class)));
+            if (!anySetters.isEmpty()) {
+                if (anySetters.size() > 1) {
+                    problemReporter.fail("Only one @JsonAnySetter allowed", anySetters.get(1));
+                    return;
+                }
+                anySetter = anySetters.get(0);
+                if (anySetter.getParameters().length != 2) {
+                    problemReporter.fail("@JsonAnySetter must have exactly two parameters", anySetter);
+                    return;
+                }
             }
 
             for (PropBuilder prop : byName.values()) {

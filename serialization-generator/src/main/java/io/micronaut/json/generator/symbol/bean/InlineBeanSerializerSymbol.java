@@ -142,7 +142,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
         return findSymbol(prop.type, prop.property.permitRecursiveSerialization, prop.property.nullable);
     }
 
-    private SerializerSymbol findSymbol(GeneratorType type, boolean permitRecursiveSerialization, Boolean nullable) {
+    SerializerSymbol findSymbol(GeneratorType type, boolean permitRecursiveSerialization, Boolean nullable) {
         SerializerSymbol symbol = linker.findSymbol(type);
         if (permitRecursiveSerialization) {
             symbol = symbol.withRecursiveSerialization();
