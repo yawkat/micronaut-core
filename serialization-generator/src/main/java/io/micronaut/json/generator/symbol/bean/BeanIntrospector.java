@@ -77,6 +77,7 @@ class BeanIntrospector {
             built.permitRecursiveSerialization = prop.permitRecursiveSerialization;
             built.nullable = prop.nullable;
             built.unwrapped = prop.unwrapped;
+            built.required = prop.required;
             built.aliases = prop.aliases;
             built.valueInclusionPolicy = prop.valueInclusionPolicy;
             completeProps.put(prop, built);
@@ -432,6 +433,13 @@ class BeanIntrospector {
                 if (prop.valueInclusionPolicy == JsonInclude.Include.USE_DEFAULTS) {
                     prop.valueInclusionPolicy = defaultInclusionPolicy;
                 }
+
+                prop.required = prop.annotatedElementsInOrder(forSerialization)
+                        .map(element -> element.getAnnotation(JsonProperty.class))
+                        .filter(Objects::nonNull)
+                        .map(annotation -> annotation.booleanValue("required"))
+                        .findFirst()
+                        .orElse(Optional.empty()).orElse(false);
             }
         }
 
@@ -505,6 +513,7 @@ class BeanIntrospector {
         boolean permitRecursiveSerialization;
         Boolean nullable;
         boolean unwrapped;
+        boolean required = false;
 
         JsonInclude.Include valueInclusionPolicy = JsonInclude.Include.USE_DEFAULTS;
 

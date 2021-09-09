@@ -524,6 +524,37 @@ class Test {
         serializeToString(compiled.serializer, testBean) == '"bar"'
     }
 
+    void "creator with optional parameter"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+class Test {
+    public final String foo;
+    public final String bar;
+    
+    @JsonCreator
+    public Test(@JsonProperty("foo") String foo, @JsonProperty(value = "bar", required = true) String bar) {
+        this.foo = foo;
+        this.bar = bar;
+    }
+}
+''')
+
+        expect:
+        deserializeFromString(compiled.serializer, '{"foo":"123","bar":"456"}').foo == '123'
+        deserializeFromString(compiled.serializer, '{"foo":"123","bar":"456"}').bar == '456'
+
+        deserializeFromString(compiled.serializer, '{"bar":"456"}').foo == null
+        deserializeFromString(compiled.serializer, '{"bar":"456"}').bar == '456'
+
+        when:
+        deserializeFromString(compiled.serializer, '{"foo":"123"}')
+        then:
+        thrown DeserializationException
+    }
+
     void "@JsonValue on toString"() {
         given:
         def compiled = buildSerializer('''

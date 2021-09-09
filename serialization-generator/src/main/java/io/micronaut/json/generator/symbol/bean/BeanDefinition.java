@@ -62,6 +62,7 @@ class BeanDefinition {
         @Nullable
         Boolean nullable = null;
         boolean unwrapped = false;
+        boolean required = false;
 
         @NonNull
         Set<String> aliases = Collections.emptySet();
@@ -107,11 +108,6 @@ class BeanDefinition {
             } else {
                 throw new AssertionError();
             }
-        }
-
-        public boolean isRequired() {
-            // todo: only require when required=true is set
-            return creatorParameter != null;
         }
 
         static Property field(String name, FieldElement field) {

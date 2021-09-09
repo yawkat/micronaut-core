@@ -321,7 +321,7 @@ abstract class DeserializationEntity {
                 value.generateEpilogue(builder, readProperties, decoderVariable);
             }
 
-            Set<DeserializationEntity> required = definition.props.stream().filter(BeanDefinition.Property::isRequired).map(elements::get).collect(Collectors.toSet());
+            Set<DeserializationEntity> required = definition.props.stream().filter(property -> property.required).map(elements::get).collect(Collectors.toSet());
             if (!required.isEmpty()) {
                 // do a best-effort of finding the property names of the individual DeserializationEntities.
                 // One entity may be associated with multiple properties
@@ -350,7 +350,7 @@ abstract class DeserializationEntity {
             builder.addStatement("$T $N = $L", PoetUtil.toTypeName(type), localVariableName, getCreatorCall(type, definition, creatorParameters.build()));
             for (BeanDefinition.Property prop : definition.props) {
                 // unwrapped properties are created in in their specific epilogues, required properties are checked to be present above
-                CodeBlock expressionHasBeenRead = prop.unwrapped || prop.isRequired() ? null : readProperties.isSet(elements.get(prop));
+                CodeBlock expressionHasBeenRead = prop.unwrapped || prop.required ? null : readProperties.isSet(elements.get(prop));
 
                 if (expressionHasBeenRead != null) {
                     // don't set a property we haven't read
