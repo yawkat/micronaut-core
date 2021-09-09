@@ -15,7 +15,9 @@
  */
 package io.micronaut.json.generator.symbol.bean;
 
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.ParameterizedTypeName;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
@@ -137,15 +139,18 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
     }
 
     SerializerSymbol findSymbol(PropWithType prop) {
-        SerializerSymbol symbol = linker.findSymbol(prop.type);
-        if (prop.property.permitRecursiveSerialization) {
+        return findSymbol(prop.type, prop.property.permitRecursiveSerialization, prop.property.nullable);
+    }
+
+    private SerializerSymbol findSymbol(GeneratorType type, boolean permitRecursiveSerialization, Boolean nullable) {
+        SerializerSymbol symbol = linker.findSymbol(type);
+        if (permitRecursiveSerialization) {
             symbol = symbol.withRecursiveSerialization();
         }
-        Boolean nullable = prop.property.nullable;
         // if no nullity is given, infer nullity from the value null support.
         // most types will be wrapped with NullableSerializerSymbol, but e.g. Optional won't be.
         if (nullable == null) {
-            if (prop.type.isPrimitive() && !prop.type.isArray()) {
+            if (type.isPrimitive() && !type.isArray()) {
                 nullable = false;
             } else {
                 nullable = !symbol.supportsNullDeserialization();
@@ -309,9 +314,30 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                     PropWithType propWithType = PropWithType.fromContext(type, prop);
                     if (prop.unwrapped) {
                         serialize.add(serializeImpl(subGenerator, propEncoder, propWithType.type, propRead, true, true));
+                    } else if (prop.anyGetter) {
+                        if (!propWithType.type.isRawTypeEquals(Map.class)) {
+                            generatorContext.getProblemReporter().fail("@JsonAnyGetter must be of exact type Map", prop.getElement());
+                            continue;
+                        }
+                        Optional<Map<String, GeneratorType>> typeArgs = propWithType.type.getTypeArgumentsExact(Map.class);
+                        if (!typeArgs.isPresent() || !typeArgs.get().get("K").isRawTypeEquals(String.class)) {
+                            generatorContext.getProblemReporter().fail("@JsonAnyGetter must have string key", prop.getElement());
+                            continue;
+                        }
+                        GeneratorType valueType = typeArgs.get().get("V");
+                        SerializerSymbol valueSerializer = findSymbol(valueType, prop.permitRecursiveSerialization, null);
+                        String entryName = generatorContext.newLocalVariable("anyGetterEntry");
+                        serialize.beginControlFlow("for ($T $N : $L.entrySet())",
+                                ParameterizedTypeName.get(ClassName.get(Map.Entry.class), ClassName.get(String.class), PoetUtil.toTypeName(valueType)),
+                                entryName,
+                                propRead
+                        );
+                        serialize.addStatement("$N.encodeKey($N.getKey())", propEncoder, entryName);
+                        serialize.add(valueSerializer.serialize(subGenerator, propEncoder, valueType, CodeBlock.of("$N.getValue()", entryName)));
+                        serialize.endControlFlow();
                     } else {
                         SerializerSymbol symbol = findSymbol(propWithType);
-                        ConditionExpression<CodeBlock> shouldIncludeCheck = symbol.shouldIncludeCheck(generatorContext, propWithType.type, prop.valueInclusionPolicy);
+                        ConditionExpression<CodeBlock> shouldIncludeCheck = symbol.shouldIncludeCheck(subGenerator, propWithType.type, prop.valueInclusionPolicy);
                         if (!shouldIncludeCheck.isAlwaysTrue()) {
                             String tempVariable = generatorContext.newLocalVariable(propWithType.property.name);
                             serialize.addStatement("$T $N = $L", PoetUtil.toTypeName(propWithType.type), tempVariable, propRead);

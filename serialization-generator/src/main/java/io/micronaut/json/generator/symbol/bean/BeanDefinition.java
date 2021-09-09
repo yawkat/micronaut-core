@@ -63,6 +63,7 @@ class BeanDefinition {
         Boolean nullable = null;
         boolean unwrapped = false;
         boolean required = false;
+        boolean anyGetter = false;
 
         @NonNull
         Set<String> aliases = Collections.emptySet();

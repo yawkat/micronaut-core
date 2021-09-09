@@ -78,6 +78,7 @@ class BeanIntrospector {
             built.nullable = prop.nullable;
             built.unwrapped = prop.unwrapped;
             built.required = prop.required;
+            built.anyGetter = prop.anyGetter;
             built.aliases = prop.aliases;
             built.valueInclusionPolicy = prop.valueInclusionPolicy;
             completeProps.put(prop, built);
@@ -240,6 +241,7 @@ class BeanIntrospector {
         private boolean hasPropertyAnnotation(AnnotatedElement element) {
             return element.isAnnotationPresent(JsonProperty.class) ||
                     element.isAnnotationPresent(JsonValue.class) ||
+                    element.isAnnotationPresent(JsonAnyGetter.class) ||
                     element.isAnnotationPresent(JsonUnwrapped.class);
         }
 
@@ -439,6 +441,9 @@ class BeanIntrospector {
                         .map(annotation -> annotation.booleanValue("required"))
                         .findFirst()
                         .orElse(Optional.empty()).orElse(false);
+
+                prop.anyGetter = prop.annotatedElementsInOrder(forSerialization)
+                        .anyMatch(e -> e.hasAnnotation(JsonAnyGetter.class));
             }
         }
 
@@ -512,7 +517,8 @@ class BeanIntrospector {
         boolean permitRecursiveSerialization;
         Boolean nullable;
         boolean unwrapped;
-        boolean required = false;
+        boolean required;
+        boolean anyGetter;
 
         JsonInclude.Include valueInclusionPolicy = JsonInclude.Include.USE_DEFAULTS;
 

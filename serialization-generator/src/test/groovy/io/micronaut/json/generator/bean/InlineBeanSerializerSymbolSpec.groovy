@@ -724,4 +724,50 @@ class Test {
         deserializeFromString(compiled.serializer, '{}').foo == 'bar'
         deserializeFromString(compiled.serializer, '{"foo":null}').foo == null
     }
+
+    void "@JsonAnyGetter"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import java.util.*;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+class Test {
+    @JsonAnyGetter
+    Map<String, String> anyGetter() {
+        Map<String, String> map = new LinkedHashMap<>();
+        map.put("foo", "bar");
+        map.put("123", "456");
+        return map;
+    }
+}
+''')
+        def test = compiled.newInstance()
+
+        expect:
+        serializeToString(compiled.serializer, test) == '{"foo":"bar","123":"456"}'
+    }
+
+    void "@JsonAnySetter"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import java.util.*;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+class Test {
+    Map<String, String> anySetter = new HashMap<>();
+    
+    @JsonAnySetter
+    void put(String key, String value) {
+        
+    }
+}
+''')
+        def test = compiled.newInstance()
+
+        expect:
+        serializeToString(compiled.serializer, test) == '{"foo":"bar","123":"456"}'
+    }
 }
