@@ -79,7 +79,6 @@ public final class PoetUtil {
         String[] simpleNameParts = clazz.getSimpleName().split("\\$");
         ClassName className = ClassName.get(clazz.getPackageName(), simpleNameParts[0], Arrays.copyOfRange(simpleNameParts, 1, simpleNameParts.length));
         if (clazz.getName().equals("<any>")) {
-            // todo: investigate further. Seems to happen when the input source has unresolvable types
             throw new IllegalArgumentException("Type resolution error?");
         }
         return className;

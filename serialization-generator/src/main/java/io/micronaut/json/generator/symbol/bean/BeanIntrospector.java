@@ -271,7 +271,6 @@ class BeanIntrospector {
 
         void scan(ClassElement clazz, Collection<AnnotatedElement> additionalAnnotationSource) {
             AnnotationValue<JsonIgnoreProperties> jsonIgnoreProperties = ElementUtil.getAnnotation(JsonIgnoreProperties.class, clazz, additionalAnnotationSource);
-            // todo: do we really want to ignoreUnknown by default?
             ignoreUnknownProperties = true;
             if (jsonIgnoreProperties != null) {
                 ignoreUnknownProperties = jsonIgnoreProperties.get("ignoreUnknown", Boolean.class, ignoreUnknownProperties);
@@ -629,8 +628,6 @@ class BeanIntrospector {
     private enum AccessorType {
         /**
          * {@literal @}{@link JsonIgnore}.
-         * <p>
-         * todo: actually implement this
          */
         IGNORABLE,
         /**

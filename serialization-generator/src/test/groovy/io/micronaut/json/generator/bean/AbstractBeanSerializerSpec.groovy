@@ -16,13 +16,19 @@ import java.nio.charset.Charset
 import static javax.tools.JavaFileObject.Kind.SOURCE
 
 class AbstractBeanSerializerSpec extends AbstractTypeElementSpec implements SerializerUtils {
-    CompiledBean<?> buildSerializer(@Language("java") String cls) {
+    CompiledBean<?> buildSerializer(@Language("java") String cls, ProblemReporter problemReporter = null) {
         def classElement = buildClassElement(cls)
 
         def linker = new SerializerLinker(null)
         SingletonSerializerGenerator.GenerationResult result = SingletonSerializerGenerator.create(classElement)
+                .problemReporter(problemReporter)
                 .symbol(linker.inlineBean)
                 .generateSingle()
+
+        if (problemReporter != null && problemReporter.failed) {
+            return null
+        }
+
         def files = newJavaParser().generate(
                 new StringSourceJavaFileObject(classElement.name, cls),
                 new StringSourceJavaFileObject(result.serializerClassName.reflectionName(), result.generatedFile.toString())

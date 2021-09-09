@@ -103,7 +103,7 @@ abstract class DeserializationEntity {
         builder.add("if ($N == null) break;\n", fieldNameVariable);
         builder.beginControlFlow("switch ($N)", fieldNameVariable);
 
-        Map<String, ? extends DeserializationEntity> collectedProperties = collectProperties();
+        Map<String, ? extends DeserializationEntity> collectedProperties = collectProperties(generatorContext);
         Map<DeserializationEntity, List<String>> collectedPropertiesReverse = new LinkedHashMap<>();
         for (Map.Entry<String, ? extends DeserializationEntity> entry : collectedProperties.entrySet()) {
             collectedPropertiesReverse.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
@@ -142,7 +142,7 @@ abstract class DeserializationEntity {
         throw new UnsupportedOperationException();
     }
 
-    Map<String, ? extends DeserializationEntity> collectProperties() {
+    Map<String, ? extends DeserializationEntity> collectProperties(GeneratorContext context) {
         throw new UnsupportedOperationException();
     }
 
@@ -178,7 +178,8 @@ abstract class DeserializationEntity {
                 case PROPERTY:
                     return new SubtypingFlat(symbol, generatorContext, type, def);
                 default:
-                    throw new AssertionError(); // todo
+                    generatorContext.getProblemReporter().fail("Unsupported subtyping structure " + def.subtyping.as, type.getClassElement());
+                    return new SubtypingFlat(symbol, generatorContext, type, def);
             }
         } else {
             Map<BeanDefinition.Property, DeserializationEntity> elements = new LinkedHashMap<>();
@@ -287,20 +288,28 @@ abstract class DeserializationEntity {
         }
 
         @Override
-        Map<String, ? extends DeserializationEntity> collectProperties() {
+        Map<String, ? extends DeserializationEntity> collectProperties(GeneratorContext context) {
             Map<String, DeserializationEntity> result = new LinkedHashMap<>();
             for (Map.Entry<BeanDefinition.Property, DeserializationEntity> element : elements.entrySet()) {
-                // todo: detect duplicates
                 if (element.getValue().hasProperties) {
-                    result.putAll(element.getValue().collectProperties());
+                    for (Map.Entry<String, ? extends DeserializationEntity> childEntry : element.getValue().collectProperties(context).entrySet()) {
+                        putProperty(context, result, childEntry.getKey(), childEntry.getValue());
+                    }
                 } else {
-                    result.put(element.getKey().name, element.getValue());
+                    putProperty(context, result, element.getKey().name, element.getValue());
                     for (String alias : element.getKey().aliases) {
-                        result.put(alias, element.getValue());
+                        putProperty(context, result, alias, element.getValue());
                     }
                 }
             }
             return result;
+        }
+
+        private void putProperty(GeneratorContext context, Map<String, DeserializationEntity> map, String name, DeserializationEntity prop) {
+            DeserializationEntity old = map.put(name, prop);
+            if (old != null) {
+                context.getProblemReporter().fail("Duplicate property " + name, type.getClassElement());
+            }
         }
 
         @Override
@@ -531,7 +540,7 @@ abstract class DeserializationEntity {
 
             ambiguousProperties = new LinkedHashMap<>();
             for (DeserializationEntity subType : subTypes) {
-                Map<String, ? extends DeserializationEntity> subTypeProperties = subType.collectProperties();
+                Map<String, ? extends DeserializationEntity> subTypeProperties = subType.collectProperties(context);
                 for (Map.Entry<String, ? extends DeserializationEntity> entry : subTypeProperties.entrySet()) {
                     ambiguousProperties.computeIfAbsent(entry.getKey(), k -> new AmbiguousProperty())
                             .paths.add(new Path(subType, entry.getValue()));
@@ -570,7 +579,7 @@ abstract class DeserializationEntity {
         }
 
         @Override
-        Map<String, ? extends DeserializationEntity> collectProperties() {
+        Map<String, ? extends DeserializationEntity> collectProperties(GeneratorContext context) {
             if (tagProperty != null) {
                 Map<String, DeserializationEntity> all = new LinkedHashMap<>();
                 all.put(tagPropertyName, tagProperty);

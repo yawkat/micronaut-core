@@ -1,7 +1,7 @@
 package io.micronaut.json.generator.bean
 
 import io.micronaut.json.DeserializationException
-import spock.lang.Ignore
+import io.micronaut.json.generator.symbol.ProblemReporter
 
 class InlineBeanSerializerSymbolSpec extends AbstractBeanSerializerSpec {
     void "simple bean"() {
@@ -482,6 +482,29 @@ class Name {
         des.name != null
         des.name.first == "foo"
         des.name.last == "bar"
+    }
+
+    void "unwrapped duplicate property"() {
+        given:
+        def problemReporter = new ProblemReporter()
+        buildSerializer('''
+package example;
+
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+class Test {
+    String first;
+    @JsonUnwrapped Name name = new Name();
+}
+
+class Name {
+    String first;
+    String last;
+}
+''', problemReporter)
+
+        expect:
+        problemReporter.failed
+        problemReporter.problems.any { it.message.contains('first') }
     }
 
     void "aliases"() {
