@@ -514,7 +514,7 @@ abstract class DeserializationEntity {
         @Override
         boolean isStructurallyIdentical(InlineBeanSerializerSymbol context, DeserializationEntity other) {
             return other instanceof AnySetterAsMap &&
-                    this.valueType.equals(((AnySetterAsMap) other).valueType);
+                    this.valueType.typeEquals(((AnySetterAsMap) other).valueType);
         }
 
         @Override

@@ -298,4 +298,50 @@ class B extends Base {
         then:
         thrown DeserializationException
     }
+
+    void 'any setter merge'() {
+        given:
+        def compiled = buildClassLoader('example.Base', '''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+import java.util.*;
+import io.micronaut.json.annotation.SerializableBean;
+
+@SerializableBean
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = A.class),
+    @JsonSubTypes.Type(value = B.class)
+})
+@JsonTypeInfo(use = JsonTypeInfo.Id.MINIMAL_CLASS, include = JsonTypeInfo.As.PROPERTY, property = "type")
+class Base {
+}
+class A extends Base {
+    private Map<String, String> anySetter = new HashMap<>();
+    
+    @JsonAnySetter
+    void put(String key, String value) {
+        anySetter.put(key, value);
+    }
+}
+class B extends Base {
+    private Map<String, String> anySetter = new HashMap<>();
+    
+    @JsonAnySetter
+    void put(String key, String value) {
+        anySetter.put(key, value);
+    }
+}
+''')
+        def deserializer = (Deserializer) compiled.loadClass('example.$Base$Deserializer').newInstance()
+
+        expect:
+        deserializeFromString(deserializer, '{"type":".A","foo":"bar"}').class.simpleName == 'A'
+        deserializeFromString(deserializer, '{"type":".A","foo":"bar"}').anySetter == [foo: 'bar']
+        deserializeFromString(deserializer, '{"type":".B","foo":"bar"}').class.simpleName == 'B'
+        deserializeFromString(deserializer, '{"type":".B","foo":"bar"}').anySetter == [foo: 'bar']
+
+        deserializeFromString(deserializer, '{"foo":"bar","type":".A"}').anySetter == [foo: 'bar']
+        deserializeFromString(deserializer, '{"foo":"bar","type":".B"}').anySetter == [foo: 'bar']
+    }
 }
