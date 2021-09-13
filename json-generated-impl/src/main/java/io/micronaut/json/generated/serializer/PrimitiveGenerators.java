@@ -37,13 +37,8 @@ import java.util.function.Function;
 /**
  * Marker class to tell the generator that we should generate the primitive serializers here.
  */
-@PrimitiveGenerators.GeneratePrimitiveSerializers
+@GeneratePrimitiveSerializers
 class PrimitiveGenerators {
-    @Target(ElementType.TYPE)
-    @Retention(RetentionPolicy.SOURCE)
-    @interface GeneratePrimitiveSerializers {
-    }
-
     // serializers for raw types
 
     @SuppressWarnings("rawtypes")
@@ -125,4 +120,9 @@ class PrimitiveGenerators {
             return locator.findInvariantDeserializer(actualType);
         }
     }
+}
+
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.SOURCE)
+@interface GeneratePrimitiveSerializers {
 }

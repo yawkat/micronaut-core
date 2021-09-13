@@ -16,12 +16,13 @@ import io.micronaut.json.Encoder;
 import io.micronaut.json.Serializer;
 import java.lang.annotation.*;
 
-@PrimitiveGenerators.GeneratePrimitiveSerializers
+@GeneratePrimitiveSerializers
 class PrimitiveGenerators {
-    @Target(ElementType.TYPE)
-    @Retention(RetentionPolicy.SOURCE)
-    @interface GeneratePrimitiveSerializers {
-    }
+}
+
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.SOURCE)
+@interface GeneratePrimitiveSerializers {
 }
 
 @jakarta.inject.Singleton

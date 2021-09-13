@@ -31,7 +31,7 @@ import java.util.*;
  */
 @Internal
 public class PrimitiveVisitor extends AbstractGeneratorVisitor<Object> implements TypeElementVisitor<Object, Object> {
-    private static final String TYPE = "io.micronaut.json.generated.serializer.PrimitiveGenerators.GeneratePrimitiveSerializers";
+    private static final String TYPE = "io.micronaut.json.generated.serializer.GeneratePrimitiveSerializers";
 
     @Override
     public Set<String> getSupportedAnnotationNames() {

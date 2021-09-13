@@ -36,7 +36,7 @@ import io.micronaut.json.annotation.SerializableBean
 class Bean {
     String foo
 }
-''')
+''', true)
 
         then:
         context.getBeansOfType(Serializer.Factory).any { it.genericType == context.classLoader.loadClass("example.Bean") }
@@ -80,7 +80,7 @@ class Bean {
         this.foo = foo
     }
 }
-''')
+''', true)
 
         then:
         context.getBeansOfType(Serializer.Factory).any { it.genericType == context.classLoader.loadClass("example.Bean") }

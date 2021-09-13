@@ -183,7 +183,7 @@ abstract class DeserializationEntity {
     }
 
     boolean isStructurallyIdentical(InlineBeanSerializerSymbol context, DeserializationEntity other) {
-        return false;
+        return this == other;
     }
 
     void updateChildren(Function<DeserializationEntity, DeserializationEntity> function) {
