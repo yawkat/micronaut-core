@@ -45,7 +45,7 @@ public class ConditionExpression<I> {
         return new ConditionExpression<>(Collections.singletonList(condition));
     }
 
-    public ConditionExpression<I> and(ConditionExpression<I> other) {
+    public ConditionExpression<I> and(ConditionExpression<? super I> other) {
         List<Function<? super I, CodeBlock>> newAndTerms = new ArrayList<>(andTerms.size() + other.andTerms.size());
         newAndTerms.addAll(andTerms);
         newAndTerms.addAll(other.andTerms);
@@ -55,6 +55,12 @@ public class ConditionExpression<I> {
     public <J> ConditionExpression<J> compose(Function<J, I> function) {
         return new ConditionExpression<>(andTerms.stream()
                 .map(f -> f.compose(function))
+                .collect(Collectors.toList()));
+    }
+
+    public <J> ConditionExpression<J> bind(I value) {
+        return new ConditionExpression<>(andTerms.stream()
+                .map(fun -> (Function<J, CodeBlock>) ignored -> fun.apply(value))
                 .collect(Collectors.toList()));
     }
 

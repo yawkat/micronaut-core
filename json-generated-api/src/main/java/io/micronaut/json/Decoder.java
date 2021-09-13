@@ -74,4 +74,10 @@ public interface Decoder {
     void finishStructure() throws IOException;
 
     IOException createDeserializationException(String message);
+
+    /**
+     * @param views Views to check.
+     * @return {@code true} iff any of the given views is enabled.
+     */
+    boolean hasView(Class<?>... views);
 }

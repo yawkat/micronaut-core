@@ -3,6 +3,7 @@ package io.micronaut.json.generated
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
+import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.core.JsonFactory
 import io.micronaut.context.ApplicationContext
 import io.micronaut.core.type.Argument
@@ -157,5 +158,63 @@ class GeneratedObjectCodecSpec extends Specification {
         def parsed = codec.readValue('{"foo":42}', Argument.mapOf(Object, Integer))
         then:
         parsed == [foo: 42]
+    }
+
+    def 'views'() {
+        given:
+        def ctx = ApplicationContext.run()
+        def codec = ctx.getBean(GeneratedObjectMapper)
+
+        def withViews = new WithViews(firstName: "Bob", lastName: "Jones", birthdate: "08/01/1980", password: "secret")
+
+        expect:
+        new String(codec.cloneWithViewClass(Views.Admin).writeValueAsBytes(withViews), StandardCharsets.UTF_8) ==
+                '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}'
+        new String(codec.cloneWithViewClass(Views.Internal).writeValueAsBytes(withViews), StandardCharsets.UTF_8) ==
+                '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980"}'
+        new String(codec.cloneWithViewClass(Views.Public).writeValueAsBytes(withViews), StandardCharsets.UTF_8) ==
+                '{"firstName":"Bob","lastName":"Jones"}'
+        new String(codec.writeValueAsBytes(withViews), StandardCharsets.UTF_8) == '{}'
+
+        codec.readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+                .firstName == null
+
+        codec.cloneWithViewClass(Views.Public).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+                .firstName == 'Bob'
+        codec.cloneWithViewClass(Views.Public).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+                .birthdate == null
+
+        codec.cloneWithViewClass(Views.Internal).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+                .firstName == 'Bob'
+        codec.cloneWithViewClass(Views.Internal).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+                .birthdate == '08/01/1980'
+        codec.cloneWithViewClass(Views.Internal).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+                .password == null
+
+        codec.cloneWithViewClass(Views.Admin).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+                .firstName == 'Bob'
+        codec.cloneWithViewClass(Views.Admin).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+                .birthdate == '08/01/1980'
+        codec.cloneWithViewClass(Views.Admin).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+                .password == 'secret'
+    }
+
+    @SerializableBean
+    @JsonView(Views.Public)
+    static class WithViews {
+        String firstName
+        String lastName
+        @JsonView(Views.Internal)
+        String birthdate
+        @JsonView(Views.Admin)
+        String password // don't do plaintext passwords at home please
+    }
+
+    static class Views {
+        static class Public {}
+
+        static class Internal extends Public {}
+
+        static class Admin extends Internal {}
     }
 }

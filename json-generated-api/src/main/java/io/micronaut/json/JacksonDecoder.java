@@ -41,16 +41,30 @@ public class JacksonDecoder implements Decoder {
 
     private boolean currentlyUnwrappingArray = false;
 
-    private JacksonDecoder(JsonParser parser, @Nullable JacksonDecoder parent) {
-        this.parser = parser;
+    @NonNull
+    private final Class<?> view;
+
+    private JacksonDecoder(@NonNull JacksonDecoder parent) {
+        this.parser = parent.parser;
         this.parent = parent;
+        this.view = parent.view;
+    }
+
+    private JacksonDecoder(JsonParser parser, @NonNull Class<?> view) {
+        this.parser = parser;
+        this.parent = null;
+        this.view = view;
     }
 
     public static Decoder create(JsonParser parser) throws IOException {
+        return create(parser, Object.class);
+    }
+
+    public static Decoder create(JsonParser parser, Class<?> view) throws IOException {
         if (!parser.hasCurrentToken()) {
             parser.nextToken();
         }
-        return new JacksonDecoder(parser, null);
+        return new JacksonDecoder(parser, view);
     }
 
     private void checkChild() {
@@ -110,6 +124,16 @@ public class JacksonDecoder implements Decoder {
     }
 
     @Override
+    public boolean hasView(Class<?>... views) {
+        for (Class<?> candidate : views) {
+            if (candidate.isAssignableFrom(view)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
     public final boolean hasNextArrayValue() throws IOException {
         checkChild();
         return parser.currentToken() != JsonToken.END_ARRAY;
@@ -140,7 +164,7 @@ public class JacksonDecoder implements Decoder {
             throw createDeserializationException("Unexpected token " + parser.currentToken() + ", expected array");
         }
         parser.nextToken();
-        return child = new JacksonDecoder(parser, this);
+        return child = new JacksonDecoder(this);
     }
 
     @NonNull
@@ -151,7 +175,7 @@ public class JacksonDecoder implements Decoder {
             throw ((Decoder) this).createDeserializationException("Unexpected token " + parser.currentToken() + ", expected object");
         }
         parser.nextToken();
-        return child = new JacksonDecoder(parser, this);
+        return child = new JacksonDecoder(this);
     }
 
     @NonNull

@@ -63,17 +63,19 @@ public final class GeneratedObjectMapper implements JsonMapper {
     private final JsonStreamConfig deserializationConfig;
     private final JsonNodeTreeCodec treeCodec;
     private final ObjectCodecImpl objectCodecImpl = new ObjectCodecImpl();
+    private final Class<?> view;
 
-    private GeneratedObjectMapper(SerializerLocator locator, JsonStreamConfig deserializationConfig) {
+    private GeneratedObjectMapper(SerializerLocator locator, JsonStreamConfig deserializationConfig, Class<?> view) {
         this.locator = locator;
         this.deserializationConfig = deserializationConfig;
         this.treeCodec = JsonNodeTreeCodec.getInstance().withConfig(deserializationConfig);
+        this.view = view;
     }
 
     @Inject
     @Internal
     public GeneratedObjectMapper(SerializerLocator locator) {
-        this(locator, JsonStreamConfig.DEFAULT);
+        this(locator, JsonStreamConfig.DEFAULT, Object.class);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -88,7 +90,7 @@ public final class GeneratedObjectMapper implements JsonMapper {
         if (serializer instanceof ObjectSerializer) {
             throw new ObjectMappingException("No serializer for type " + type.getName());
         }
-        serializer.serialize(JacksonEncoder.create(gen), value);
+        serializer.serialize(JacksonEncoder.create(gen, view), value);
     }
 
     private <T> T readValue(JsonParser parser, Argument<T> type) throws IOException {
@@ -106,7 +108,7 @@ public final class GeneratedObjectMapper implements JsonMapper {
         if (parser.currentToken() == JsonToken.VALUE_NULL && !deserializer.supportsNullDeserialization()) {
             return null;
         }
-        return (T) deserializer.deserialize(JacksonDecoder.create(parser));
+        return (T) deserializer.deserialize(JacksonDecoder.create(parser, view));
     }
 
     @Override
@@ -168,6 +170,12 @@ public final class GeneratedObjectMapper implements JsonMapper {
                 super.subscribe(downstreamSubscriber);
             }
         };
+    }
+
+    @NonNull
+    @Override
+    public JsonMapper cloneWithViewClass(@NonNull Class<?> viewClass) {
+        return new GeneratedObjectMapper(locator, deserializationConfig, viewClass);
     }
 
     private class ObjectCodecImpl extends ObjectCodec {

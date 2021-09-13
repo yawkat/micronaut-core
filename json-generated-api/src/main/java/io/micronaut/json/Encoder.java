@@ -40,4 +40,10 @@ public interface Encoder {
     void encodeNull() throws IOException;
 
     void encodeArbitrary(Object object) throws IOException;
+
+    /**
+     * @param views Views to check.
+     * @return {@code true} iff any of the given views is enabled.
+     */
+    boolean hasView(Class<?>... views);
 }

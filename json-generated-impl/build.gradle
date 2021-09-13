@@ -23,3 +23,7 @@ dependencies {
         testImplementation files(org.gradle.internal.jvm.Jvm.current().toolsJar)
     }
 }
+
+test {
+    systemProperty 'micronaut.databind', 'generated'
+}

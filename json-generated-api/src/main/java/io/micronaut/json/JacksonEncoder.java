@@ -16,15 +16,29 @@ public abstract class JacksonEncoder implements Encoder {
 
     private JacksonEncoder child = null;
 
-    private JacksonEncoder(@NonNull JsonGenerator generator, @Nullable JacksonEncoder parent) {
-        Objects.requireNonNull(generator, "generator");
+    @NonNull
+    private final Class<?> view;
 
-        this.generator = generator;
+    private JacksonEncoder(@NonNull JacksonEncoder parent) {
+        this.generator = parent.generator;
         this.parent = parent;
+        this.view = parent.view;
+    }
+
+    private JacksonEncoder(@NonNull JsonGenerator generator, @NonNull Class<?> view) {
+        this.generator = generator;
+        this.view = view;
+        this.parent = null;
     }
 
     public static JacksonEncoder create(@NonNull JsonGenerator generator) {
-        return new OuterEncoder(generator, null);
+        return create(generator, Object.class);
+    }
+
+    public static JacksonEncoder create(@NonNull JsonGenerator generator, @NonNull Class<?> view) {
+        Objects.requireNonNull(generator, "generator");
+        Objects.requireNonNull(view, "view");
+        return new OuterEncoder(generator, view);
     }
 
     private void checkChild() {
@@ -41,7 +55,7 @@ public abstract class JacksonEncoder implements Encoder {
         checkChild();
 
         generator.writeStartArray();
-        JacksonEncoder arrayEncoder = new ArrayEncoder(generator, this);
+        JacksonEncoder arrayEncoder = new ArrayEncoder(this);
         child = arrayEncoder;
         return arrayEncoder;
     }
@@ -51,7 +65,7 @@ public abstract class JacksonEncoder implements Encoder {
         checkChild();
 
         generator.writeStartObject();
-        JacksonEncoder objectEncoder = new ObjectEncoder(generator, this);
+        JacksonEncoder objectEncoder = new ObjectEncoder(this);
         child = objectEncoder;
         return objectEncoder;
     }
@@ -141,9 +155,19 @@ public abstract class JacksonEncoder implements Encoder {
         generator.writeObject(object);
     }
 
+    @Override
+    public boolean hasView(Class<?>... views) {
+        for (Class<?> candidate : views) {
+            if (candidate.isAssignableFrom(view)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static class ArrayEncoder extends JacksonEncoder {
-        ArrayEncoder(JsonGenerator generator, @Nullable JacksonEncoder parent) {
-            super(generator, parent);
+        ArrayEncoder(JacksonEncoder parent) {
+            super(parent);
         }
 
         @Override
@@ -153,8 +177,8 @@ public abstract class JacksonEncoder implements Encoder {
     }
 
     private static class ObjectEncoder extends JacksonEncoder {
-        ObjectEncoder(JsonGenerator generator, @Nullable JacksonEncoder parent) {
-            super(generator, parent);
+        ObjectEncoder(JacksonEncoder parent) {
+            super(parent);
         }
 
         @Override
@@ -164,8 +188,8 @@ public abstract class JacksonEncoder implements Encoder {
     }
 
     private static class OuterEncoder extends JacksonEncoder {
-        OuterEncoder(JsonGenerator generator, @Nullable JacksonEncoder parent) {
-            super(generator, parent);
+        OuterEncoder(@NonNull JsonGenerator generator, @NonNull Class<?> view) {
+            super(generator, view);
         }
 
         @Override

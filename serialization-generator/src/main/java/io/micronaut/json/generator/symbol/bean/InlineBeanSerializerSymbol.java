@@ -21,6 +21,7 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.json.Encoder;
 import io.micronaut.json.annotation.SerializableBean;
 import io.micronaut.json.generator.symbol.*;
@@ -313,6 +314,24 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                     CodeBlock propRead = getPropertyAccessExpression(readExpression, prop);
                     GeneratorContext subGenerator = generatorContext.withSubPath(prop.name);
                     PropWithType propWithType = PropWithType.fromContext(type, prop);
+
+                    ConditionExpression<CodeBlock> shouldIncludeCheck = ConditionExpression.alwaysTrue();
+
+                    shouldIncludeCheck = shouldIncludeCheck.and(checkJsonViewEnabled(prop).bind(propEncoder));
+
+                    SerializerSymbol symbol = null;
+                    if (!prop.unwrapped && !prop.anyGetter) {
+                        symbol = findSymbol(propWithType);
+                        shouldIncludeCheck = shouldIncludeCheck.and(symbol.shouldIncludeCheck(subGenerator, propWithType.type, prop.valueInclusionPolicy));
+                    }
+
+                    if (!shouldIncludeCheck.isAlwaysTrue()) {
+                        String tempVariable = generatorContext.newLocalVariable(propWithType.property.name);
+                        serialize.addStatement("$T $N = $L", PoetUtil.toTypeName(propWithType.type), tempVariable, propRead);
+                        propRead = CodeBlock.of("$N", tempVariable);
+                        serialize.beginControlFlow("if ($L)", shouldIncludeCheck.build(propRead));
+                    }
+
                     if (prop.unwrapped) {
                         serialize.add(serializeImpl(subGenerator, propEncoder, propWithType.type, propRead, true, true));
                     } else if (prop.anyGetter) {
@@ -337,21 +356,13 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                         serialize.add(valueSerializer.serialize(subGenerator, propEncoder, valueType, CodeBlock.of("$N.getValue()", entryName)));
                         serialize.endControlFlow();
                     } else {
-                        SerializerSymbol symbol = findSymbol(propWithType);
-                        ConditionExpression<CodeBlock> shouldIncludeCheck = symbol.shouldIncludeCheck(subGenerator, propWithType.type, prop.valueInclusionPolicy);
-                        if (!shouldIncludeCheck.isAlwaysTrue()) {
-                            String tempVariable = generatorContext.newLocalVariable(propWithType.property.name);
-                            serialize.addStatement("$T $N = $L", PoetUtil.toTypeName(propWithType.type), tempVariable, propRead);
-                            propRead = CodeBlock.of("$N", tempVariable);
-                            serialize.beginControlFlow("if ($L)", shouldIncludeCheck.build(propRead));
-                        }
-
+                        assert symbol != null;
                         serialize.addStatement("$N.encodeKey($S)", propEncoder, prop.name);
                         serialize.add(symbol.serialize(subGenerator, propEncoder, propWithType.type, propRead));
+                    }
 
-                        if (!shouldIncludeCheck.isAlwaysTrue()) {
-                            serialize.endControlFlow();
-                        }
+                    if (!shouldIncludeCheck.isAlwaysTrue()) {
+                        serialize.endControlFlow();
                     }
                 }
                 if (!nakedProperties) {
@@ -359,6 +370,27 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                 }
             }
             return serialize.build();
+        }
+    }
+
+    ConditionExpression<String> checkJsonViewEnabled(BeanDefinition.Property prop) {
+        if (prop.viewClasses != null) {
+            return ConditionExpression.of(coderVariable -> {
+                CodeBlock.Builder hasViewCheck = CodeBlock.builder();
+                hasViewCheck.add("$N.hasView(", coderVariable);
+                boolean first = true;
+                for (ClassElement viewClass : prop.viewClasses) {
+                    if (!first) {
+                        hasViewCheck.add(", ");
+                    }
+                    first = false;
+                    hasViewCheck.add("$T.class", PoetUtil.toTypeName(viewClass));
+                }
+                hasViewCheck.add(")");
+                return hasViewCheck.build();
+            });
+        } else {
+            return ConditionExpression.alwaysTrue();
         }
     }
 
@@ -421,7 +453,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             throw new UnsupportedOperationException();
         }
 
-        DeserializationEntity entity = DeserializationEntity.introspect(this, generatorContext, type);
+        DeserializationEntity entity = DeserializationEntity.introspect(this, generatorContext, type, ConditionExpression.alwaysTrue());
 
         // if there were failures, the entity may be in an inconsistent state, so we avoid codegen.
         if (generatorContext.getProblemReporter().isFailed()) {

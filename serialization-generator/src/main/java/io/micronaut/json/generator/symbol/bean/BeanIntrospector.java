@@ -80,6 +80,9 @@ class BeanIntrospector {
             built.anyGetter = prop.anyGetter;
             built.aliases = prop.aliases;
             built.valueInclusionPolicy = prop.valueInclusionPolicy;
+            built.viewClasses = prop.viewClassNames == null ?
+                    null :
+                    prop.viewClassNames.stream().map(fqcn -> context.getClassElement(fqcn).get()).collect(Collectors.toList());
             completeProps.put(prop, built);
         }
         beanDefinition.props = new ArrayList<>(completeProps.values());
@@ -458,6 +461,12 @@ class BeanIntrospector {
 
                 prop.anyGetter = prop.annotatedElementsInOrder(forSerialization)
                         .anyMatch(e -> e.hasAnnotation(JsonAnyGetter.class));
+
+                prop.viewClassNames = Stream.concat(prop.annotatedElementsInOrder(forSerialization), Stream.of(clazz))
+                        .map(e -> e.getAnnotation(JsonView.class))
+                        .filter(Objects::nonNull)
+                        .map(a -> Arrays.stream(a.annotationClassValues("value")).map(AnnotationClassValue::getName).collect(Collectors.toList()))
+                        .findFirst().orElse(null);
             }
         }
 
@@ -546,6 +555,9 @@ class BeanIntrospector {
         Accessor<MethodElement> setter;
         @Nullable
         ParameterElement creatorParameter;
+
+        @Nullable
+        List<String> viewClassNames;
 
         void trimInaccessible(boolean forSerialization) {
             if (getter != null && !getter.isAccessible()) {

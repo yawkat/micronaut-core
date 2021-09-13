@@ -12,6 +12,7 @@ import jakarta.inject.Provider
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.TypeVariable
 import java.lang.reflect.WildcardType
+import java.nio.charset.StandardCharsets
 
 class MapperVisitorSpec extends AbstractTypeElementSpec implements SerializerUtils {
     void "generator creates a serializer for jackson annotations"() {
@@ -585,5 +586,108 @@ class A {
 
         expect:
         ctx.getBeansOfType(Serializer.Factory).any { it.genericType == ctx.classLoader.loadClass('example.A') }
+    }
+
+    def 'simple views'() {
+        given:
+        def ctx = buildContext('example.WithViews', '''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+import io.micronaut.json.annotation.SerializableBean;
+
+@SerializableBean
+@JsonView(Public.class)
+class WithViews {
+    String firstName;
+    String lastName;
+    @JsonView(Internal.class)
+    String birthdate;
+    @JsonView(Admin.class)
+    String password; // don't do plaintext passwords at home please
+}
+
+class Public {}
+
+class Internal extends Public {}
+
+class Admin extends Internal {}
+''', true)
+        def serializer = ctx.classLoader.loadClass('example.$WithViews$Serializer').newInstance()
+        def deserializer = ctx.classLoader.loadClass('example.$WithViews$Deserializer').newInstance()
+        def withViews = ctx.classLoader.loadClass('example.WithViews').newInstance()
+        withViews.firstName = 'Bob'
+        withViews.lastName = 'Jones'
+        withViews.birthdate = '08/01/1980'
+        withViews.password = 'secret'
+
+        def viewPublic = ctx.classLoader.loadClass('example.Public')
+        def viewInternal = ctx.classLoader.loadClass('example.Internal')
+        def viewAdmin = ctx.classLoader.loadClass('example.Admin')
+
+        expect:
+        serializeToString(serializer, withViews, viewAdmin) ==
+                '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}'
+        serializeToString(serializer, withViews, viewInternal) ==
+                '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980"}'
+        serializeToString(serializer, withViews, viewPublic) ==
+                '{"firstName":"Bob","lastName":"Jones"}'
+        serializeToString(serializer, withViews) == '{}'
+
+        deserializeFromString(deserializer, '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}')
+                .firstName == null
+
+        deserializeFromString(deserializer, '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', viewPublic)
+                .firstName == 'Bob'
+        deserializeFromString(deserializer, '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', viewPublic)
+                .birthdate == null
+
+        deserializeFromString(deserializer, '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', viewInternal)
+                .firstName == 'Bob'
+        deserializeFromString(deserializer, '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', viewInternal)
+                .birthdate == '08/01/1980'
+        deserializeFromString(deserializer, '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', viewInternal)
+                .password == null
+
+        deserializeFromString(deserializer, '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', viewAdmin)
+                .firstName == 'Bob'
+        deserializeFromString(deserializer, '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', viewAdmin)
+                .birthdate == '08/01/1980'
+        deserializeFromString(deserializer, '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', viewAdmin)
+                .password == 'secret'
+    }
+
+    def 'unwrapped view'() {
+        given:
+        def ctx = buildContext('example.WithViews', '''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+import io.micronaut.json.annotation.SerializableBean;
+
+@SerializableBean
+class Outer {
+    String a;
+    @JsonView(Runnable.class) @JsonUnwrapped Nested nested;
+}
+
+class Nested {
+    String b;
+}
+''', true)
+        def serializer = ctx.classLoader.loadClass('example.$Outer$Serializer').newInstance()
+        def deserializer = ctx.classLoader.loadClass('example.$Outer$Deserializer').newInstance()
+        def outer = ctx.classLoader.loadClass('example.Outer').newInstance()
+        outer.a = 'a'
+        outer.nested = ctx.classLoader.loadClass('example.Nested').newInstance()
+        outer.nested.b = 'b'
+
+        expect:
+        serializeToString(serializer, outer) == '{"a":"a"}'
+        // abuse Runnable as the view class
+        serializeToString(serializer, outer, Runnable) == '{"a":"a","b":"b"}'
+
+        deserializeFromString(deserializer, '{"a":"a","b":"b"}').nested.b == null
+        deserializeFromString(deserializer, '{"a":"a","b":"b"}', Runnable).nested.b == 'b'
     }
 }

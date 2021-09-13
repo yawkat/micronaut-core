@@ -80,6 +80,9 @@ class BeanDefinition {
         @NonNull
         JsonInclude.Include valueInclusionPolicy = JsonInclude.Include.ALWAYS;
 
+        @Nullable
+        Collection<ClassElement> viewClasses;
+
         private Property(String name, ClassElement declaring, FieldElement field, MethodElement getter, MethodElement setter, ParameterElement creatorParameter) {
             this.name = name;
 

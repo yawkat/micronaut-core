@@ -12,17 +12,17 @@ trait SerializerUtils {
     static final JsonFactory JSON_FACTORY = new JsonFactoryBuilder().build();
 
     @Language("json")
-    static <T> String serializeToString(Serializer<T> serializer, T value) {
+    static <T> String serializeToString(Serializer<T> serializer, T value, Class<?> view = Object.class) {
         def writer = new StringWriter()
         def generator = JSON_FACTORY.createGenerator(writer)
-        serializer.serialize(JacksonEncoder.create(generator), value)
+        serializer.serialize(JacksonEncoder.create(generator, view), value)
         generator.close()
         return writer.toString()
     }
 
-    static <T> T deserializeFromString(Deserializer<T> serializer, @Language("json") String json) {
+    static <T> T deserializeFromString(Deserializer<T> serializer, @Language("json") String json, Class<?> view = Object.class) {
         def parser = JSON_FACTORY.createParser(json)
         parser.nextToken() // place parser at first token
-        return serializer.deserialize(JacksonDecoder.create(parser))
+        return serializer.deserialize(JacksonDecoder.create(parser, view))
     }
 }
