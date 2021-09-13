@@ -67,6 +67,16 @@ public final class PrimitiveElement implements ArrayableClassElement {
             public List<? extends Variable> getTypeVariables() {
                 return Collections.emptyList();
             }
+
+            @Override
+            public MnType getSupertype() {
+                return null;
+            }
+
+            @Override
+            public List<? extends MnType> getInterfaces() {
+                return Collections.emptyList();
+            }
         };
     }
 

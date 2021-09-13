@@ -20,6 +20,7 @@ import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ConstructorElement;
+import io.micronaut.inject.ast.MnType;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.generator.symbol.GeneratorContext;
 import io.micronaut.json.generator.symbol.GeneratorType;
@@ -214,8 +215,9 @@ abstract class DeserializationEntity {
             }
             AnySetterAsMap anySetterAsMap;
             if (def.anySetter != null) {
-                GeneratorType keyType = GeneratorType.parameterType(def.anySetter.getParameters()[0], type.typeParametersAsFoldFunction());
-                GeneratorType valueType = GeneratorType.parameterType(def.anySetter.getParameters()[1], type.typeParametersAsFoldFunction());
+                MnType context = def.anySetter.getDeclaringType().getRawMnType();
+                GeneratorType keyType = GeneratorType.parameterType(def.anySetter.getParameters()[0], type.typeParametersAsFoldFunction(context));
+                GeneratorType valueType = GeneratorType.parameterType(def.anySetter.getParameters()[1], type.typeParametersAsFoldFunction(context));
                 if (!keyType.isRawTypeEquals(String.class)) {
                     generatorContext.getProblemReporter().fail("First parameter of JsonAnySetter must be string", def.anySetter);
                 }

@@ -831,4 +831,20 @@ class B {
         expect:'error should have the name of the outer class'
         e.message.contains("Outer")
     }
+
+    void 'generic supertype'() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+class Sub extends Sup<String> {
+}
+class Sup<T> {
+    T value;
+}
+''')
+
+        expect:
+        deserializeFromString(compiled.serializer, '{"value":"bar"}').value == 'bar'
+    }
 }

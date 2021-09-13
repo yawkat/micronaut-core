@@ -59,6 +59,8 @@ class BeanDefinition {
     final static class Property {
         final String name;
 
+        final ClassElement declaring;
+
         // exactly one of these is not null
         final FieldElement field;
         final MethodElement getter;
@@ -78,9 +80,10 @@ class BeanDefinition {
         @NonNull
         JsonInclude.Include valueInclusionPolicy = JsonInclude.Include.ALWAYS;
 
-        private Property(String name, FieldElement field, MethodElement getter, MethodElement setter, ParameterElement creatorParameter) {
+        private Property(String name, ClassElement declaring, FieldElement field, MethodElement getter, MethodElement setter, ParameterElement creatorParameter) {
             this.name = name;
 
+            this.declaring = declaring;
             this.field = field;
             this.getter = getter;
             this.setter = setter;
@@ -120,22 +123,22 @@ class BeanDefinition {
 
         static Property field(String name, FieldElement field) {
             Objects.requireNonNull(field, "field");
-            return new Property(name, field, null, null, null);
+            return new Property(name, field.getDeclaringType(), field, null, null, null);
         }
 
         static Property getter(String name, MethodElement getter) {
             Objects.requireNonNull(getter, "getter");
-            return new Property(name, null, getter, null, null);
+            return new Property(name, getter.getDeclaringType(), null, getter, null, null);
         }
 
         static Property setter(String name, MethodElement setter) {
             Objects.requireNonNull(setter, "setter");
-            return new Property(name, null, null, setter, null);
+            return new Property(name, setter.getDeclaringType(), null, null, setter, null);
         }
 
-        static Property creatorParameter(String name, ParameterElement creatorParameter) {
+        static Property creatorParameter(ClassElement declaring, String name, ParameterElement creatorParameter) {
             Objects.requireNonNull(creatorParameter, "creatorParameter");
-            return new Property(name, null, null, null, creatorParameter);
+            return new Property(name, declaring, null, null, null, creatorParameter);
         }
     }
 

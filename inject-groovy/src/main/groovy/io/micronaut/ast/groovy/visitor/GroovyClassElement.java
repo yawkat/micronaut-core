@@ -163,6 +163,17 @@ public class GroovyClassElement extends AbstractGroovyElement implements Arrayab
                         })
                         .collect(Collectors.toList());
             }
+
+            @Nullable
+            @Override
+            public MnType getSupertype() {
+                return null; // todo
+            }
+
+            @Override
+            public List<? extends MnType> getInterfaces() {
+                return Collections.emptyList(); // todo
+            }
         };
         for (int i = 0; i < arrayDimensions; i++) {
             type = type.getArrayType();

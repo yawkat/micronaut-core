@@ -33,7 +33,6 @@ class PropWithType {
      * @param property The property.
      */
     static PropWithType fromContext(GeneratorType context, BeanDefinition.Property property) {
-        // todo: how does this work when supertypes also have type parameters?
-        return new PropWithType(property, property.getType(context.typeParametersAsFoldFunction()));
+        return new PropWithType(property, property.getType(context.typeParametersAsFoldFunction(property.declaring.getRawMnType())));
     }
 }

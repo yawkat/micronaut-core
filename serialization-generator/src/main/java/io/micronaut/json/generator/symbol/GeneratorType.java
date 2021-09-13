@@ -220,10 +220,14 @@ public class GeneratorType {
         return classElement.getName().equals(forType.getName());
     }
 
-    public Function<MnType, MnType> typeParametersAsFoldFunction() {
-        if (fullType instanceof MnType.RawClass) {
+    public Function<MnType, MnType> typeParametersAsFoldFunction(MnType context) {
+        return typeParametersAsFoldFunction0(fullType.findParameterization(context));
+    }
+
+    private static Function<MnType, MnType> typeParametersAsFoldFunction0(MnType t) {
+        if (t instanceof MnType.RawClass) {
             // raw class, replace type variables by their bound
-            List<? extends MnType.Variable> variables = ((MnType.RawClass) fullType).getTypeVariables();
+            List<? extends MnType.Variable> variables = ((MnType.RawClass) t).getTypeVariables();
             return type -> {
                 if (type instanceof MnType.Variable) {
                     if (variables.contains(type)) {
@@ -233,9 +237,9 @@ public class GeneratorType {
                 return type;
             };
         } else {
-            assert fullType instanceof MnType.Parameterized;
-            List<? extends MnType.Variable> variables = ((MnType.Parameterized) fullType).getRaw().getTypeVariables();
-            List<? extends MnType> arguments = ((MnType.Parameterized) fullType).getParameters();
+            assert t instanceof MnType.Parameterized;
+            List<? extends MnType.Variable> variables = ((MnType.Parameterized) t).getRaw().getTypeVariables();
+            List<? extends MnType> arguments = ((MnType.Parameterized) t).getParameters();
             return type -> {
                 if (type instanceof MnType.Variable) {
                     // note: for groovy, MnType.Variable.equals breaks, so we just compare names

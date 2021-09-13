@@ -23,6 +23,7 @@ import io.micronaut.annotation.processing.PublicMethodVisitor;
 import io.micronaut.annotation.processing.SuperclassAwareTypeVisitor;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.naming.NameUtils;
 import io.micronaut.core.reflect.ClassUtils;
 import io.micronaut.core.util.StringUtils;
@@ -33,6 +34,8 @@ import io.micronaut.inject.processing.JavaModelUtils;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.NoType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.util.Elements;
@@ -154,6 +157,18 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
                 return classElement.getTypeParameters().stream()
                         .map(tpe -> new MnVariableImpl(visitorContext, tpe))
                         .collect(Collectors.toList());
+            }
+
+            @Nullable
+            @Override
+            public MnType getSupertype() {
+                TypeMirror superclass = classElement.getSuperclass();
+                return superclass instanceof NoType ? null : typeMirrorToMnType(superclass);
+            }
+
+            @Override
+            public List<? extends MnType> getInterfaces() {
+                return classElement.getInterfaces().stream().map(JavaClassElement.this::typeMirrorToMnType).collect(Collectors.toList());
             }
         };
         for (int i = 0; i < getArrayDimensions(); i++) {

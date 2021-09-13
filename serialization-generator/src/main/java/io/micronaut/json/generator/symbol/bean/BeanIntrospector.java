@@ -16,7 +16,6 @@
 package io.micronaut.json.generator.symbol.bean;
 
 import com.fasterxml.jackson.annotation.*;
-import com.sun.tools.javac.jvm.Gen;
 import io.micronaut.core.annotation.*;
 import io.micronaut.inject.ast.*;
 import io.micronaut.inject.visitor.VisitorContext;
@@ -66,7 +65,7 @@ class BeanIntrospector {
                 }
             } else {
                 if (prop.creatorParameter != null) {
-                    built = BeanDefinition.Property.creatorParameter(prop.name, prop.creatorParameter);
+                    built = BeanDefinition.Property.creatorParameter(clazz, prop.name, prop.creatorParameter);
                 } else if (prop.setter != null) {
                     built = BeanDefinition.Property.setter(prop.name, prop.setter.accessor);
                 } else {

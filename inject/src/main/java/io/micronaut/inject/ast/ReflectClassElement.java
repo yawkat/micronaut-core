@@ -17,9 +17,15 @@ package io.micronaut.inject.ast;
 
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.annotation.Nullable;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -85,7 +91,82 @@ class ReflectClassElement implements ClassElement {
                         })
                         .collect(Collectors.toList());
             }
+
+            @Nullable
+            @Override
+            public MnType getSupertype() {
+                Type genericSuperclass = type.getGenericSuperclass();
+                return genericSuperclass == null ? null : toMnType(genericSuperclass);
+            }
+
+            @Override
+            public List<? extends MnType> getInterfaces() {
+                return Arrays.stream(type.getGenericInterfaces()).map(ReflectClassElement::toMnType).collect(Collectors.toList());
+            }
         };
+    }
+
+    private static MnType toMnType(Type type) {
+        if (type instanceof GenericArrayType) {
+            return toMnType(((GenericArrayType) type).getGenericComponentType()).getArrayType();
+        } else if (type instanceof ParameterizedType) {
+            return new MnType.Parameterized() {
+                @Nullable
+                @Override
+                public MnType getOuter() {
+                    Type ownerType = ((ParameterizedType) type).getOwnerType();
+                    return ownerType == null ? null : toMnType(ownerType);
+                }
+
+                @NonNull
+                @Override
+                public RawClass getRaw() {
+                    return (RawClass) toMnType(((ParameterizedType) type).getRawType());
+                }
+
+                @NonNull
+                @Override
+                public List<? extends MnType> getParameters() {
+                    return Arrays.stream(((ParameterizedType) type).getActualTypeArguments()).map(ReflectClassElement::toMnType).collect(Collectors.toList());
+                }
+            };
+        } else if (type instanceof TypeVariable<?>) {
+            return new MnType.Variable() {
+                @NonNull
+                @Override
+                public Element getDeclaringElement() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @NonNull
+                @Override
+                public String getName() {
+                    return ((TypeVariable<?>) type).getName();
+                }
+
+                @NonNull
+                @Override
+                public List<? extends MnType> getBounds() {
+                    return Arrays.stream(((TypeVariable<?>) type).getBounds()).map(ReflectClassElement::toMnType).collect(Collectors.toList());
+                }
+            };
+        } else if (type instanceof WildcardType) {
+            return new MnType.Wildcard() {
+                @Override
+                public List<? extends MnType> getUpperBounds() {
+                    return Arrays.stream(((WildcardType) type).getUpperBounds()).map(ReflectClassElement::toMnType).collect(Collectors.toList());
+                }
+
+                @Override
+                public List<? extends MnType> getLowerBounds() {
+                    return Arrays.stream(((WildcardType) type).getLowerBounds()).map(ReflectClassElement::toMnType).collect(Collectors.toList());
+                }
+            };
+        } else if (type instanceof Class) {
+            return ClassElement.of((Class<?>) type).getRawMnType();
+        } else {
+            throw new IllegalArgumentException("Unsupported type: " + type.getClass().getName());
+        }
     }
 
     @Override

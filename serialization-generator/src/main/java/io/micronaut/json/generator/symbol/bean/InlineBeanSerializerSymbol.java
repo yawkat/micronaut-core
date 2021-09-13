@@ -212,10 +212,11 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             }
 
             // @JsonValue
-            return findSymbol(PropWithType.fromContext(type, definition.valueProperty)).serialize(
+            PropWithType propWithType = PropWithType.fromContext(type, definition.valueProperty);
+            return findSymbol(propWithType).serialize(
                     generatorContext, encoderVariable,
+                    propWithType.type,
                     // we don't need a temp variable here, getPropertyAccessExpression only evaluates the read expression once
-                    definition.valueProperty.getType(type.typeParametersAsFoldFunction()),
                     getPropertyAccessExpression(readExpression, definition.valueProperty));
         } else {
             CodeBlock.Builder serialize = CodeBlock.builder();
