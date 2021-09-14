@@ -31,7 +31,7 @@ import java.util.function.Consumer;
 
 @Internal
 public class InlineBeanSerializerSymbol implements SerializerSymbol {
-    private final SerializerLinker linker;
+    final SerializerLinker linker;
 
     @Nullable
     private final AnnotationValue<SerializableBean> fixedAnnotation;
@@ -130,47 +130,10 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
             if (prop.unwrapped) {
                 visitDependencies(visitor, problemReporter, propWithType.type, ser);
             } else {
-                SerializerSymbol symbol = linker.findSymbol(propWithType.type);
-                if (prop.permitRecursiveSerialization) {
-                    symbol = symbol.withRecursiveSerialization();
-                }
+                SerializerSymbol symbol = SymbolLookup.forProperty(propWithType).withNullable(false).lookup(linker, ser);
                 visitor.visitStructureElement(symbol, propWithType.type, prop.getElement());
             }
         }
-    }
-
-    SerializerSymbol findSymbol(PropWithType prop) {
-        return findSymbol(prop.type, prop.property.permitRecursiveSerialization, prop.property.nullable);
-    }
-
-    SerializerSymbol findSymbol(GeneratorType type, boolean permitRecursiveSerialization, Boolean nullable) {
-        SerializerSymbol symbol = linker.findSymbol(type);
-        if (permitRecursiveSerialization) {
-            symbol = symbol.withRecursiveSerialization();
-        }
-        // if no nullity is given, infer nullity from the value null support.
-        // most types will be wrapped with NullableSerializerSymbol, but e.g. Optional won't be.
-        if (nullable == null) {
-            if (type.isPrimitive() && !type.isArray()) {
-                nullable = false;
-            } else {
-                nullable = !symbol.supportsNullDeserialization();
-            }
-        }
-        if (nullable) {
-            symbol = new NullableSerializerSymbol(symbol);
-        }
-        return symbol;
-    }
-
-    /**
-     * Check whether two properties are structurally identical, i.e. they will deserialize to the same type the same
-     * way. Must be consistent with {@link #findSymbol(PropWithType)}.
-     */
-    boolean areStructurallyIdentical(PropWithType a, PropWithType b) {
-        return a.type.typeEquals(b.type) &&
-                a.property.permitRecursiveSerialization == b.property.permitRecursiveSerialization &&
-                Objects.equals(a.property.nullable, b.property.nullable);
     }
 
     @Override
@@ -214,7 +177,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
 
             // @JsonValue
             PropWithType propWithType = PropWithType.fromContext(type, definition.valueProperty);
-            return findSymbol(propWithType).serialize(
+            return SymbolLookup.forProperty(propWithType).lookup(linker, true).serialize(
                     generatorContext, encoderVariable,
                     propWithType.type,
                     // we don't need a temp variable here, getPropertyAccessExpression only evaluates the read expression once
@@ -321,7 +284,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
 
                     SerializerSymbol symbol = null;
                     if (!prop.unwrapped && !prop.anyGetter) {
-                        symbol = findSymbol(propWithType);
+                        symbol = SymbolLookup.forProperty(propWithType).lookup(linker, true);
                         shouldIncludeCheck = shouldIncludeCheck.and(symbol.shouldIncludeCheck(subGenerator, propWithType.type, prop.valueInclusionPolicy));
                     }
 
@@ -345,7 +308,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
                             continue;
                         }
                         GeneratorType valueType = typeArgs.get().get("V");
-                        SerializerSymbol valueSerializer = findSymbol(valueType, prop.permitRecursiveSerialization, null);
+                        SerializerSymbol valueSerializer = SymbolLookup.forAnyGetterValue(valueType, prop.permitRecursiveSerialization).lookup(linker, true);
                         String entryName = generatorContext.newLocalVariable("anyGetterEntry");
                         serialize.beginControlFlow("for ($T $N : $L.entrySet())",
                                 ParameterizedTypeName.get(ClassName.get(Map.Entry.class), ClassName.get(String.class), PoetUtil.toTypeName(valueType)),

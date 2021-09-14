@@ -6,9 +6,13 @@ import com.fasterxml.jackson.annotation.JsonValue
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.core.JsonFactory
 import io.micronaut.context.ApplicationContext
+import io.micronaut.context.annotation.Bean
 import io.micronaut.core.type.Argument
-
+import io.micronaut.json.Encoder
+import io.micronaut.json.Serializer
+import io.micronaut.json.annotation.CustomSerializer
 import io.micronaut.json.annotation.SerializableBean
+import jakarta.inject.Singleton
 import spock.lang.Specification
 
 import java.nio.charset.StandardCharsets
@@ -216,5 +220,40 @@ class GeneratedObjectCodecSpec extends Specification {
         static class Internal extends Public {}
 
         static class Admin extends Internal {}
+    }
+
+    def 'custom serializer does not collide with native serializers'() {
+        // note: this test isnt very robust, because SerializerLocator may use the 'right' Serializer for String even
+        // when UpperCaseSer would be eligible.
+
+        given:
+        def ctx = ApplicationContext.run()
+        def codec = ctx.getBean(GeneratedObjectMapper)
+
+        def bean = new CustomSerializerBean(foo: 'boo', bar: 'Baz')
+        expect:
+        new String(codec.writeValueAsBytes(bean), StandardCharsets.UTF_8) == '{"foo":"boo","bar":"BAZ"}'
+        new String(codec.writeValueAsBytes('Baz'), StandardCharsets.UTF_8) == '"Baz"'
+    }
+
+    @SerializableBean
+    static class CustomSerializerBean {
+        String foo
+        @CustomSerializer(serializer = UpperCaseSer.class)
+        String bar
+    }
+
+    @Singleton
+    @Bean(typed = UpperCaseSer.class)
+    static class UpperCaseSer implements Serializer<String> {
+        @Override
+        void serialize(Encoder encoder, String value) throws IOException {
+            encoder.encodeString(value.toUpperCase(Locale.ROOT))
+        }
+
+        @Override
+        boolean isEmpty(String value) {
+            return value.isEmpty()
+        }
     }
 }

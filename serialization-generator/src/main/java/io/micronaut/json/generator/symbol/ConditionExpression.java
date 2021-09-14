@@ -84,4 +84,14 @@ public class ConditionExpression<I> {
     public boolean isAlwaysTrue() {
         return andTerms.isEmpty();
     }
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof ConditionExpression && ((ConditionExpression<?>) o).andTerms.equals(andTerms);
+    }
+
+    @Override
+    public int hashCode() {
+        return andTerms.hashCode();
+    }
 }

@@ -1,18 +1,13 @@
 package io.micronaut.json.generator
 
 import io.micronaut.annotation.processing.test.AbstractTypeElementSpec
-import io.micronaut.context.BeanProvider
-import io.micronaut.core.type.Argument
-import io.micronaut.inject.BeanDefinitionReference
 import io.micronaut.json.Deserializer
 import io.micronaut.json.Serializer
-import io.micronaut.json.generator.symbol.SingletonSerializerGenerator
 import jakarta.inject.Provider
 
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.TypeVariable
 import java.lang.reflect.WildcardType
-import java.nio.charset.StandardCharsets
 
 class MapperVisitorSpec extends AbstractTypeElementSpec implements SerializerUtils {
     void "generator creates a serializer for jackson annotations"() {
@@ -689,5 +684,77 @@ class Nested {
 
         deserializeFromString(deserializer, '{"a":"a","b":"b"}').nested.b == null
         deserializeFromString(deserializer, '{"a":"a","b":"b"}', Runnable).nested.b == 'b'
+    }
+
+    def 'custom serializer'() {
+        def ctx = buildContext('example.Test', '''
+package example;
+
+import io.micronaut.context.annotation.Bean;import io.micronaut.json.*;
+import io.micronaut.json.annotation.*;
+import jakarta.inject.Singleton;
+import java.io.IOException;
+import java.util.Locale;
+
+@SerializableBean
+class Test {
+    String foo;
+    @CustomSerializer(serializer = UpperCaseSer.class, deserializer = LowerCaseDeser.class)
+    String bar;
+}
+
+@Singleton
+@Bean(typed = UpperCaseSer.class)
+class UpperCaseSer implements Serializer<String> {
+    @Override
+    public void serialize(Encoder encoder, String value) throws IOException {
+        encoder.encodeString(value.toUpperCase(Locale.ROOT));
+    }
+
+    @Override
+    public boolean isEmpty(String value) {
+        return value.isEmpty();
+    }
+}
+
+@Singleton
+@Bean(typed = LowerCaseDeser.class)
+class LowerCaseDeser implements Deserializer<String> {
+    @Override
+    public String deserialize(Decoder decoder) throws IOException {
+        return decoder.decodeString().toLowerCase(Locale.ROOT);
+    }
+}
+''', true)
+        def serializerFactory = (Serializer.Factory) ctx.createBean(ctx.classLoader.loadClass('example.$Test$Serializer$FactoryImpl'))
+        def deserializerFactory = (Deserializer.Factory) ctx.createBean(ctx.classLoader.loadClass('example.$Test$Deserializer$FactoryImpl'))
+
+        def serializer = serializerFactory.newInstance(null, null)
+        def deserializer = deserializerFactory.newInstance(null, null)
+
+        def testInstance = ctx.classLoader.loadClass('example.Test').newInstance()
+
+        when:
+        testInstance.foo = 'boo'
+        testInstance.bar = 'Baz'
+        then:'normal ser'
+        serializeToString(serializer, testInstance) == '{"foo":"boo","bar":"BAZ"}'
+
+        when:
+        testInstance.foo = 'boo'
+        testInstance.bar = ''
+        then:'empty ser is skipped'
+        serializeToString(serializer, testInstance) == '{"foo":"boo"}'
+
+        when:
+        testInstance.foo = 'boo'
+        testInstance.bar = null
+        then:'null ser is skipped'
+        serializeToString(serializer, testInstance) == '{"foo":"boo"}'
+
+        expect:'deser'
+        deserializeFromString(deserializer, '{"foo":"boo","bar":"BAZ"}').foo == 'boo'
+        deserializeFromString(deserializer, '{"foo":"boo","bar":"BAZ"}').bar == 'baz'
+        deserializeFromString(deserializer, '{"foo":"boo","bar":null}').bar == null
     }
 }

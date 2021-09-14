@@ -37,22 +37,25 @@ public final class GeneratorContext {
     private final NameAllocator fields;
     private final NameAllocator localVariables;
 
-    private final Map<InjectableSerializerType, Injected> injected;
+    private final Map<InjectableSerializerType, Injected> injectedNormalSerializers;
+    private final Map<TypeName, Injected> injectedBeans;
 
     private GeneratorContext(
             ProblemReporter problemReporter, String readablePath,
             NameAllocator fields,
             NameAllocator localVariables,
-            Map<InjectableSerializerType, Injected> injected) {
+            Map<InjectableSerializerType, Injected> injectedNormalSerializers,
+            Map<TypeName, Injected> injectedBeans) {
         this.problemReporter = problemReporter;
         this.readablePath = readablePath;
         this.fields = fields;
         this.localVariables = localVariables;
-        this.injected = injected;
+        this.injectedNormalSerializers = injectedNormalSerializers;
+        this.injectedBeans = injectedBeans;
     }
 
     static GeneratorContext create(ProblemReporter problemReporter, String rootReadablePath) {
-        return new GeneratorContext(problemReporter, rootReadablePath, new NameAllocator(), null, new HashMap<>());
+        return new GeneratorContext(problemReporter, rootReadablePath, new NameAllocator(), null, new HashMap<>(), new HashMap<>());
     }
 
     public String getReadablePath() {
@@ -61,7 +64,7 @@ public final class GeneratorContext {
 
     public GeneratorContext withSubPath(String element) {
         // the other variables are mutable, so we can just reuse them
-        return new GeneratorContext(problemReporter, readablePath + "->" + element, fields, localVariables, injected);
+        return new GeneratorContext(problemReporter, readablePath + "->" + element, fields, localVariables, injectedNormalSerializers, injectedBeans);
     }
 
     public GeneratorContext newMethodContext(String... usedLocals) {
@@ -76,7 +79,7 @@ public final class GeneratorContext {
                 throw new IllegalArgumentException("Duplicate or illegal local variable name: " + usedLocal);
             }
         }
-        return new GeneratorContext(problemReporter, readablePath, fields, localVariables, injected);
+        return new GeneratorContext(problemReporter, readablePath, fields, localVariables, injectedNormalSerializers, injectedBeans);
     }
 
     /**
@@ -90,14 +93,25 @@ public final class GeneratorContext {
     }
 
     public Injected requestInjection(InjectableSerializerType injectable) {
-        return injected.computeIfAbsent(injectable, t -> {
+        return injectedNormalSerializers.computeIfAbsent(injectable, t -> {
             String fieldName = fields.newName(t.fieldType.toString());
             return new Injected(fieldName);
         });
     }
 
-    Map<InjectableSerializerType, Injected> getInjected() {
-        return injected;
+    public Injected requestInjection(TypeName beanType) {
+        return injectedBeans.computeIfAbsent(beanType, t -> {
+            String fieldName = fields.newName(beanType.toString());
+            return new Injected(fieldName);
+        });
+    }
+
+    Map<InjectableSerializerType, Injected> getInjectedNormalSerializers() {
+        return injectedNormalSerializers;
+    }
+
+    Map<TypeName, Injected> getInjectedBeans() {
+        return injectedBeans;
     }
 
     public ProblemReporter getProblemReporter() {

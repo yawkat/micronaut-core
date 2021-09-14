@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.*;
 import io.micronaut.core.annotation.*;
 import io.micronaut.inject.ast.*;
 import io.micronaut.inject.visitor.VisitorContext;
+import io.micronaut.json.annotation.CustomSerializer;
 import io.micronaut.json.annotation.RecursiveSerialization;
 import io.micronaut.json.generator.symbol.GeneratorType;
 import io.micronaut.json.generator.symbol.ProblemReporter;
@@ -83,6 +84,8 @@ class BeanIntrospector {
             built.viewClasses = prop.viewClassNames == null ?
                     null :
                     prop.viewClassNames.stream().map(fqcn -> context.getClassElement(fqcn).get()).collect(Collectors.toList());
+            built.customSerializer = prop.customSerializerFqcn == null ? null : context.getClassElement(prop.customSerializerFqcn).get();
+            built.customDeserializer = prop.customDeserializerFqcn == null ? null : context.getClassElement(prop.customDeserializerFqcn).get();
             completeProps.put(prop, built);
         }
         beanDefinition.props = new ArrayList<>(completeProps.values());
@@ -467,6 +470,12 @@ class BeanIntrospector {
                         .filter(Objects::nonNull)
                         .map(a -> Arrays.stream(a.annotationClassValues("value")).map(AnnotationClassValue::getName).collect(Collectors.toList()))
                         .findFirst().orElse(null);
+
+                Optional<AnnotationValue<CustomSerializer>> customSerializerAnnotation = prop.annotatedElementsInOrder(forSerialization)
+                        .map(e -> e.getAnnotation(CustomSerializer.class))
+                        .filter(Objects::nonNull).findFirst();
+                prop.customSerializerFqcn = customSerializerAnnotation.flatMap(v -> v.annotationClassValue("serializer")).map(AnnotationClassValue::getName).orElse(null);
+                prop.customDeserializerFqcn = customSerializerAnnotation.flatMap(v -> v.annotationClassValue("deserializer")).map(AnnotationClassValue::getName).orElse(null);
             }
         }
 
@@ -558,6 +567,9 @@ class BeanIntrospector {
 
         @Nullable
         List<String> viewClassNames;
+
+        String customSerializerFqcn;
+        String customDeserializerFqcn;
 
         void trimInaccessible(boolean forSerialization) {
             if (getter != null && !getter.isAccessible()) {

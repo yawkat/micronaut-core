@@ -26,6 +26,7 @@ import io.micronaut.json.generator.symbol.ConditionExpression;
 import io.micronaut.json.generator.symbol.GeneratorContext;
 import io.micronaut.json.generator.symbol.GeneratorType;
 import io.micronaut.json.generator.symbol.PoetUtil;
+import io.micronaut.json.generator.symbol.SerializerLinker;
 import io.micronaut.json.generator.symbol.SerializerSymbol;
 
 import java.util.*;
@@ -182,7 +183,7 @@ abstract class DeserializationEntity {
         return Collections.emptySet();
     }
 
-    boolean isStructurallyIdentical(InlineBeanSerializerSymbol context, DeserializationEntity other) {
+    boolean isStructurallyIdentical(DeserializationEntity other) {
         return this == other;
     }
 
@@ -198,7 +199,7 @@ abstract class DeserializationEntity {
         BeanDefinition def = symbol.introspect(generatorContext.getProblemReporter(), type, false);
         if (def.creatorDelegatingProperty != null) {
             PropWithType singleProp = PropWithType.fromContext(type, def.creatorDelegatingProperty);
-            return new Delegating(type, def, singleProp, symbol.findSymbol(singleProp));
+            return new Delegating(type, def, singleProp, SymbolLookup.forProperty(singleProp).lookup(symbol.linker, false));
         } else if (def.subtyping != null) {
             if (def.subtyping.deduce) {
                 return new SubtypingFlat(symbol, generatorContext, type, def, allowDeserializationCheck);
@@ -234,7 +235,7 @@ abstract class DeserializationEntity {
                         continue;
                     }
                 } else {
-                    propEntity = new SimpleLeafProperty(propWithType, symbol.findSymbol(propWithType));
+                    propEntity = new SimpleLeafProperty(propWithType, SymbolLookup.forProperty(propWithType), symbol.linker);
                 }
                 propEntity.allowDeserializationCheck = propCheck;
                 elements.put(prop, propEntity);
@@ -247,7 +248,7 @@ abstract class DeserializationEntity {
                 if (!keyType.isRawTypeEquals(String.class)) {
                     generatorContext.getProblemReporter().fail("First parameter of JsonAnySetter must be string", def.anySetter);
                 }
-                anySetterAsMap = new AnySetterAsMap(valueType, symbol.findSymbol(valueType, false, true));
+                anySetterAsMap = new AnySetterAsMap(valueType, SymbolLookup.forAnySetterValue(valueType).lookup(symbol.linker, false));
                 anySetterAsMap.allowDeserializationCheck = allowDeserializationCheck;
             } else {
                 anySetterAsMap = null;
@@ -473,13 +474,15 @@ abstract class DeserializationEntity {
 
     private static class SimpleLeafProperty extends DeserializationEntity {
         private final PropWithType prop;
-        private final SerializerSymbol symbol;
+        private final SymbolLookup symbolLookup;
+        private final SerializerLinker linker;
 
         private boolean declared = false;
 
-        SimpleLeafProperty(PropWithType prop, SerializerSymbol symbol) {
+        SimpleLeafProperty(PropWithType prop, SymbolLookup symbolLookup, SerializerLinker linker) {
             this.prop = prop;
-            this.symbol = symbol;
+            this.symbolLookup = symbolLookup;
+            this.linker = linker;
 
             presentAsJava = true;
         }
@@ -487,7 +490,7 @@ abstract class DeserializationEntity {
         @Override
         void generatePrologue(CodeBlock.Builder builder) {
             if (!declared) {
-                builder.addStatement("$T $N = $L", PoetUtil.toTypeName(prop.type), localVariableName, symbol.getDefaultExpression(prop.type));
+                builder.addStatement("$T $N = $L", PoetUtil.toTypeName(prop.type), localVariableName, symbolLookup.lookup(linker, false).getDefaultExpression(prop.type));
                 declared = true;
             }
         }
@@ -498,9 +501,9 @@ abstract class DeserializationEntity {
         }
 
         @Override
-        boolean isStructurallyIdentical(InlineBeanSerializerSymbol context, DeserializationEntity other) {
+        boolean isStructurallyIdentical(DeserializationEntity other) {
             return other instanceof SimpleLeafProperty &&
-                    context.areStructurallyIdentical(this.prop, ((SimpleLeafProperty) other).prop) &&
+                    this.symbolLookup.equals(((SimpleLeafProperty) other).symbolLookup) &&
                     this.allowDeserializationCheck.equals(other.allowDeserializationCheck);
         }
 
@@ -514,7 +517,7 @@ abstract class DeserializationEntity {
             );
             readProperties.set(builder, this);
 
-            CodeBlock deserializationCode = symbol
+            CodeBlock deserializationCode = symbolLookup.lookup(linker, false)
                     .deserialize(generatorContext.withSubPath(prop.property.name), decoderVariable, prop.type, expr -> CodeBlock.of("$N = $L;\n", localVariableName, expr));
             builder.add(deserializationCode);
         }
@@ -542,7 +545,7 @@ abstract class DeserializationEntity {
         }
 
         @Override
-        boolean isStructurallyIdentical(InlineBeanSerializerSymbol context, DeserializationEntity other) {
+        boolean isStructurallyIdentical(DeserializationEntity other) {
             return other instanceof AnySetterAsMap &&
                     this.valueType.typeEquals(((AnySetterAsMap) other).valueType) &&
                     this.allowDeserializationCheck.equals(other.allowDeserializationCheck);
@@ -628,7 +631,6 @@ abstract class DeserializationEntity {
      * PROPERTY, DEDUCTION
      */
     private static class SubtypingFlat extends DeserializationEntity {
-        private final InlineBeanSerializerSymbol symbol;
         private final GeneratorType superType;
         private final Collection<DeserializationEntity> subTypes;
 
@@ -646,7 +648,6 @@ abstract class DeserializationEntity {
                 GeneratorType superType,
                 BeanDefinition definition,
                 ConditionExpression<String> allowDeserializationCheck) {
-            this.symbol = symbol;
             this.superType = superType;
             Map<GeneratorType, DeserializationEntity> subTypeEntities = definition.subtyping.subTypes.stream()
                     .collect(Collectors.toMap(t -> t, t -> introspect(symbol, context, t, allowDeserializationCheck)));
@@ -671,7 +672,7 @@ abstract class DeserializationEntity {
                 }
             }
             for (AmbiguousProperty ambiguousProperty : ambiguousProperties.values()) {
-                ambiguousProperty.unite(symbol);
+                ambiguousProperty.unite();
             }
 
             hasProperties = true;
@@ -731,8 +732,8 @@ abstract class DeserializationEntity {
                 DeserializationEntity subTypeUnknownPropertyHandler = subType.onUnknownProperty(generatorContext, stage, fieldNameVariable, elementDecoderVariable, next);
                 unknownPropertyHandler.paths.add(new Path(subType, subTypeUnknownPropertyHandler == null ? next : subTypeUnknownPropertyHandler));
             }
-            unknownPropertyHandler.unite(symbol);
-            if (unknownPropertyHandler.paths.stream().allMatch(p -> p.property.isStructurallyIdentical(symbol, next))) {
+            unknownPropertyHandler.unite();
+            if (unknownPropertyHandler.paths.stream().allMatch(p -> p.property.isStructurallyIdentical(next))) {
                 return null;
             } else {
                 return unknownPropertyHandler;
@@ -766,14 +767,14 @@ abstract class DeserializationEntity {
             /**
              * Unite properties of different types that are structurally identical
              */
-            void unite(InlineBeanSerializerSymbol symbol) {
+            void unite() {
                 // this is potentially n² in the number of subtypes, but only if they have identically named properties
                 // that all differ structurally
                 for (int i = 0; i < paths.size(); i++) {
                     Path from = paths.get(i);
                     for (int j = 0; j < i; j++) {
                         Path into = paths.get(j);
-                        if (into.mergeFrom(symbol, from)) {
+                        if (into.mergeFrom(from)) {
                             paths.remove(i);
                             i--;
                             break;
@@ -845,8 +846,8 @@ abstract class DeserializationEntity {
                 this.property = property;
             }
 
-            boolean mergeFrom(InlineBeanSerializerSymbol symbol, Path other) {
-                if (property.isStructurallyIdentical(symbol, other.property)) {
+            boolean mergeFrom(Path other) {
+                if (property.isStructurallyIdentical(other.property)) {
                     subTypes.addAll(other.subTypes);
 
                     for (DeserializationEntity subType : other.subTypes) {
@@ -906,7 +907,7 @@ abstract class DeserializationEntity {
         }
 
         @Override
-        boolean isStructurallyIdentical(InlineBeanSerializerSymbol context, DeserializationEntity other) {
+        boolean isStructurallyIdentical(DeserializationEntity other) {
             return other instanceof IgnoreUnknownProperties;
         }
     }
@@ -932,7 +933,7 @@ abstract class DeserializationEntity {
         }
 
         @Override
-        boolean isStructurallyIdentical(InlineBeanSerializerSymbol context, DeserializationEntity other) {
+        boolean isStructurallyIdentical(DeserializationEntity other) {
             return other instanceof FailUnknownProperties;
         }
     }

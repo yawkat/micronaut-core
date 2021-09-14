@@ -83,6 +83,10 @@ class BeanDefinition {
         @Nullable
         Collection<ClassElement> viewClasses;
 
+        @Nullable
+        ClassElement customSerializer;
+        ClassElement customDeserializer;
+
         private Property(String name, ClassElement declaring, FieldElement field, MethodElement getter, MethodElement setter, ParameterElement creatorParameter) {
             this.name = name;
 

@@ -49,7 +49,7 @@ public final class SerializerLinker {
                 new OptionalSerializerSymbol(this),
                 // for serializing beans inline (@SerializableBean(inline=true))
                 inlineBean,
-                new InjectingSerializerSymbol(this)
+                new InjectingSerializerSymbol()
         );
     }
 

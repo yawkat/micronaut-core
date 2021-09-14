@@ -21,20 +21,17 @@ import io.micronaut.context.BeanProvider;
 import io.micronaut.core.annotation.Internal;
 
 @Internal
-public final class InjectingSerializerSymbol implements SerializerSymbol {
-    private final SerializerLinker linker;
-
+public class InjectingSerializerSymbol implements SerializerSymbol {
     /**
      * Whether to wrap the injection with a {@link BeanProvider}.
      */
-    private final boolean provider;
+    protected final boolean provider;
 
-    public InjectingSerializerSymbol(SerializerLinker linker) {
-        this(linker, false);
+    public InjectingSerializerSymbol() {
+        this(false);
     }
 
-    private InjectingSerializerSymbol(SerializerLinker linker, boolean provider) {
-        this.linker = linker;
+    protected InjectingSerializerSymbol(boolean provider) {
         this.provider = provider;
     }
 
@@ -51,7 +48,7 @@ public final class InjectingSerializerSymbol implements SerializerSymbol {
 
     @Override
     public SerializerSymbol withRecursiveSerialization() {
-        return new InjectingSerializerSymbol(linker, true);
+        return new InjectingSerializerSymbol(true);
     }
 
     @Override
@@ -73,11 +70,15 @@ public final class InjectingSerializerSymbol implements SerializerSymbol {
     }
 
     private CodeBlock getSerializerAccess(GeneratorContext generatorContext, GeneratorType type, boolean forSerialization) {
-        GeneratorContext.InjectableSerializerType injectable = new GeneratorContext.InjectableSerializerType(type, provider, forSerialization);
-        CodeBlock accessExpression = generatorContext.requestInjection(injectable).getAccessExpression();
+        CodeBlock accessExpression = inject(generatorContext, type, forSerialization).getAccessExpression();
         if (provider) {
             accessExpression = CodeBlock.of("$L.get()", accessExpression);
         }
         return accessExpression;
+    }
+
+    protected GeneratorContext.Injected inject(GeneratorContext generatorContext, GeneratorType type, boolean forSerialization) {
+        GeneratorContext.InjectableSerializerType injectable = new GeneratorContext.InjectableSerializerType(type, provider, forSerialization);
+        return generatorContext.requestInjection(injectable);
     }
 }
