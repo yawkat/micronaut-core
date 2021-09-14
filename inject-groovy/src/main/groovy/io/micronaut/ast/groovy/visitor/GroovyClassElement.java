@@ -167,12 +167,12 @@ public class GroovyClassElement extends AbstractGroovyElement implements Arrayab
             @Nullable
             @Override
             public MnType getSupertype() {
-                return null; // todo
+                return toMnType(visitorContext, classNode.getUnresolvedSuperClass(false));
             }
 
             @Override
             public List<? extends MnType> getInterfaces() {
-                return Collections.emptyList(); // todo
+                return Arrays.stream(classNode.getUnresolvedInterfaces(false)).map(cn -> toMnType(visitorContext, cn)).collect(Collectors.toList());
             }
         };
         for (int i = 0; i < arrayDimensions; i++) {

@@ -195,4 +195,59 @@ class Test {
         mnTypeB.parameters[0].lowerBounds.size() == 1
         mnTypeB.parameters[0].lowerBounds[0].typeName == 'java.lang.String'
     }
+
+    def "supertype generic"() {
+        given:
+        def element = buildClassElement('''
+package test
+
+class Test extends ArrayList<String> {
+}
+''')
+        when:
+        def mnType = element.rawMnType
+
+        then:
+        mnType instanceof MnType.RawClass
+        mnType.supertype instanceof MnType.Parameterized
+        mnType.supertype.raw.typeName == 'java.util.ArrayList'
+        mnType.supertype.parameters[0].typeName == 'java.lang.String'
+    }
+
+    def "superinterface generic"() {
+        given:
+        def element = buildClassElement('''
+package test
+
+abstract class Test implements List<String> {
+}
+''')
+        when:
+        def mnType = element.rawMnType
+
+        then:
+        mnType instanceof MnType.RawClass
+        mnType.interfaces[0] instanceof MnType.Parameterized
+        mnType.interfaces[0].raw.typeName == 'java.util.List'
+        mnType.interfaces[0].parameters[0].typeName == 'java.lang.String'
+    }
+
+    def "supertype type var"() {
+        given:
+        def element = buildClassElement('''
+package test
+
+class Test<E> extends ArrayList<E> {
+}
+''')
+        when:
+        def mnType = element.rawMnType
+
+        then:
+        mnType instanceof MnType.RawClass
+        mnType.supertype instanceof MnType.Parameterized
+        mnType.supertype.raw.typeName == 'java.util.ArrayList'
+        mnType.supertype.parameters[0] instanceof MnType.Variable
+        mnType.supertype.parameters[0].name == 'E'
+    }
 }
