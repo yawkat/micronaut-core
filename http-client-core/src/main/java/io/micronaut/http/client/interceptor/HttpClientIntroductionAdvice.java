@@ -224,7 +224,7 @@ public class HttpClientIntroductionAdvice implements MethodInterceptor<Object, O
             if (arguments.length > 0) {
                 Map<String, Object> paramMap = context.getParameterValueMap();
                 for (Argument argument : arguments) {
-                    Object definedValue = getValue(argument, context, parameters, paramMap);
+                    Object definedValue = getValue(argument, context, parameters);
 
                     if (definedValue != null) {
                         final ClientArgumentRequestBinder<Object> binder = (ClientArgumentRequestBinder<Object>) binderRegistry
@@ -429,7 +429,7 @@ public class HttpClientIntroductionAdvice implements MethodInterceptor<Object, O
         Class<?> argumentType = reactiveValueArgument.getType();
         if (Void.class == argumentType || returnType.isVoid()) {
             request.getHeaders().remove(HttpHeaders.ACCEPT);
-            return httpClient.exchange(request, null, errorType);
+            return httpClient.exchange(request, Argument.VOID, errorType);
         } else {
             if (HttpResponse.class.isAssignableFrom(argumentType)) {
                 return httpClient.exchange(request, reactiveValueArgument, errorType);
@@ -478,10 +478,8 @@ public class HttpClientIntroductionAdvice implements MethodInterceptor<Object, O
 
     private Object getValue(Argument argument,
                             MethodInvocationContext<?, ?> context,
-                            Map<String, MutableArgumentValue<?>> parameters,
-                            Map<String, Object> paramMap) {
+                            Map<String, MutableArgumentValue<?>> parameters) {
         String argumentName = argument.getName();
-        AnnotationMetadata argumentMetadata = argument.getAnnotationMetadata();
         MutableArgumentValue<?> value = parameters.get(argumentName);
 
         Object definedValue = value.getValue();
