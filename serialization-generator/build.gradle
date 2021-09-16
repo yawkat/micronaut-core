@@ -8,7 +8,7 @@ dependencies {
     compileOnly project(":inject-groovy")
 
     api "com.squareup:javapoet:$javapoetVersion"
-    api "com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion"
+    api libs.managed.jackson.annotations
 
     testAnnotationProcessor project(":inject-java")
     testImplementation project(":inject-java")

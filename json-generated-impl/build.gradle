@@ -6,10 +6,10 @@ dependencies {
     api project(":http")
     api project(":json-generated-api")
 
-    api("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
+    api libs.managed.jackson.core
 
     // NettyHttpMethodSerializer
-    compileOnly("io.netty:netty-codec-http:$nettyVersion")
+    compileOnly libs.managed.netty.codec.http
     compileOnly project(':management')
 
     testAnnotationProcessor project(":inject-java")
