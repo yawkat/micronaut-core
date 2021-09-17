@@ -28,7 +28,11 @@ import io.micronaut.core.util.ArgumentUtils;
 import io.micronaut.core.util.ArrayUtils;
 import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.inject.annotation.AbstractAnnotationMetadataBuilder;
-import io.micronaut.inject.ast.*;
+import io.micronaut.inject.ast.ClassElement;
+import io.micronaut.inject.ast.Element;
+import io.micronaut.inject.ast.ElementModifier;
+import io.micronaut.inject.ast.MemberElement;
+import io.micronaut.inject.ast.MnType;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.MethodNode;
@@ -471,7 +475,7 @@ public abstract class AbstractGroovyElement implements AnnotationMetadataDelegat
                     @Nullable
                     @Override
                     public MnType getOuter() {
-                        // todo
+                        // parameterized outer classes are apparently not valid in groovy.
                         return null;
                     }
 

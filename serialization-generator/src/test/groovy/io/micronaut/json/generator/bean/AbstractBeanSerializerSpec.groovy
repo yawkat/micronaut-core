@@ -65,7 +65,6 @@ class AbstractBeanSerializerSpec extends AbstractTypeElementSpec implements Seri
 
     /**
      * stolen from micronaut-inject
-     * todo: reuse instead
      */
     private static final class StringSourceJavaFileObject extends SimpleJavaFileObject {
         final String source;
