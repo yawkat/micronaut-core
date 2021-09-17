@@ -1,7 +1,10 @@
 package io.micronaut.json.generator.bean
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.json.DeserializationException
 import io.micronaut.json.generator.symbol.ProblemReporter
+import org.spockframework.runtime.model.parallel.ExecutionMode
+import spock.lang.Execution
 
 class InlineBeanSerializerSymbolSpec extends AbstractBeanSerializerSpec {
     void "simple bean"() {
@@ -846,5 +849,173 @@ class Sup<T> {
 
         expect:
         deserializeFromString(compiled.serializer, '{"value":"bar"}').value == 'bar'
+    }
+
+    void 'auto-detect visibility homogenous'() {
+        given:
+        def compiled = buildSerializer("""
+package example;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
+@JsonAutoDetect(
+    getterVisibility = JsonAutoDetect.Visibility.$configuredVisibility,
+    isGetterVisibility = JsonAutoDetect.Visibility.$configuredVisibility,
+    setterVisibility = JsonAutoDetect.Visibility.$configuredVisibility,
+    fieldVisibility = JsonAutoDetect.Visibility.$configuredVisibility
+)
+class Test {
+    $declaredVisibility String field = "unchanged";
+    
+    private String setterValue = "unchanged";
+    
+    $declaredVisibility void setSetter(String value) {
+        this.setterValue = value;
+    }
+    
+    private String getterValue = "unchanged";
+    
+    $declaredVisibility String getGetter() {
+        return getterValue;
+    }
+    
+    private String isGetterValue = "unchanged";
+    
+    $declaredVisibility String isIsGetter() {
+        return isGetterValue;
+    }
+}
+""")
+        def instance = compiled.newInstance()
+        instance.field = 'foo'
+        instance.setterValue = 'qux'
+        instance.getterValue = 'bar'
+        instance.isGetterValue = 'baz'
+
+        // json with all fields
+        def fullJson = '{"field":"foo","getter":"bar","isGetter":"baz","setter":"qux"}'
+
+        // json with only the serializable fields
+        def expectedJson = appears ? '{"field":"foo","getter":"bar","isGetter":"baz"}' : '{}'
+
+        expect:
+        deserializeFromString(compiled.serializer, fullJson).field == appears ? 'foo' : 'unchanged'
+        deserializeFromString(compiled.serializer, fullJson).setterValue == appears ? 'qux' : 'unchanged'
+        deserializeFromString(compiled.serializer, fullJson).getterValue == 'unchanged' // never written
+        deserializeFromString(compiled.serializer, fullJson).isGetterValue == 'unchanged' // never written
+
+        serializeToString(compiled.serializer, instance) == expectedJson
+
+        where:
+        configuredVisibility         | declaredVisibility    | appears
+        // hide private by default
+        JsonAutoDetect.Visibility.DEFAULT | 'private'                  | false
+        // hide package-private by default
+        JsonAutoDetect.Visibility.DEFAULT | ''                         | false
+        // various access modes
+        // ANY is not supported (we can't access private fields)
+        JsonAutoDetect.Visibility.NON_PRIVATE | 'private'                  | false
+        JsonAutoDetect.Visibility.NON_PRIVATE | ''                         | true
+        JsonAutoDetect.Visibility.NON_PRIVATE | 'protected'                | true
+        JsonAutoDetect.Visibility.NON_PRIVATE | 'public'                   | true
+        JsonAutoDetect.Visibility.PROTECTED_AND_PUBLIC | 'private'                  | false
+        JsonAutoDetect.Visibility.PROTECTED_AND_PUBLIC | ''                         | false
+        JsonAutoDetect.Visibility.PROTECTED_AND_PUBLIC | 'protected'                | true
+        JsonAutoDetect.Visibility.PROTECTED_AND_PUBLIC | 'public'                   | true
+        JsonAutoDetect.Visibility.PUBLIC_ONLY | 'private'                  | false
+        JsonAutoDetect.Visibility.PUBLIC_ONLY | ''                         | false
+        JsonAutoDetect.Visibility.PUBLIC_ONLY | 'protected'                | false
+        JsonAutoDetect.Visibility.PUBLIC_ONLY | 'public'                   | true
+        JsonAutoDetect.Visibility.NONE | 'private'                  | false
+        JsonAutoDetect.Visibility.NONE | ''                         | false
+        JsonAutoDetect.Visibility.NONE | 'protected'                | false
+        JsonAutoDetect.Visibility.NONE | 'public'                   | false
+    }
+
+    void 'auto-detect visibility heterogenous'() {
+        given:
+        def compiled = buildSerializer("""
+package example;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
+@JsonAutoDetect(
+    getterVisibility = JsonAutoDetect.Visibility.$configuredGetterVisibility,
+    isGetterVisibility = JsonAutoDetect.Visibility.$configuredIsGetterVisibility,
+    setterVisibility = JsonAutoDetect.Visibility.$configuredSetterVisibility,
+    fieldVisibility = JsonAutoDetect.Visibility.$configuredFieldVisibility
+)
+class Test {
+    $declaredFieldVisibility String field = "unchanged";
+    
+    private String setterValue = "unchanged";
+    
+    $declaredSetterVisibility void setSetter(String value) {
+        this.setterValue = value;
+    }
+    
+    private String getterValue = "unchanged";
+    
+    $declaredGetterVisibility String getGetter() {
+        return getterValue;
+    }
+    
+    private String isGetterValue = "unchanged";
+    
+    $declaredIsGetterVisibility String isIsGetter() {
+        return isGetterValue;
+    }
+}
+""")
+        def instance = compiled.newInstance()
+        instance.field = 'foo'
+        instance.setterValue = 'qux'
+        instance.getterValue = 'bar'
+        instance.isGetterValue = 'baz'
+
+        // json with all fields
+        def fullJson = '{"field":"foo","getter":"bar","isGetter":"baz","setter":"qux"}'
+
+        // json with only the visible fields
+        def expectedJson = '{'
+        if (fieldAppears) expectedJson += '"field":"foo",'
+        if (getterAppears) expectedJson += '"getter":"bar",'
+        if (isGetterAppears) expectedJson += '"isGetter":"baz",'
+        if (expectedJson.length() > 1) expectedJson = expectedJson.substring(0, expectedJson.length() - 1)
+        expectedJson += '}'
+
+        expect:
+        deserializeFromString(compiled.serializer, fullJson).field == fieldAppears ? 'foo' : 'unchanged'
+        deserializeFromString(compiled.serializer, fullJson).setterValue == setterAppears ? 'qux' : 'unchanged'
+        deserializeFromString(compiled.serializer, fullJson).getterValue == 'unchanged' // never written
+        deserializeFromString(compiled.serializer, fullJson).isGetterValue == 'unchanged' // never written
+
+        serializeToString(compiled.serializer, instance) == expectedJson
+
+        where:
+
+        configuredFieldVisibility         | declaredFieldVisibility    | fieldAppears
+        JsonAutoDetect.Visibility.NON_PRIVATE | ''                  | true
+        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        __
+        configuredGetterVisibility         | declaredGetterVisibility    | getterAppears
+        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        JsonAutoDetect.Visibility.NON_PRIVATE | ''                  | true
+        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        __
+        configuredIsGetterVisibility         | declaredIsGetterVisibility    | isGetterAppears
+        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        JsonAutoDetect.Visibility.NON_PRIVATE | ''                  | true
+        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        __
+        configuredSetterVisibility         | declaredSetterVisibility    | setterAppears
+        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        JsonAutoDetect.Visibility.NON_PRIVATE | ''                  | true
     }
 }

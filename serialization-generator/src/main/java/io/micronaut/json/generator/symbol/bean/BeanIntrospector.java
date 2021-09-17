@@ -16,15 +16,38 @@
 package io.micronaut.json.generator.symbol.bean;
 
 import com.fasterxml.jackson.annotation.*;
-import io.micronaut.core.annotation.*;
-import io.micronaut.inject.ast.*;
+import io.micronaut.core.annotation.AnnotatedElement;
+import io.micronaut.core.annotation.AnnotationClassValue;
+import io.micronaut.core.annotation.AnnotationValue;
+import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.annotation.Nullable;
+import io.micronaut.inject.ast.ClassElement;
+import io.micronaut.inject.ast.ConstructorElement;
+import io.micronaut.inject.ast.Element;
+import io.micronaut.inject.ast.ElementQuery;
+import io.micronaut.inject.ast.FieldElement;
+import io.micronaut.inject.ast.MemberElement;
+import io.micronaut.inject.ast.MethodElement;
+import io.micronaut.inject.ast.ParameterElement;
 import io.micronaut.inject.visitor.VisitorContext;
 import io.micronaut.json.annotation.CustomSerializer;
 import io.micronaut.json.annotation.RecursiveSerialization;
 import io.micronaut.json.generator.symbol.GeneratorType;
 import io.micronaut.json.generator.symbol.ProblemReporter;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -217,6 +240,11 @@ class BeanIntrospector {
         boolean ignoreUnknownProperties;
         JsonInclude.Include defaultInclusionPolicy;
 
+        JsonAutoDetect.Visibility fieldVisibility;
+        JsonAutoDetect.Visibility getterVisibility;
+        JsonAutoDetect.Visibility isGetterVisibility;
+        JsonAutoDetect.Visibility setterVisibility;
+
         Scanner(ProblemReporter problemReporter, boolean forSerialization) {
             this.problemReporter = problemReporter;
             this.forSerialization = forSerialization;
@@ -278,6 +306,42 @@ class BeanIntrospector {
             return new Accessor<>(finalName, element, type);
         }
 
+        private JsonAutoDetect.Visibility getVisibility(@Nullable AnnotationValue<JsonAutoDetect> jsonAutoDetect, String name, JsonAutoDetect.Visibility defaultValue) {
+            if (jsonAutoDetect != null) {
+                Optional<JsonAutoDetect.Visibility> configured = jsonAutoDetect.get(name, JsonAutoDetect.Visibility.class);
+                if (configured.isPresent() && configured.get() != JsonAutoDetect.Visibility.DEFAULT) {
+                    return configured.get();
+                }
+            }
+            return defaultValue;
+        }
+
+        private boolean isVisibleForAutoDetect(Element element, JsonAutoDetect.Visibility visibility) {
+            switch (visibility) {
+                case NONE:
+                    return false;
+                case PUBLIC_ONLY:
+                    if (element.isProtected()) {
+                        return false;
+                    }
+                    // fall-through
+                case PROTECTED_AND_PUBLIC:
+                    if (element.isPackagePrivate()) {
+                        return false;
+                    }
+                    // fall-through
+                case NON_PRIVATE:
+                    if (element.isPrivate()) {
+                        return false;
+                    }
+                    // fall-through
+                case ANY:
+                    return true;
+                default:
+                    throw new AssertionError(visibility);
+            }
+        }
+
         void scan(ClassElement clazz, Collection<AnnotatedElement> additionalAnnotationSource) {
             AnnotationValue<JsonIgnoreProperties> jsonIgnoreProperties = ElementUtil.getAnnotation(JsonIgnoreProperties.class, clazz, additionalAnnotationSource);
             ignoreUnknownProperties = true;
@@ -291,33 +355,28 @@ class BeanIntrospector {
                 defaultInclusionPolicy = jsonInclude.get("value", JsonInclude.Include.class, defaultInclusionPolicy);
             }
 
+            AnnotationValue<JsonAutoDetect> jsonAutoDetect = ElementUtil.getAnnotation(JsonAutoDetect.class, clazz, additionalAnnotationSource);
+            fieldVisibility = getVisibility(jsonAutoDetect, "fieldVisibility", JsonAutoDetect.Visibility.PUBLIC_ONLY);
+            getterVisibility = getVisibility(jsonAutoDetect, "getterVisibility", JsonAutoDetect.Visibility.PUBLIC_ONLY);
+            isGetterVisibility = getVisibility(jsonAutoDetect, "isGetterVisibility", JsonAutoDetect.Visibility.PUBLIC_ONLY);
+            setterVisibility = getVisibility(jsonAutoDetect, "setterVisibility", JsonAutoDetect.Visibility.PUBLIC_ONLY);
+
             // todo: check we don't have another candidate when replacing properties of the definition
 
             // note: clazz may be a superclass of our original class. in that case, the defaultConstructor will be overwritten.
             defaultConstructor = clazz.getDefaultConstructor().orElse(null);
 
             for (FieldElement field : clazz.getEnclosedElements(ElementQuery.ALL_FIELDS.onlyInstance())) {
-                PropBuilder prop = getByImplicitName(field.getName());
-                prop.field = makeAccessor(field, field.getName());
+                if (isVisibleForAutoDetect(field, fieldVisibility)) {
+                    PropBuilder prop = getByImplicitName(field.getName());
+                    prop.field = makeAccessor(field, field.getName());
+                }
             }
 
             // used to avoid visiting a method twice, once in bean properties and once in the normal pass
             // todo: find a better solution
             // maybe only compare names, should be fine for getters
             Set<MethodElementWrapper> visitedMethods = new HashSet<>();
-
-            for (PropertyElement beanProperty : clazz.getBeanProperties()) {
-                String implicitName = beanProperty.getName();
-                PropBuilder prop = getByImplicitName(implicitName);
-                beanProperty.getReadMethod().ifPresent(readMethod -> {
-                    visitedMethods.add(new MethodElementWrapper(readMethod));
-                    prop.getter = makeAccessor(readMethod, implicitName);
-                });
-                beanProperty.getWriteMethod().ifPresent(writeMethod -> {
-                    visitedMethods.add(new MethodElementWrapper(writeMethod));
-                    prop.setter = makeAccessor(writeMethod, implicitName);
-                });
-            }
 
             // todo: filter by annotation?
             // todo: more specific filters for get/set
@@ -335,11 +394,15 @@ class BeanIntrospector {
 
                     String implicitName = method.getName();
                     if (implicitName.startsWith("get")) {
-                        implicitName = decapitalize(implicitName.substring(3));
-                        consider = true;
+                        if (isVisibleForAutoDetect(method, getterVisibility)) {
+                            implicitName = decapitalize(implicitName.substring(3));
+                            consider = true;
+                        }
                     } else if (implicitName.startsWith("is")) {
-                        implicitName = decapitalize(implicitName.substring(2));
-                        consider = true;
+                        if (isVisibleForAutoDetect(method, isGetterVisibility)) {
+                            implicitName = decapitalize(implicitName.substring(2));
+                            consider = true;
+                        }
                     }
 
                     if (consider) {
@@ -351,10 +414,11 @@ class BeanIntrospector {
                     boolean consider = hasPropertyAnnotation(method);
 
                     String implicitName = method.getName();
-                    // todo: implement write-only property queries in ClassElement
                     if (implicitName.startsWith("set")) {
-                        implicitName = decapitalize(implicitName.substring(3));
-                        consider = true;
+                        if (isVisibleForAutoDetect(method, setterVisibility)) {
+                            implicitName = decapitalize(implicitName.substring(3));
+                            consider = true;
+                        }
                     }
 
                     if (consider) {
