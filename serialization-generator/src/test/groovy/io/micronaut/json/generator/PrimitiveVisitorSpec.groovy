@@ -1,7 +1,7 @@
 package io.micronaut.json.generator
 
 import io.micronaut.annotation.processing.test.AbstractTypeElementSpec
-import io.micronaut.core.reflect.GenericTypeToken
+import io.micronaut.core.reflect.GenericTypeFactory
 import io.micronaut.json.SerializerLocator
 
 class PrimitiveVisitorSpec extends AbstractTypeElementSpec {
@@ -43,9 +43,9 @@ class MockObjectSerializer implements Serializer<Object>, Deserializer<Object> {
         expect:
         locator.findInvariantDeserializer(Integer) != null
         locator.findInvariantDeserializer(String) != null
-        locator.findInvariantDeserializer(new GenericTypeToken<List<Object>>() {}) != null
-        locator.findInvariantDeserializer(new GenericTypeToken<Map<String, Object>>() {}) != null
-        locator.findInvariantDeserializer(new GenericTypeToken<Optional<Object>>() {}) != null
-        locator.findInvariantDeserializer(new GenericTypeToken<String[]>() {}) != null
+        locator.findInvariantDeserializer(GenericTypeFactory.makeParameterizedTypeWithOwner(null, List, Object)) != null
+        locator.findInvariantDeserializer(GenericTypeFactory.makeParameterizedTypeWithOwner(null, Map, String, Object)) != null
+        locator.findInvariantDeserializer(GenericTypeFactory.makeParameterizedTypeWithOwner(null, Optional, Object)) != null
+        locator.findInvariantDeserializer(String[].class) != null
     }
 }

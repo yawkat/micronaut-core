@@ -17,6 +17,9 @@ package io.micronaut.core.reflect
 
 import spock.lang.Specification
 
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+
 class GenericTypeUtilsSpec extends Specification {
 
     void "test resolve generic super type"() {
@@ -72,6 +75,16 @@ class GenericTypeUtilsSpec extends Specification {
         !GenericTypeUtils.isAssignableFrom(new GenericTypeToken<List<? super CharSequence>>() {}.type, Simple.class)
     }
 
+    private static abstract class GenericTypeToken<T> {
+        Type type
+
+        GenericTypeToken() {
+            Type parameterization = GenericTypeUtils.findParameterization(GenericTypeUtils.parameterizeWithFreeVariables(getClass()), GenericTypeToken.class)
+            assert parameterization != null
+            this.type = ((ParameterizedType) parameterization).getActualTypeArguments()[0]
+        }
+    }
+
     static abstract class Simple implements List<String> {}
 
     void "test findParameterization wildcard"() {
@@ -109,7 +122,7 @@ class GenericTypeUtilsSpec extends Specification {
 
     void "test findParameterization generic type var array"() {
         given:
-        def genericArrayType = new GenericArrayToken().getType()
+        def genericArrayType = GenericTypeFactory.makeArrayType(HasTypeVar.getTypeParameters()[0])
 
         expect:
         GenericTypeUtils.findParameterization(genericArrayType, Object[]) != null
@@ -118,7 +131,7 @@ class GenericTypeUtilsSpec extends Specification {
         GenericTypeUtils.findParameterization(genericArrayType, Serializable) != null
     }
 
-    static class GenericArrayToken<T extends String> extends GenericTypeToken<T[]> {}
+    static class HasTypeVar<T extends String> {}
 
     void "test findParameterization parameterized type array"() {
         expect:

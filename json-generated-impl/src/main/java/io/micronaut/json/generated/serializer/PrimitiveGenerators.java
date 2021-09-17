@@ -16,7 +16,6 @@
 package io.micronaut.json.generated.serializer;
 
 import io.micronaut.core.reflect.GenericTypeFactory;
-import io.micronaut.core.reflect.GenericTypeToken;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Encoder;
@@ -68,7 +67,7 @@ class PrimitiveGenerators {
     @Singleton
     static class RawList extends Raw<List> {
         RawList(SerializerLocator locator) {
-            super(locator, new GenericTypeToken<List<Object>>() {}.getType());
+            super(locator, GenericTypeFactory.makeParameterizedTypeWithOwner(null, List.class, Object.class));
         }
     }
 
@@ -76,7 +75,7 @@ class PrimitiveGenerators {
     @Singleton
     static class RawCollection extends Raw<Collection> {
         RawCollection(SerializerLocator locator) {
-            super(locator, new GenericTypeToken<Collection<Object>>() {}.getType());
+            super(locator, GenericTypeFactory.makeParameterizedTypeWithOwner(null, Collection.class, Object.class));
         }
     }
 
@@ -84,7 +83,7 @@ class PrimitiveGenerators {
     @Singleton
     static class RawSet extends Raw<Set> {
         RawSet(SerializerLocator locator) {
-            super(locator, new GenericTypeToken<Set<Object>>() {}.getType());
+            super(locator, GenericTypeFactory.makeParameterizedTypeWithOwner(null, Set.class, Object.class));
         }
     }
 
@@ -92,7 +91,7 @@ class PrimitiveGenerators {
     @Singleton
     static class RawSortedSet extends Raw<SortedSet> {
         RawSortedSet(SerializerLocator locator) {
-            super(locator, new GenericTypeToken<SortedSet<Object>>() {}.getType());
+            super(locator, GenericTypeFactory.makeParameterizedTypeWithOwner(null, SortedSet.class, Object.class));
         }
     }
 
@@ -100,7 +99,7 @@ class PrimitiveGenerators {
     @Singleton
     static class RawMap extends Raw<Map> {
         RawMap(SerializerLocator locator) {
-            super(locator, new GenericTypeToken<Map<String, Object>>() {}.getType());
+            super(locator, GenericTypeFactory.makeParameterizedTypeWithOwner(null, Map.class, String.class, Object.class));
         }
     }
 

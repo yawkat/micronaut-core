@@ -18,11 +18,9 @@ package io.micronaut.json;
 import io.micronaut.context.BeanContext;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.reflect.GenericTypeToken;
 import io.micronaut.core.reflect.GenericTypeUtils;
 import io.micronaut.core.reflect.ReflectionUtils;
 import io.micronaut.inject.BeanDefinition;
-import io.micronaut.inject.BeanType;
 import jakarta.inject.Inject;
 import jakarta.inject.Provider;
 import jakarta.inject.Singleton;
@@ -61,17 +59,9 @@ public final class SerializerLocator {
         return findInvariantDeserializer((Type) forType);
     }
 
-    public <T> Deserializer<T> findInvariantDeserializer(GenericTypeToken<T> typeToken) {
-        return findInvariantDeserializer(typeToken.getType());
-    }
-
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> Provider<Deserializer<T>> findInvariantDeserializerProvider(Type forType) {
         return (Provider) deserializers.findInvariant(forType);
-    }
-
-    public <T> Provider<Deserializer<T>> findInvariantDeserializerProvider(GenericTypeToken<T> typeToken) {
-        return findInvariantDeserializerProvider(typeToken.getType());
     }
 
     public <T> Serializer<? super T> findContravariantSerializer(Type forType) {
@@ -82,17 +72,9 @@ public final class SerializerLocator {
         return findContravariantSerializer((Type) forType);
     }
 
-    public <T> Serializer<? super T> findContravariantSerializer(GenericTypeToken<T> typeToken) {
-        return findContravariantSerializer(typeToken.getType());
-    }
-
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> Provider<Serializer<? super T>> findContravariantSerializerProvider(Type forType) {
         return (Provider) serializers.findContravariant(forType);
-    }
-
-    public <T> Provider<Serializer<? super T>> findContravariantSerializerProvider(GenericTypeToken<T> typeToken) {
-        return findContravariantSerializerProvider(typeToken.getType());
     }
 
     //endregion
