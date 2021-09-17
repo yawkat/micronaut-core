@@ -270,7 +270,7 @@ class Test {
 package example;
 
 class Test {
-    String foo;
+    public String foo;
 }
 ''')
 
@@ -367,7 +367,7 @@ package example;
 import com.fasterxml.jackson.annotation.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 class Test {
-    String foo;
+    public String foo;
 }
 ''')
 
@@ -385,7 +385,7 @@ package example;
 import com.fasterxml.jackson.annotation.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 class Test {
-    String foo;
+    public String foo;
 }
 ''')
 
@@ -403,8 +403,8 @@ package example;
 import com.fasterxml.jackson.annotation.*;
 @JsonIgnoreProperties(ignoreUnknown = true)
 class Test {
-    @JsonIgnore String foo;
-    String bar;
+    @JsonIgnore public String foo;
+    public String bar;
 }
 ''')
 
@@ -466,12 +466,12 @@ package example;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 class Test {
-    @JsonUnwrapped Name name = new Name();
+    @JsonUnwrapped public Name name = new Name();
 }
 
 class Name {
-    String first;
-    String last;
+    public String first;
+    public String last;
 }
 ''')
 
@@ -495,13 +495,13 @@ package example;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 class Test {
-    String first;
-    @JsonUnwrapped Name name = new Name();
+    public String first;
+    @JsonUnwrapped public Name name = new Name();
 }
 
 class Name {
-    String first;
-    String last;
+    public String first;
+    public String last;
 }
 ''', problemReporter)
 
@@ -666,23 +666,23 @@ import java.util.*;
 
 class Test {
     @JsonInclude(JsonInclude.Include.ALWAYS)
-    String alwaysString;
+    public String alwaysString;
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    String nonNullString;
+    public String nonNullString;
     @JsonInclude(JsonInclude.Include.NON_ABSENT)
-    String nonAbsentString;
+    public String nonAbsentString;
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    String nonEmptyString;
+    public String nonEmptyString;
     
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    String[] nonEmptyArray;
+    public String[] nonEmptyArray;
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    List<String> nonEmptyList;
+    public List<String> nonEmptyList;
     
     @JsonInclude(JsonInclude.Include.NON_ABSENT)
-    Optional<String> nonAbsentOptionalString;
+    public Optional<String> nonAbsentOptionalString;
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    Optional<List<String>> nonEmptyOptionalList;
+    public Optional<List<String>> nonEmptyOptionalList;
 }
 ''')
         def with = compiled.newInstance()
@@ -719,7 +719,7 @@ import io.micronaut.core.annotation.Nullable;
 import java.util.Optional;
 class Test {
     @Nullable
-    String foo = "bar";
+    public String foo = "bar";
 }
 ''')
 
@@ -843,7 +843,7 @@ package example;
 class Sub extends Sup<String> {
 }
 class Sup<T> {
-    T value;
+    public T value;
 }
 ''')
 

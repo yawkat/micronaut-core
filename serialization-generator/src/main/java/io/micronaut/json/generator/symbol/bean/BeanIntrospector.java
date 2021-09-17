@@ -367,27 +367,14 @@ class BeanIntrospector {
             defaultConstructor = clazz.getDefaultConstructor().orElse(null);
 
             for (FieldElement field : clazz.getEnclosedElements(ElementQuery.ALL_FIELDS.onlyInstance())) {
-                if (isVisibleForAutoDetect(field, fieldVisibility)) {
+                if (hasPropertyAnnotation(field) || isVisibleForAutoDetect(field, fieldVisibility)) {
                     PropBuilder prop = getByImplicitName(field.getName());
                     prop.field = makeAccessor(field, field.getName());
                 }
             }
 
-            // used to avoid visiting a method twice, once in bean properties and once in the normal pass
-            // todo: find a better solution
-            // maybe only compare names, should be fine for getters
-            Set<MethodElementWrapper> visitedMethods = new HashSet<>();
-
-            // todo: filter by annotation?
-            // todo: more specific filters for get/set
             for (MethodElement method : clazz.getEnclosedElements(ElementQuery.ALL_METHODS.onlyInstance())) {
-                if (!visitedMethods.add(new MethodElementWrapper(method))) {
-                    // skip methods we already visited for properties
-                    continue;
-                }
-
                 // if we have an explicit @JsonProperty, fall back to just the method name as the implicit name
-                // also handle getters/setters again, because getBeanProperties doesn't return all of them. todo
                 if (method.getParameters().length == 0) {
                     // getter
                     boolean consider = hasPropertyAnnotation(method);
@@ -750,24 +737,5 @@ class BeanIntrospector {
          * {@literal @}{@link JsonProperty} with name.
          */
         EXPLICIT,
-    }
-
-    private static class MethodElementWrapper {
-        private final MethodElement element;
-
-        MethodElementWrapper(MethodElement element) {
-            this.element = element;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            return o instanceof MethodElementWrapper && ElementUtil.equals(element, ((MethodElementWrapper) o).element);
-        }
-
-        @Override
-        public int hashCode() {
-            // should be fine
-            return element.getName().hashCode();
-        }
     }
 }

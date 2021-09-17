@@ -34,13 +34,13 @@ package example;
 
 import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class A {
-    B b;
-    String bar;
+    public B b;
+    public String bar;
 }
 
 @io.micronaut.json.annotation.SerializableBean
 class B {
-    String foo;
+    public String foo;
 }
 ''')
 
@@ -74,7 +74,7 @@ import io.micronaut.json.annotation.SerializableBean;import java.util.List;
 
 @io.micronaut.json.annotation.SerializableBean
 class Test {
-    List<String> list;
+    public List<String> list;
 }
 ''')
 
@@ -100,7 +100,7 @@ import java.util.Map;
 
 @io.micronaut.json.annotation.SerializableBean
 class Test {
-    Map<String, String> map;
+    public Map<String, String> map;
 }
 ''')
 
@@ -125,7 +125,7 @@ import java.util.Map;
 
 @io.micronaut.json.annotation.SerializableBean
 class Test {
-    Map<String, String> map;
+    public Map<String, String> map;
 }
 ''')
 
@@ -150,7 +150,7 @@ import io.micronaut.json.annotation.SerializableBean;
 
 @io.micronaut.json.annotation.SerializableBean
 class Test {
-    @io.micronaut.json.annotation.RecursiveSerialization Test foo;
+    @io.micronaut.json.annotation.RecursiveSerialization public Test foo;
 }
 ''')
 
@@ -185,7 +185,7 @@ package example;
 
 import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class Test {
-    Test foo;
+    public Test foo;
 }
 ''')
         then:
@@ -203,7 +203,7 @@ package example;
 
 import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class Test {
-    Test[] foo;
+    public Test[] foo;
 }
 ''')
         then:
@@ -221,11 +221,11 @@ package example;
 
 import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class A {
-    B b;
+    public B b;
 }
 @io.micronaut.json.annotation.SerializableBean
 class B {
-    A a;
+    public A a;
 }
 ''')
         then:
@@ -262,17 +262,17 @@ package example;
 
 import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class A {
-    B<C> b;
+    public B<C> b;
 }
 
 @io.micronaut.json.annotation.SerializableBean
 class B<T> {
-    T foo;
+    public T foo;
 }
 
 @io.micronaut.json.annotation.SerializableBean
 class C {
-    String bar;
+    public String bar;
 }
 ''')
 
@@ -318,17 +318,17 @@ package example;
 
 import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class A {
-    B<C> b;
+    public B<C> b;
 }
 
 @io.micronaut.json.annotation.SerializableBean(inline = true)
 class B<T> {
-    T foo;
+    public T foo;
 }
 
 @io.micronaut.json.annotation.SerializableBean
 class C {
-    String bar;
+    public String bar;
 }
 ''')
 
@@ -357,7 +357,7 @@ package example;
 
 import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
 class A {
-    E e;
+    public E e;
 }
 
 enum E {
@@ -426,7 +426,7 @@ package example;
 
 @io.micronaut.json.annotation.SerializableBean
 class A {
-    java.util.Optional<B> b;
+    public java.util.Optional<B> b;
 }
 
 @io.micronaut.json.annotation.SerializableBean
@@ -523,11 +523,11 @@ import jakarta.inject.Singleton;
 @SerializableBean(allowDeserialization = false)
 class A {
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    B b;
+    public B b;
 }
 
 class B {
-    boolean present;
+    public boolean present;
 }
 
 @Singleton
@@ -594,12 +594,12 @@ import io.micronaut.json.annotation.SerializableBean;
 @SerializableBean
 @JsonView(Public.class)
 class WithViews {
-    String firstName;
-    String lastName;
+    public String firstName;
+    public String lastName;
     @JsonView(Internal.class)
-    String birthdate;
+    public String birthdate;
     @JsonView(Admin.class)
-    String password; // don't do plaintext passwords at home please
+    public String password; // don't do plaintext passwords at home please
 }
 
 class Public {}
@@ -662,12 +662,12 @@ import io.micronaut.json.annotation.SerializableBean;
 
 @SerializableBean
 class Outer {
-    String a;
-    @JsonView(Runnable.class) @JsonUnwrapped Nested nested;
+    public String a;
+    @JsonView(Runnable.class) @JsonUnwrapped public Nested nested;
 }
 
 class Nested {
-    String b;
+    public String b;
 }
 ''', true)
         def serializer = ctx.classLoader.loadClass('example.$Outer$Serializer').newInstance()
@@ -698,9 +698,9 @@ import java.util.Locale;
 
 @SerializableBean
 class Test {
-    String foo;
+    public String foo;
     @CustomSerializer(serializer = UpperCaseSer.class, deserializer = LowerCaseDeser.class)
-    String bar;
+    public String bar;
 }
 
 @Singleton

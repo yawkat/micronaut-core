@@ -68,11 +68,11 @@ class GeneratedObjectCodecSpec extends Specification {
 
     @SerializableBean
     static class Base {
-        String foo
+        public String foo
     }
 
     static class Subclass extends Base {
-        String bar
+        public String bar
     }
 
     def "generic bean deser"() {
@@ -110,13 +110,13 @@ class GeneratedObjectCodecSpec extends Specification {
 
     @SerializableBean
     static class GenericBean<T> {
-        T naked
-        List<T> list
+        public T naked
+        public List<T> list
     }
 
     @SerializableBean
     static class GenericBeanWrapper {
-        @JsonValue GenericBean<String> bean;
+        @JsonValue public GenericBean<String> bean;
     }
 
     def "raw map"() {
@@ -206,12 +206,12 @@ class GeneratedObjectCodecSpec extends Specification {
     @SerializableBean
     @JsonView(Views.Public)
     static class WithViews {
-        String firstName
-        String lastName
+        public String firstName
+        public String lastName
         @JsonView(Views.Internal)
-        String birthdate
+        public String birthdate
         @JsonView(Views.Admin)
-        String password // don't do plaintext passwords at home please
+        public String password // don't do plaintext passwords at home please
     }
 
     static class Views {
@@ -238,9 +238,9 @@ class GeneratedObjectCodecSpec extends Specification {
 
     @SerializableBean
     static class CustomSerializerBean {
-        String foo
+        public String foo
         @CustomSerializer(serializer = UpperCaseSer.class)
-        String bar
+        public String bar
     }
 
     @Singleton

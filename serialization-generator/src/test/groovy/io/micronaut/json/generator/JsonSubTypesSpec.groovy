@@ -25,10 +25,10 @@ class Base {
 }
 
 class A extends Base {
-    String fieldA;
+    public String fieldA;
 }
 class B extends Base {
-    String fieldB;
+    public String fieldB;
 }
 ''')
         def deserializer = (Deserializer) compiled.loadClass('example.$Base$Deserializer').newInstance()
@@ -64,10 +64,10 @@ class Base {
 }
 
 class A extends Base {
-    String fieldA;
+    public String fieldA;
 }
 class B extends Base {
-    String fieldB;
+    public String fieldB;
 }
 ''')
         def deserializer = (Deserializer) compiled.loadClass('example.$Base$Deserializer').newInstance()
@@ -103,10 +103,10 @@ class Base {
 }
 
 class A extends Base {
-    String fieldA;
+    public String fieldA;
 }
 class B extends Base {
-    String fieldB;
+    public String fieldB;
 }
 ''')
         def deserializer = (Deserializer) compiled.loadClass('example.$Base$Deserializer').newInstance()
@@ -142,10 +142,10 @@ class Base {
 }
 
 class A extends Base {
-    String fieldA;
+    public String fieldA;
 }
 class B extends Base {
-    String fieldB;
+    public String fieldB;
 }
 ''')
         def deserializer = (Deserializer) compiled.loadClass('example.$Base$Deserializer').newInstance()
@@ -177,14 +177,14 @@ import io.micronaut.json.annotation.SerializableBean;
 })
 @JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION)
 class Base {
-    String sup;
+    public String sup;
 }
 
 class A extends Base {
-    String fieldA;
+    public String fieldA;
 }
 class B extends Base {
-    String fieldB;
+    public String fieldB;
 }
 ''')
         def deserializer = (Deserializer) compiled.loadClass('example.$Base$Deserializer').newInstance()
@@ -220,14 +220,14 @@ import io.micronaut.json.annotation.SerializableBean;
 })
 @JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION)
 class Base1 {
-    @JsonUnwrapped Base2 base2;
+    @JsonUnwrapped public Base2 base2;
 }
 
 class A1 extends Base1 {
-    String fieldA1;
+    public String fieldA1;
 }
 class B1 extends Base1 {
-    String fieldB1;
+    public String fieldB1;
 }
 
 @JsonSubTypes({
@@ -236,14 +236,14 @@ class B1 extends Base1 {
 })
 @JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION)
 class Base2 {
-    String sup;
+    public String sup;
 }
 
 class A2 extends Base2 {
-    String fieldA2;
+    public String fieldA2;
 }
 class B2 extends Base2 {
-    String fieldB2;
+    public String fieldB2;
 }
 ''')
         def deserializer = (Deserializer) compiled.loadClass('example.$Base1$Deserializer').newInstance()
