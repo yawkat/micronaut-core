@@ -1008,14 +1008,40 @@ class Test {
         __
         configuredIsGetterVisibility         | declaredIsGetterVisibility    | isGetterAppears
         JsonAutoDetect.Visibility.DEFAULT | ''                  | false
-        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
-        JsonAutoDetect.Visibility.NON_PRIVATE | ''                  | true
-        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
+        JsonAutoDetect.Visibility.DEFAULT | '' | false
+        JsonAutoDetect.Visibility.NON_PRIVATE | '' | true
+        JsonAutoDetect.Visibility.DEFAULT | '' | false
         __
-        configuredSetterVisibility         | declaredSetterVisibility    | setterAppears
-        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
-        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
-        JsonAutoDetect.Visibility.DEFAULT | ''                  | false
-        JsonAutoDetect.Visibility.NON_PRIVATE | ''                  | true
+        configuredSetterVisibility | declaredSetterVisibility | setterAppears
+        JsonAutoDetect.Visibility.DEFAULT | '' | false
+        JsonAutoDetect.Visibility.DEFAULT | '' | false
+        JsonAutoDetect.Visibility.DEFAULT | '' | false
+        JsonAutoDetect.Visibility.NON_PRIVATE | '' | true
+    }
+
+    void 'JsonIgnoreType'() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
+
+class Test {
+    public String foo;
+    public Used used;
+}
+@JsonIgnoreType
+class Used {
+    public String bar;
+}
+''')
+        def bean = compiled.newInstance()
+        bean.foo = '42'
+        bean.used = compiled.beanClass.classLoader.loadClass('example.Used').newInstance()
+        bean.used.bar = '56'
+
+        expect:
+        deserializeFromString(compiled.serializer, '{"foo":"42","used":{"bar":"56"}}').used == null
+        serializeToString(compiled.serializer, bean) == '{"foo":"42"}'
     }
 }

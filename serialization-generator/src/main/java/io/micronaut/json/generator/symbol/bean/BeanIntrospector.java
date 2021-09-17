@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -48,6 +47,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -97,6 +97,11 @@ class BeanIntrospector {
                     built = BeanDefinition.Property.field(prop.name, prop.field.accessor);
                 }
             }
+            GeneratorType type = built.getType(Function.identity());
+            if (type.getRawClass().getAnnotation(JsonIgnoreType.class) != null) {
+                continue;
+            }
+
             built.permitRecursiveSerialization = prop.permitRecursiveSerialization;
             built.nullable = prop.nullable;
             built.unwrapped = prop.unwrapped;
