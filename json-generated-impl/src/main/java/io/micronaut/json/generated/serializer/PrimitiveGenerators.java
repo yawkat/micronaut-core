@@ -15,7 +15,7 @@
  */
 package io.micronaut.json.generated.serializer;
 
-import io.micronaut.core.reflect.GenericTypeFactory;
+import io.micronaut.json.GenericTypeFactory;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Encoder;

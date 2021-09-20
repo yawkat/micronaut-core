@@ -24,12 +24,12 @@ import io.micronaut.context.annotation.Primary;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.reflect.GenericTypeUtils;
 import io.micronaut.core.type.Argument;
 import io.micronaut.jackson.core.tree.JsonNodeTreeCodec;
 import io.micronaut.jackson.core.tree.TreeGenerator;
 import io.micronaut.json.DatabindChoice;
 import io.micronaut.json.Deserializer;
+import io.micronaut.json.GenericTypeFactory;
 import io.micronaut.json.JacksonDecoder;
 import io.micronaut.json.JacksonEncoder;
 import io.micronaut.json.JsonMapper;
@@ -94,7 +94,7 @@ public final class GeneratedObjectMapper implements JsonMapper {
     }
 
     private <T> T readValue(JsonParser parser, Argument<T> type) throws IOException {
-        return readValue0(parser, GenericTypeUtils.argumentToReflectType(type));
+        return readValue0(parser, GenericTypeFactory.argumentToReflectType(type));
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

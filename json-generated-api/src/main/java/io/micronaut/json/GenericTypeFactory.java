@@ -13,16 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.core.reflect;
+package io.micronaut.json;
 
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.type.Argument;
 
 import java.lang.reflect.*;
+import java.util.Map;
 import java.util.Objects;
 
 public class GenericTypeFactory {
     private GenericTypeFactory() {}
+
+    public static Type argumentToReflectType(Argument<?> argument) {
+        Class<?> rawType = argument.getType();
+        Map<String, Argument<?>> typeVariables = argument.getTypeVariables();
+        if (typeVariables.isEmpty()) {
+            return rawType;
+        } else {
+            return makeParameterizedTypeWithOwner(
+                    null,
+                    rawType,
+                    typeVariables.values().stream().map(GenericTypeFactory::argumentToReflectType).toArray(Type[]::new)
+            );
+        }
+    }
 
     public static Type makeArrayType(@NonNull Type component) {
         Objects.requireNonNull(component, "component");

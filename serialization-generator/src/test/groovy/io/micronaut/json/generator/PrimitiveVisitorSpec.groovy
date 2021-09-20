@@ -1,7 +1,7 @@
 package io.micronaut.json.generator
 
 import io.micronaut.annotation.processing.test.AbstractTypeElementSpec
-import io.micronaut.core.reflect.GenericTypeFactory
+import io.micronaut.json.GenericTypeFactory
 import io.micronaut.json.SerializerLocator
 
 class PrimitiveVisitorSpec extends AbstractTypeElementSpec {

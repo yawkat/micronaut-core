@@ -20,7 +20,7 @@ import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.reflect.GenericTypeFactory;
+import io.micronaut.json.GenericTypeFactory;
 import io.micronaut.inject.ast.*;
 
 import java.lang.reflect.Type;

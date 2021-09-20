@@ -18,7 +18,6 @@ package io.micronaut.json;
 import io.micronaut.context.BeanContext;
 import io.micronaut.context.annotation.BootstrapContextCompatible;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.reflect.GenericTypeUtils;
 import io.micronaut.core.reflect.ReflectionUtils;
 import io.micronaut.inject.BeanDefinition;
 import jakarta.inject.Inject;
@@ -80,14 +79,14 @@ public final class SerializerLocator {
     //endregion
 
     private static Type foldInferred(Type into, Map<TypeVariable<?>, Type> inferredTypes) {
-        GenericTypeUtils.VariableFold fold = var -> {
+        TypeInference.VariableFold fold = var -> {
             Type inferredType = inferredTypes.get(var);
             if (inferredType == null) {
                 throw new IllegalArgumentException("Missing inferred variable " + var);
             }
             return inferredType;
         };
-        return GenericTypeUtils.foldTypeVariables(into, fold);
+        return TypeInference.foldTypeVariables(into, fold);
     }
 
     private static Type normalizePrimitiveType(Type t) {
@@ -124,7 +123,7 @@ public final class SerializerLocator {
                     } else {
                         hereType = foldInferred(factory.genericType, inferred);
                     }
-                    if (found != null && foundType != null && hereType != null && GenericTypeUtils.isAssignableFrom(hereType, foundType, true)) {
+                    if (found != null && foundType != null && hereType != null && TypeInference.isAssignableFrom(hereType, foundType, true)) {
                         // hereType :> foundType :> type, foundType is the better choice
                         continue;
                     }
@@ -218,7 +217,7 @@ public final class SerializerLocator {
 
         ContainerSyntheticFactory(BeanDefinition<? extends S> definition, Class<S> baseClass) {
             this.definition = definition;
-            Type parameterization = GenericTypeUtils.findParameterization(GenericTypeUtils.parameterizeWithFreeVariables(definition.getBeanType()), baseClass);
+            Type parameterization = TypeInference.findParameterization(TypeInference.parameterizeWithFreeVariables(definition.getBeanType()), baseClass);
             assert parameterization != null;
             if (parameterization instanceof Class) {
                 throw new IllegalStateException("Bean " + definition.getName() + " implements " + baseClass.getSimpleName() + " as a raw type, this is forbidden.");
@@ -247,7 +246,7 @@ public final class SerializerLocator {
             this.assignment = assignment;
             int hash = 1;
             for (Map.Entry<String, Type> entry : assignment.entrySet()) {
-                hash = 31 * 31 * hash + 31 * entry.getKey().hashCode() + GenericTypeUtils.typeHashCode(entry.getValue());
+                hash = 31 * 31 * hash + 31 * entry.getKey().hashCode() + TypeInference.typeHashCode(entry.getValue());
             }
             this.hash = hash;
         }
@@ -261,7 +260,7 @@ public final class SerializerLocator {
             return o instanceof TypeVariableAssignment &&
                     ((TypeVariableAssignment) o).hash == this.hash &&
                     this.assignment.keySet().equals(((TypeVariableAssignment) o).assignment.keySet()) &&
-                    this.assignment.entrySet().stream().allMatch(entry -> GenericTypeUtils.typesEqual(entry.getValue(), ((TypeVariableAssignment) o).assignment.get(entry.getKey())));
+                    this.assignment.entrySet().stream().allMatch(entry -> TypeInference.typesEqual(entry.getValue(), ((TypeVariableAssignment) o).assignment.get(entry.getKey())));
         }
 
         @Override
