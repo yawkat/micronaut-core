@@ -241,8 +241,7 @@ public class JacksonDecoder implements Decoder {
 
     @Override
     public final char decodeChar() throws IOException {
-        // todo: string -> char handling
-        return (char) decodeInteger(Character.MIN_VALUE, Character.MAX_VALUE);
+        return (char) decodeInteger(Character.MIN_VALUE, Character.MAX_VALUE, true);
     }
 
     @Override
@@ -256,11 +255,23 @@ public class JacksonDecoder implements Decoder {
     }
 
     private long decodeInteger(long min, long max) throws IOException {
+        return decodeInteger(min, max, false);
+    }
+
+    private long decodeInteger(long min, long max, boolean stringsAsChars) throws IOException {
         preDecodeValue();
         switch (parser.currentToken()) {
+            case VALUE_STRING:
+                if (stringsAsChars) {
+                    if (parser.getTextLength() != 1) {
+                        throw createDeserializationException("When decoding char value, must give a single character");
+                    }
+                    char c = parser.getTextCharacters()[parser.getTextOffset()];
+                    parser.nextToken();
+                    return c;
+                }
             case VALUE_NUMBER_INT:
             case VALUE_NUMBER_FLOAT:
-            case VALUE_STRING:
             case VALUE_TRUE:
             case VALUE_FALSE:
                 // todo: better coercion rules

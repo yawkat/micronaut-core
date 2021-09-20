@@ -40,4 +40,15 @@ class JacksonDecoderSpec extends Specification {
         array.decodeInt() == 42
         array.finishStructure()
     }
+
+    def 'char reading'() {
+        given:
+        def factory = new JsonFactoryBuilder().build()
+        def decoder = JacksonDecoder.create(factory.createParser('["a",42]'))
+        def array = decoder.decodeArray()
+
+        expect:
+        array.decodeChar() == (char) 'a'
+        array.decodeChar() == (char) '*'
+    }
 }
