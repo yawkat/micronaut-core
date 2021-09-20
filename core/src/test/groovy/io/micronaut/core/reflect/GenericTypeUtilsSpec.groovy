@@ -17,9 +17,6 @@ package io.micronaut.core.reflect
 
 import spock.lang.Specification
 
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
-
 class GenericTypeUtilsSpec extends Specification {
 
     void "test resolve generic super type"() {

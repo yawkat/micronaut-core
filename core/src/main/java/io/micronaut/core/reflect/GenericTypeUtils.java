@@ -15,17 +15,15 @@
  */
 package io.micronaut.core.reflect;
 
-import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.ArrayUtils;
 
-import java.io.Serializable;
-import java.lang.reflect.*;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Function;
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Utility methods for dealing with generic types via reflection. Generally reflection is to be avoided in Micronaut. Hence
@@ -35,6 +33,7 @@ import java.util.function.Function;
  * @since 1.0
  */
 public class GenericTypeUtils {
+
     /**
      * Resolves a single generic type argument for the given field.
      *
