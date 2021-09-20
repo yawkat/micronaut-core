@@ -344,4 +344,43 @@ class B extends Base {
         deserializeFromString(deserializer, '{"foo":"bar","type":".A"}').anySetter == [foo: 'bar']
         deserializeFromString(deserializer, '{"foo":"bar","type":".B"}').anySetter == [foo: 'bar']
     }
+
+    def 'JsonTypeName'() {
+        given:
+        def compiled = buildClassLoader('example.Base', '''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+import io.micronaut.json.annotation.SerializableBean;
+
+@SerializableBean
+@JsonSubTypes({
+    @JsonSubTypes.Type(A.class),
+    @JsonSubTypes.Type(B.class)
+})
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.WRAPPER_ARRAY)
+class Base {
+}
+
+@JsonTypeName
+class A extends Base {
+    public String fieldA;
+}
+@JsonTypeName("b")
+class B extends Base {
+    public String fieldB;
+}
+''')
+        def deserializer = (Deserializer) compiled.loadClass('example.$Base$Deserializer').newInstance()
+
+        def serializer = (Serializer) compiled.loadClass('example.$Base$Serializer').newInstance()
+        def a = compiled.loadClass('example.A').newInstance()
+        a.fieldA = 'foo'
+
+        expect:
+        deserializeFromString(deserializer, '["A",{"fieldA":"foo"}]').fieldA == 'foo'
+        deserializeFromString(deserializer, '["b",{"fieldB":"foo"}]').fieldB == 'foo'
+
+        serializeToString(serializer, a) == '["A",{"fieldA":"foo"}]'
+    }
 }

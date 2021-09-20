@@ -46,12 +46,6 @@ class BeanDefinition {
      */
     MethodElement anySetter;
 
-    /**
-     * {@link com.fasterxml.jackson.annotation.JsonTypeName}
-     * todo
-     */
-    String subTypeName;
-
     Subtyping subtyping;
 
     List<Property> props;

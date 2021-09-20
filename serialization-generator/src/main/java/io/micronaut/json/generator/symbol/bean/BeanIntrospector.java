@@ -182,7 +182,19 @@ class BeanIntrospector {
                 break;
             case NAME:
                 subtyping.subTypeNames = subtyping.subTypes.stream()
-                        .collect(Collectors.toMap(cls -> cls, cls -> explicitTypes.get(cls.getTypeName())));
+                        .collect(Collectors.toMap(cls -> cls, cls -> {
+                            Collection<String> names = explicitTypes.get(cls.getTypeName());
+                            if (names.isEmpty()) {
+                                ClassElement rawClassElement = cls.getRawClass();
+                                AnnotationValue<JsonTypeName> jsonTypeName = rawClassElement.getAnnotation(JsonTypeName.class);
+                                if (jsonTypeName != null) {
+                                    names = Collections.singleton(jsonTypeName.stringValue().map(s -> s.isEmpty() ? null : s).orElse(rawClassElement.getSimpleName()));
+                                } else {
+                                    problemReporter.fail("No explicit name given for type " + rawClassElement.getName(), on);
+                                }
+                            }
+                            return names;
+                        }));
                 break;
             case DEDUCTION:
                 subtyping.deduce = true;
