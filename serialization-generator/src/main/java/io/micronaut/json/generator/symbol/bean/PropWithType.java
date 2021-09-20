@@ -33,6 +33,6 @@ class PropWithType {
      * @param property The property.
      */
     static PropWithType fromContext(GeneratorType context, BeanDefinition.Property property) {
-        return new PropWithType(property, property.getType(context.typeParametersAsFoldFunction(property.declaring.getRawMnType())));
+        return new PropWithType(property, property.getType(context.typeParametersAsFoldFunction(property.declaring.getRawSourceType())));
     }
 }

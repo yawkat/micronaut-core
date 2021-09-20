@@ -20,7 +20,7 @@ import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ConstructorElement;
-import io.micronaut.inject.ast.MnType;
+import io.micronaut.inject.ast.SourceType;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.generator.symbol.ConditionExpression;
 import io.micronaut.json.generator.symbol.GeneratorContext;
@@ -242,7 +242,7 @@ abstract class DeserializationEntity {
             }
             AnySetterAsMap anySetterAsMap;
             if (def.anySetter != null) {
-                MnType context = def.anySetter.getDeclaringType().getRawMnType();
+                SourceType context = def.anySetter.getDeclaringType().getRawSourceType();
                 GeneratorType keyType = GeneratorType.parameterType(def.anySetter.getParameters()[0], type.typeParametersAsFoldFunction(context));
                 GeneratorType valueType = GeneratorType.parameterType(def.anySetter.getParameters()[1], type.typeParametersAsFoldFunction(context));
                 if (!keyType.isRawTypeEquals(String.class)) {

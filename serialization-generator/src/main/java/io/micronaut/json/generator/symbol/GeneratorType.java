@@ -40,7 +40,7 @@ public class GeneratorType {
     @Internal
     public static final GeneratorType GENERIC_ARRAY = new GeneratorType(
             ClassElement.of(Object[].class),
-            new MnType.Variable() {
+            new SourceType.Variable() {
                 @NonNull
                 @Override
                 public Element getDeclaringElement() {
@@ -56,28 +56,28 @@ public class GeneratorType {
 
                 @NonNull
                 @Override
-                public List<? extends MnType> getBounds() {
-                    return Collections.singletonList(ClassElement.of(Object.class).getRawMnType());
+                public List<? extends SourceType> getBounds() {
+                    return Collections.singletonList(ClassElement.of(Object.class).getRawSourceType());
                 }
-            }.getArrayType()
+            }.createArrayType()
     );
 
     private final ClassElement classElement;
-    private final MnType fullType;
+    private final SourceType fullType;
 
-    private GeneratorType(ClassElement classElement, MnType fullType) {
+    private GeneratorType(ClassElement classElement, SourceType fullType) {
         this.classElement = classElement;
         this.fullType = fullType;
     }
 
     public static GeneratorType ofClass(ClassElement raw) {
-        MnType rawMn = raw.getRawMnType();
-        if (rawMn instanceof MnType.RawClass) {
+        SourceType rawMn = raw.getRawSourceType();
+        if (rawMn instanceof SourceType.RawClass) {
             // if the class has type parameters, instead return a parameterized type with those parameters as free variables.
             // List -> List<E>
-            List<? extends MnType.Variable> typeVariables = ((MnType.RawClass) rawMn).getTypeVariables();
+            List<? extends SourceType.Variable> typeVariables = ((SourceType.RawClass) rawMn).getTypeVariables();
             if (!typeVariables.isEmpty()) {
-                return new GeneratorType(raw, new ParameterizedImpl((MnType.RawClass) rawMn, typeVariables));
+                return new GeneratorType(raw, new ParameterizedImpl((SourceType.RawClass) rawMn, typeVariables));
             }
         }
         return new GeneratorType(raw, rawMn);
@@ -88,21 +88,21 @@ public class GeneratorType {
 
         if (params.length == 0) {
             ClassElement ele = ClassElement.of(raw);
-            return new GeneratorType(ele, ele.getRawMnType());
+            return new GeneratorType(ele, ele.getRawSourceType());
         }
 
-        MnType.RawClass mnRaw = (MnType.RawClass) ClassElement.of(raw).getRawMnType();
+        SourceType.RawClass mnRaw = (SourceType.RawClass) ClassElement.of(raw).getRawSourceType();
 
-        List<MnType> mnArgs = new ArrayList<>();
+        List<SourceType> mnArgs = new ArrayList<>();
         Map<String, ClassElement> argMap = new LinkedHashMap<>();
-        List<? extends MnType.Variable> typeVariables = mnRaw.getTypeVariables();
+        List<? extends SourceType.Variable> typeVariables = mnRaw.getTypeVariables();
         for (int i = 0; i < typeVariables.size(); i++) {
-            MnType.Variable variable = typeVariables.get(i);
+            SourceType.Variable variable = typeVariables.get(i);
             if (params[i] != null) {
                 // concrete type
                 ClassElement element = ClassElement.of(params[i]);
                 argMap.put(variable.getName(), element);
-                mnArgs.add(element.getRawMnType());
+                mnArgs.add(element.getRawSourceType());
             } else {
                 // type variable
                 argMap.put(variable.getName(), variable.getBounds().get(0).getErasureElement());
@@ -110,21 +110,21 @@ public class GeneratorType {
             }
         }
         ClassElement classElement = ClassElement.of(raw, AnnotationMetadata.EMPTY_METADATA, argMap);
-        return new GeneratorType(classElement, new ParameterizedImpl((MnType.RawClass) classElement.getRawMnType(), mnArgs));
+        return new GeneratorType(classElement, new ParameterizedImpl((SourceType.RawClass) classElement.getRawSourceType(), mnArgs));
     }
 
-    private static class ParameterizedImpl extends MnType.Parameterized {
+    private static class ParameterizedImpl extends SourceType.Parameterized {
         private final RawClass raw;
-        private final List<? extends MnType> parameters;
+        private final List<? extends SourceType> parameters;
 
-        ParameterizedImpl(RawClass raw, List<? extends MnType> parameters) {
+        ParameterizedImpl(RawClass raw, List<? extends SourceType> parameters) {
             this.raw = raw;
             this.parameters = parameters;
         }
 
         @Nullable
         @Override
-        public MnType getOuter() {
+        public SourceType getOuter() {
             return null;
         }
 
@@ -136,29 +136,29 @@ public class GeneratorType {
 
         @NonNull
         @Override
-        public List<? extends MnType> getParameters() {
+        public List<? extends SourceType> getParameters() {
             return parameters;
         }
     }
 
-    public static GeneratorType fieldType(FieldElement element, Function<MnType, MnType> fold) {
+    public static GeneratorType fieldType(FieldElement element, Function<SourceType, SourceType> fold) {
         return new GeneratorType(
                 element.getGenericType(),
-                element.getMnType().foldTypes(fold)
+                element.getDeclaredSourceType().foldTypes(fold)
         );
     }
 
-    public static GeneratorType methodReturnType(MethodElement element, Function<MnType, MnType> fold) {
+    public static GeneratorType methodReturnType(MethodElement element, Function<SourceType, SourceType> fold) {
         return new GeneratorType(
                 element.getGenericReturnType(),
-                element.getMnReturnType().foldTypes(fold)
+                element.getDeclaredReturnSourceType().foldTypes(fold)
         );
     }
 
-    public static GeneratorType parameterType(ParameterElement element, Function<MnType, MnType> fold) {
+    public static GeneratorType parameterType(ParameterElement element, Function<SourceType, SourceType> fold) {
         return new GeneratorType(
                 element.getGenericType(),
-                element.getMnType().foldTypes(fold)
+                element.getDeclaredSourceType().foldTypes(fold)
         );
     }
 
@@ -166,7 +166,7 @@ public class GeneratorType {
         return classElement;
     }
 
-    public Set<MnType.Variable> getFreeVariables() {
+    public Set<SourceType.Variable> getFreeVariables() {
         return fullType.getFreeVariables();
     }
 
@@ -175,17 +175,17 @@ public class GeneratorType {
     }
 
     public boolean isArray() {
-        return fullType instanceof MnType.Array;
+        return fullType instanceof SourceType.Array;
     }
 
     public GeneratorType fromArray() {
-        if (!(fullType instanceof MnType.Array)) {
+        if (!(fullType instanceof SourceType.Array)) {
             throw new IllegalStateException("not an array");
         }
         if (!classElement.isArray()) {
             throw new IllegalStateException("not an array (but only on ClassElement? BUG)");
         }
-        return new GeneratorType(classElement.fromArray(), ((MnType.Array) fullType).getComponent());
+        return new GeneratorType(classElement.fromArray(), ((SourceType.Array) fullType).getComponent());
     }
 
     public boolean isPrimitive() {
@@ -198,7 +198,7 @@ public class GeneratorType {
 
     public Map<String, GeneratorType> getTypeArgumentsExact() {
         Map<String, ClassElement> args = classElement.getTypeArguments();
-        List<? extends MnType> parameterizedArgs = ((MnType.Parameterized) this.fullType).getParameters();
+        List<? extends SourceType> parameterizedArgs = ((SourceType.Parameterized) this.fullType).getParameters();
         int i = 0;
         Map<String, GeneratorType> mappedArgs = new LinkedHashMap<>();
         for (Map.Entry<String, ClassElement> entry : args.entrySet()) {
@@ -220,16 +220,16 @@ public class GeneratorType {
         return classElement.getName().equals(forType.getName());
     }
 
-    public Function<MnType, MnType> typeParametersAsFoldFunction(MnType context) {
+    public Function<SourceType, SourceType> typeParametersAsFoldFunction(SourceType context) {
         return typeParametersAsFoldFunction0(fullType.findParameterization(context));
     }
 
-    private static Function<MnType, MnType> typeParametersAsFoldFunction0(MnType t) {
-        if (t instanceof MnType.RawClass) {
+    private static Function<SourceType, SourceType> typeParametersAsFoldFunction0(SourceType t) {
+        if (t instanceof SourceType.RawClass) {
             // raw class, replace type variables by their bound
-            List<? extends MnType.Variable> variables = ((MnType.RawClass) t).getTypeVariables();
+            List<? extends SourceType.Variable> variables = ((SourceType.RawClass) t).getTypeVariables();
             return type -> {
-                if (type instanceof MnType.Variable) {
+                if (type instanceof SourceType.Variable) {
                     if (variables.contains(type)) {
                         return type.getErasure();
                     }
@@ -237,14 +237,14 @@ public class GeneratorType {
                 return type;
             };
         } else {
-            assert t instanceof MnType.Parameterized;
-            List<? extends MnType.Variable> variables = ((MnType.Parameterized) t).getRaw().getTypeVariables();
-            List<? extends MnType> arguments = ((MnType.Parameterized) t).getParameters();
+            assert t instanceof SourceType.Parameterized;
+            List<? extends SourceType.Variable> variables = ((SourceType.Parameterized) t).getRaw().getTypeVariables();
+            List<? extends SourceType> arguments = ((SourceType.Parameterized) t).getParameters();
             return type -> {
-                if (type instanceof MnType.Variable) {
+                if (type instanceof SourceType.Variable) {
                     // note: for groovy, MnType.Variable.equals breaks, so we just compare names
                     for (int i = 0; i < variables.size(); i++) {
-                        if (variables.get(i).getName().equals(((MnType.Variable) type).getName())) {
+                        if (variables.get(i).getName().equals(((SourceType.Variable) type).getName())) {
                             return arguments.get(i);
                         }
                     }
@@ -275,37 +275,37 @@ public class GeneratorType {
      *
      * @param variableResolve Function to resolve type variables.
      */
-    CodeBlock toRuntimeFactory(Function<MnType.Variable, CodeBlock> variableResolve) {
+    CodeBlock toRuntimeFactory(Function<SourceType.Variable, CodeBlock> variableResolve) {
         return toRuntimeFactory(fullType, variableResolve);
     }
 
-    private static CodeBlock toRuntimeFactory(MnType type, Function<MnType.Variable, CodeBlock> variableResolve) {
-        if (type instanceof MnType.Array) {
+    private static CodeBlock toRuntimeFactory(SourceType type, Function<SourceType.Variable, CodeBlock> variableResolve) {
+        if (type instanceof SourceType.Array) {
             return CodeBlock.of("$T.makeArrayType($L)",
                     GenericTypeFactory.class,
-                    toRuntimeFactory(((MnType.Array) type).getComponent(), variableResolve));
-        } else if (type instanceof MnType.RawClass) {
-            return CodeBlock.of("$T.class", PoetUtil.toTypeNameRaw(((MnType.RawClass) type).getClassElement()));
-        } else if (type instanceof MnType.Parameterized) {
-            MnType outer = ((MnType.Parameterized) type).getOuter();
+                    toRuntimeFactory(((SourceType.Array) type).getComponent(), variableResolve));
+        } else if (type instanceof SourceType.RawClass) {
+            return CodeBlock.of("$T.class", PoetUtil.toTypeNameRaw(((SourceType.RawClass) type).getClassElement()));
+        } else if (type instanceof SourceType.Parameterized) {
+            SourceType outer = ((SourceType.Parameterized) type).getOuter();
             return CodeBlock.of("$T.makeParameterizedTypeWithOwner($L, $L$L)",
                     GenericTypeFactory.class,
                     outer == null ? "null" : toRuntimeFactory(outer, variableResolve),
-                    toRuntimeFactory(((MnType.Parameterized) type).getRaw(), variableResolve),
-                    toRuntimeFactoryVarargs(((MnType.Parameterized) type).getParameters(), true, variableResolve));
-        } else if (type instanceof MnType.Wildcard) {
+                    toRuntimeFactory(((SourceType.Parameterized) type).getRaw(), variableResolve),
+                    toRuntimeFactoryVarargs(((SourceType.Parameterized) type).getParameters(), true, variableResolve));
+        } else if (type instanceof SourceType.Wildcard) {
             return CodeBlock.of("$T.makeWildcardType(new $T[] {$L}, new $T[] {$L})",
                     GenericTypeFactory.class,
-                    Type.class, toRuntimeFactoryVarargs(((MnType.Wildcard) type).getUpperBounds(), false, variableResolve),
-                    Type.class, toRuntimeFactoryVarargs(((MnType.Wildcard) type).getLowerBounds(), false, variableResolve));
-        } else if (type instanceof MnType.Variable) {
-            return variableResolve.apply((MnType.Variable) type);
+                    Type.class, toRuntimeFactoryVarargs(((SourceType.Wildcard) type).getUpperBounds(), false, variableResolve),
+                    Type.class, toRuntimeFactoryVarargs(((SourceType.Wildcard) type).getLowerBounds(), false, variableResolve));
+        } else if (type instanceof SourceType.Variable) {
+            return variableResolve.apply((SourceType.Variable) type);
         } else {
             throw new AssertionError(type.getClass().getName());
         }
     }
 
-    private static CodeBlock toRuntimeFactoryVarargs(Collection<? extends MnType> types, boolean leadingComma, Function<MnType.Variable, CodeBlock> variableResolve) {
+    private static CodeBlock toRuntimeFactoryVarargs(Collection<? extends SourceType> types, boolean leadingComma, Function<SourceType.Variable, CodeBlock> variableResolve) {
         return varargsCodeBlock(
                 types.stream()
                         .map(p -> toRuntimeFactory(p, variableResolve))

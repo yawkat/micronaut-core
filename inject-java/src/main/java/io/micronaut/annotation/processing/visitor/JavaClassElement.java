@@ -35,7 +35,6 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.NoType;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.util.Elements;
@@ -145,34 +144,36 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
     }
 
     @Override
-    public MnType getRawMnType() {
-        MnType type = new MnType.RawClass() {
+    public SourceType getRawSourceType() {
+        SourceType type = new SourceType.RawClass() {
             @Override
             public ClassElement getClassElement() {
                 return JavaClassElement.this;
             }
 
+            @NonNull
             @Override
             public List<? extends Variable> getTypeVariables() {
                 return classElement.getTypeParameters().stream()
-                        .map(tpe -> new MnVariableImpl(visitorContext, tpe))
+                        .map(tpe -> new SourceVariableImpl(visitorContext, tpe))
                         .collect(Collectors.toList());
             }
 
             @Nullable
             @Override
-            public MnType getSupertype() {
+            public SourceType getSupertype() {
                 TypeMirror superclass = classElement.getSuperclass();
-                return superclass instanceof NoType ? null : typeMirrorToMnType(superclass);
+                return superclass instanceof NoType ? null : typeMirrorToSourceType(superclass);
             }
 
+            @NonNull
             @Override
-            public List<? extends MnType> getInterfaces() {
-                return classElement.getInterfaces().stream().map(JavaClassElement.this::typeMirrorToMnType).collect(Collectors.toList());
+            public List<? extends SourceType> getInterfaces() {
+                return classElement.getInterfaces().stream().map(JavaClassElement.this::typeMirrorToSourceType).collect(Collectors.toList());
             }
         };
         for (int i = 0; i < getArrayDimensions(); i++) {
-            type = type.getArrayType();
+            type = type.createArrayType();
         }
         return type;
     }
@@ -320,7 +321,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
                                 BeanPropertyData beanPropertyData = new BeanPropertyData(propertyName);
                                 beanPropertyData.declaringType = JavaClassElement.this;
                                 beanPropertyData.type = mirrorToClassElement(element.asType(), visitorContext, genericTypeInfo, true);
-                                beanPropertyData.mnType = typeMirrorToMnType(element.asType());
+                                beanPropertyData.sourceType = typeMirrorToSourceType(element.asType());
                                 return beanPropertyData;
                             });
                         }
@@ -388,7 +389,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
                             BeanPropertyData beanPropertyData = props.computeIfAbsent(propertyName, BeanPropertyData::new);
                             configureDeclaringType(declaringTypeElement, beanPropertyData);
                             beanPropertyData.type = getterReturnType;
-                            beanPropertyData.mnType = typeMirrorToMnType(returnType);
+                            beanPropertyData.sourceType = typeMirrorToSourceType(returnType);
                             beanPropertyData.getter = executableElement;
                             if (beanPropertyData.setter != null) {
                                 TypeMirror typeMirror = beanPropertyData.setter.getParameters().get(0).asType();
@@ -450,7 +451,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
                                 annotationMetadata,
                                 propertyName,
                                 value.type,
-                                value.mnType,
+                                value.sourceType,
                                 value.setter == null,
                                 visitorContext) {
 
@@ -1041,7 +1042,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
      */
     private static class BeanPropertyData {
         ClassElement type;
-        MnType mnType;
+        SourceType sourceType;
         ClassElement declaringType;
         ExecutableElement getter;
         ExecutableElement setter;

@@ -32,13 +32,13 @@ import java.util.function.Consumer;
  */
 final class ReflectParameterElement implements ParameterElement {
     private final ClassElement classElement;
-    private final MnType mnType;
+    private final SourceType sourceType;
     private final String name;
     private AnnotationMetadata annotationMetadata = AnnotationMetadata.EMPTY_METADATA;
 
-    ReflectParameterElement(ClassElement classElement, MnType mnType, String name) {
+    ReflectParameterElement(ClassElement classElement, SourceType sourceType, String name) {
         this.classElement = classElement;
-        this.mnType = mnType;
+        this.sourceType = sourceType;
         this.name = name;
     }
 
@@ -64,11 +64,11 @@ final class ReflectParameterElement implements ParameterElement {
     }
 
     @Override
-    public MnType getMnType() {
-        if (mnType == null) {
+    public SourceType getDeclaredSourceType() {
+        if (sourceType == null) {
             throw new UnsupportedOperationException();
         }
-        return mnType;
+        return sourceType;
     }
 
     @NonNull

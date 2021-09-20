@@ -3,9 +3,9 @@ package io.micronaut.ast.groovy.visitor
 import io.micronaut.ast.transform.test.AbstractBeanDefinitionSpec
 import io.micronaut.inject.ast.ClassElement
 import io.micronaut.inject.ast.ElementQuery
-import io.micronaut.inject.ast.MnType
+import io.micronaut.inject.ast.SourceType
 
-class GroovyMnTypeSpec extends AbstractBeanDefinitionSpec {
+class GroovySourceTypeSpec extends AbstractBeanDefinitionSpec {
     def simple() {
         given:
         def element = buildClassElement('''
@@ -14,10 +14,10 @@ package test
 class Test {}
 ''')
         when:
-        def mnType = element.getRawMnType()
+        def mnType = element.getRawSourceType()
 
         then:
-        mnType instanceof MnType.RawClass
+        mnType instanceof SourceType.RawClass
         mnType.typeName == 'test.Test'
         mnType.typeVariables.isEmpty()
     }
@@ -30,10 +30,10 @@ package test
 class Test {}
 ''')
         when:
-        def mnType = element.withArrayDimensions(2).getRawMnType()
+        def mnType = element.withArrayDimensions(2).getRawSourceType()
 
         then:
-        mnType instanceof MnType.Array
+        mnType instanceof SourceType.Array
         mnType.typeName == 'test.Test[][]'
     }
 
@@ -45,35 +45,35 @@ package test
 class Test<A, B extends CharSequence, C extends Comparable<C>, D extends Number & CharSequence> {}
 ''')
         when:
-        def mnType = element.getRawMnType()
+        def mnType = element.getRawSourceType()
 
         then:
-        mnType instanceof MnType.RawClass
+        mnType instanceof SourceType.RawClass
         mnType.typeName == 'test.Test'
 
         when:
-        def args = ((MnType.RawClass) mnType).typeVariables
+        def args = ((SourceType.RawClass) mnType).typeVariables
 
         then:
         args.size() == 4
 
         args[0].name == 'A'
         args[0].bounds.size() == 1
-        args[0].bounds[0] instanceof MnType.RawClass
+        args[0].bounds[0] instanceof SourceType.RawClass
         args[0].bounds[0].typeName == 'java.lang.Object'
         args[0].declaringElement instanceof ClassElement
         args[0].declaringElement.name == 'test.Test'
 
         args[1].name == 'B'
         args[1].bounds.size() == 1
-        args[1].bounds[0] instanceof MnType.RawClass
+        args[1].bounds[0] instanceof SourceType.RawClass
         args[1].bounds[0].typeName == 'java.lang.CharSequence'
         args[1].declaringElement instanceof ClassElement
         args[1].declaringElement.name == 'test.Test'
 
         args[2].name == 'C'
         args[2].bounds.size() == 1
-        args[2].bounds[0] instanceof MnType.Parameterized
+        args[2].bounds[0] instanceof SourceType.Parameterized
         args[2].bounds[0].outer == null
         args[2].bounds[0].raw.typeName == 'java.lang.Comparable'
         args[2].bounds[0].parameters.size() == 1
@@ -83,9 +83,9 @@ class Test<A, B extends CharSequence, C extends Comparable<C>, D extends Number 
 
         args[3].name == 'D'
         args[3].bounds.size() == 2
-        args[3].bounds[0] instanceof MnType.RawClass
+        args[3].bounds[0] instanceof SourceType.RawClass
         args[3].bounds[0].typeName == 'java.lang.Number'
-        args[3].bounds[1] instanceof MnType.RawClass
+        args[3].bounds[1] instanceof SourceType.RawClass
         args[3].bounds[1].typeName == 'java.lang.CharSequence'
         args[3].declaringElement instanceof ClassElement
         args[3].declaringElement.name == 'test.Test'
@@ -101,10 +101,10 @@ class Test {
 }
 ''')
         when:
-        def mnType = element.getFields()[0].mnType
+        def mnType = element.getFields()[0].declaredSourceType
 
         then:
-        mnType instanceof MnType.Parameterized
+        mnType instanceof SourceType.Parameterized
         mnType.typeName == 'java.util.List<java.lang.String>'
     }
 
@@ -118,10 +118,10 @@ abstract class Test {
 }
 ''')
         when:
-        def mnType = element.getEnclosedElement(ElementQuery.ALL_METHODS).get().mnReturnType
+        def mnType = element.getEnclosedElement(ElementQuery.ALL_METHODS).get().declaredReturnSourceType
 
         then:
-        mnType instanceof MnType.Parameterized
+        mnType instanceof SourceType.Parameterized
         mnType.typeName == 'java.util.List<java.lang.String>'
     }
 
@@ -135,10 +135,10 @@ class Test {
 }
 ''')
         when:
-        def mnType = element.getEnclosedElement(ElementQuery.ALL_METHODS).get().parameters[0].mnType
+        def mnType = element.getEnclosedElement(ElementQuery.ALL_METHODS).get().parameters[0].declaredSourceType
 
         then:
-        mnType instanceof MnType.Parameterized
+        mnType instanceof SourceType.Parameterized
         mnType.typeName == 'java.util.List<java.lang.String>'
     }
 
@@ -153,17 +153,17 @@ class Test<E> {
 }
 ''')
         when:
-        def mnType1 = element.fields[0].mnType
-        def mnType2 = element.fields[1].mnType
+        def mnType1 = element.fields[0].declaredSourceType
+        def mnType2 = element.fields[1].declaredSourceType
 
         then:
-        mnType1 instanceof MnType.Variable
+        mnType1 instanceof SourceType.Variable
         //mnType1.declaringElement instanceof ClassElement unsupported
         //mnType1.declaringElement.name == 'test.Test'
         mnType1.name == 'E'
 
-        mnType2 instanceof MnType.Array
-        mnType2.component instanceof MnType.Variable
+        mnType2 instanceof SourceType.Array
+        mnType2.component instanceof SourceType.Variable
         mnType2.component.name == 'E'
     }
 
@@ -178,18 +178,18 @@ class Test {
 }
 ''')
         when:
-        def mnTypeA = element.fields[0].mnType
-        def mnTypeB = element.fields[1].mnType
+        def mnTypeA = element.fields[0].declaredSourceType
+        def mnTypeB = element.fields[1].declaredSourceType
 
         then:
-        mnTypeA instanceof MnType.Parameterized
-        mnTypeA.parameters[0] instanceof MnType.Wildcard
+        mnTypeA instanceof SourceType.Parameterized
+        mnTypeA.parameters[0] instanceof SourceType.Wildcard
         mnTypeA.parameters[0].lowerBounds.size() == 0
         mnTypeA.parameters[0].upperBounds.size() == 1
         mnTypeA.parameters[0].upperBounds[0].typeName == 'java.lang.Number'
 
-        mnTypeB instanceof MnType.Parameterized
-        mnTypeB.parameters[0] instanceof MnType.Wildcard
+        mnTypeB instanceof SourceType.Parameterized
+        mnTypeB.parameters[0] instanceof SourceType.Wildcard
         mnTypeB.parameters[0].upperBounds.size() == 1
         mnTypeB.parameters[0].upperBounds[0].typeName == 'java.lang.Object'
         mnTypeB.parameters[0].lowerBounds.size() == 1
@@ -205,11 +205,11 @@ class Test extends ArrayList<String> {
 }
 ''')
         when:
-        def mnType = element.rawMnType
+        def mnType = element.rawSourceType
 
         then:
-        mnType instanceof MnType.RawClass
-        mnType.supertype instanceof MnType.Parameterized
+        mnType instanceof SourceType.RawClass
+        mnType.supertype instanceof SourceType.Parameterized
         mnType.supertype.raw.typeName == 'java.util.ArrayList'
         mnType.supertype.parameters[0].typeName == 'java.lang.String'
     }
@@ -223,11 +223,11 @@ abstract class Test implements List<String> {
 }
 ''')
         when:
-        def mnType = element.rawMnType
+        def mnType = element.rawSourceType
 
         then:
-        mnType instanceof MnType.RawClass
-        mnType.interfaces[0] instanceof MnType.Parameterized
+        mnType instanceof SourceType.RawClass
+        mnType.interfaces[0] instanceof SourceType.Parameterized
         mnType.interfaces[0].raw.typeName == 'java.util.List'
         mnType.interfaces[0].parameters[0].typeName == 'java.lang.String'
     }
@@ -241,13 +241,13 @@ class Test<E> extends ArrayList<E> {
 }
 ''')
         when:
-        def mnType = element.rawMnType
+        def mnType = element.rawSourceType
 
         then:
-        mnType instanceof MnType.RawClass
-        mnType.supertype instanceof MnType.Parameterized
+        mnType instanceof SourceType.RawClass
+        mnType.supertype instanceof SourceType.Parameterized
         mnType.supertype.raw.typeName == 'java.util.ArrayList'
-        mnType.supertype.parameters[0] instanceof MnType.Variable
+        mnType.supertype.parameters[0] instanceof SourceType.Variable
         mnType.supertype.parameters[0].name == 'E'
     }
 }

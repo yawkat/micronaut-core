@@ -36,8 +36,12 @@ import static io.micronaut.inject.writer.BeanDefinitionVisitor.PROXY_SUFFIX;
  * @since 1.0
  */
 public interface ClassElement extends TypedElement {
-    default MnType getRawMnType() {
-        throw new UnsupportedOperationException();
+    /**
+     * @return The raw {@link SourceType} for this type, without any parameterization. Must be either a
+     * {@link SourceType.RawClass} or {@link SourceType.Array}.
+     */
+    default SourceType getRawSourceType() {
+        throw new UnsupportedOperationException(getClass().getName() + ".getRawSourceType");
     }
 
     /**

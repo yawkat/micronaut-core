@@ -23,7 +23,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
-import io.micronaut.inject.ast.MnType;
+import io.micronaut.inject.ast.SourceType;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Encoder;
@@ -218,8 +218,8 @@ public final class SingletonSerializerGenerator {
         }
 
         // add type parameters if necessary
-        List<MnType.Variable> freeVariables = new ArrayList<>(valueType.getFreeVariables());
-        for (MnType.Variable typeVariable : freeVariables) {
+        List<SourceType.Variable> freeVariables = new ArrayList<>(valueType.getFreeVariables());
+        for (SourceType.Variable typeVariable : freeVariables) {
             builder.addTypeVariable(TypeVariableName.get(
                     typeVariable.getName(),
                     typeVariable.getBounds().stream().map(PoetUtil::toTypeName).toArray(TypeName[]::new)

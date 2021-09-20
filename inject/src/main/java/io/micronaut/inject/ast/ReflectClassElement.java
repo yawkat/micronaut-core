@@ -51,16 +51,17 @@ class ReflectClassElement implements ClassElement {
     }
 
     @Override
-    public MnType getRawMnType() {
+    public SourceType getRawSourceType() {
         if (type.isArray()) {
-            return fromArray().getRawMnType().getArrayType();
+            return fromArray().getRawSourceType().createArrayType();
         }
-        return new MnType.RawClass() {
+        return new SourceType.RawClass() {
             @Override
             public ClassElement getClassElement() {
                 return ReflectClassElement.this;
             }
 
+            @NonNull
             @Override
             public List<? extends Variable> getTypeVariables() {
                 return Arrays.stream(type.getTypeParameters())
@@ -79,10 +80,10 @@ class ReflectClassElement implements ClassElement {
 
                             @NonNull
                             @Override
-                            public List<? extends MnType> getBounds() {
+                            public List<? extends SourceType> getBounds() {
                                 return Arrays.stream(tp.getBounds()).map(bound -> {
                                     if (bound instanceof Class) {
-                                        return ClassElement.of((Class<?>) bound).getRawMnType();
+                                        return ClassElement.of((Class<?>) bound).getRawSourceType();
                                     } else {
                                         throw new UnsupportedOperationException();
                                     }
@@ -94,44 +95,45 @@ class ReflectClassElement implements ClassElement {
 
             @Nullable
             @Override
-            public MnType getSupertype() {
+            public SourceType getSupertype() {
                 Type genericSuperclass = type.getGenericSuperclass();
-                return genericSuperclass == null ? null : toMnType(genericSuperclass);
+                return genericSuperclass == null ? null : toSourceType(genericSuperclass);
             }
 
+            @NonNull
             @Override
-            public List<? extends MnType> getInterfaces() {
-                return Arrays.stream(type.getGenericInterfaces()).map(ReflectClassElement::toMnType).collect(Collectors.toList());
+            public List<? extends SourceType> getInterfaces() {
+                return Arrays.stream(type.getGenericInterfaces()).map(ReflectClassElement::toSourceType).collect(Collectors.toList());
             }
         };
     }
 
-    private static MnType toMnType(Type type) {
+    private static SourceType toSourceType(Type type) {
         if (type instanceof GenericArrayType) {
-            return toMnType(((GenericArrayType) type).getGenericComponentType()).getArrayType();
+            return toSourceType(((GenericArrayType) type).getGenericComponentType()).createArrayType();
         } else if (type instanceof ParameterizedType) {
-            return new MnType.Parameterized() {
+            return new SourceType.Parameterized() {
                 @Nullable
                 @Override
-                public MnType getOuter() {
+                public SourceType getOuter() {
                     Type ownerType = ((ParameterizedType) type).getOwnerType();
-                    return ownerType == null ? null : toMnType(ownerType);
+                    return ownerType == null ? null : toSourceType(ownerType);
                 }
 
                 @NonNull
                 @Override
                 public RawClass getRaw() {
-                    return (RawClass) toMnType(((ParameterizedType) type).getRawType());
+                    return (RawClass) toSourceType(((ParameterizedType) type).getRawType());
                 }
 
                 @NonNull
                 @Override
-                public List<? extends MnType> getParameters() {
-                    return Arrays.stream(((ParameterizedType) type).getActualTypeArguments()).map(ReflectClassElement::toMnType).collect(Collectors.toList());
+                public List<? extends SourceType> getParameters() {
+                    return Arrays.stream(((ParameterizedType) type).getActualTypeArguments()).map(ReflectClassElement::toSourceType).collect(Collectors.toList());
                 }
             };
         } else if (type instanceof TypeVariable<?>) {
-            return new MnType.Variable() {
+            return new SourceType.Variable() {
                 @NonNull
                 @Override
                 public Element getDeclaringElement() {
@@ -146,24 +148,24 @@ class ReflectClassElement implements ClassElement {
 
                 @NonNull
                 @Override
-                public List<? extends MnType> getBounds() {
-                    return Arrays.stream(((TypeVariable<?>) type).getBounds()).map(ReflectClassElement::toMnType).collect(Collectors.toList());
+                public List<? extends SourceType> getBounds() {
+                    return Arrays.stream(((TypeVariable<?>) type).getBounds()).map(ReflectClassElement::toSourceType).collect(Collectors.toList());
                 }
             };
         } else if (type instanceof WildcardType) {
-            return new MnType.Wildcard() {
+            return new SourceType.Wildcard() {
                 @Override
-                public List<? extends MnType> getUpperBounds() {
-                    return Arrays.stream(((WildcardType) type).getUpperBounds()).map(ReflectClassElement::toMnType).collect(Collectors.toList());
+                public List<? extends SourceType> getUpperBounds() {
+                    return Arrays.stream(((WildcardType) type).getUpperBounds()).map(ReflectClassElement::toSourceType).collect(Collectors.toList());
                 }
 
                 @Override
-                public List<? extends MnType> getLowerBounds() {
-                    return Arrays.stream(((WildcardType) type).getLowerBounds()).map(ReflectClassElement::toMnType).collect(Collectors.toList());
+                public List<? extends SourceType> getLowerBounds() {
+                    return Arrays.stream(((WildcardType) type).getLowerBounds()).map(ReflectClassElement::toSourceType).collect(Collectors.toList());
                 }
             };
         } else if (type instanceof Class) {
-            return ClassElement.of((Class<?>) type).getRawMnType();
+            return ClassElement.of((Class<?>) type).getRawSourceType();
         } else {
             throw new IllegalArgumentException("Unsupported type: " + type.getClass().getName());
         }

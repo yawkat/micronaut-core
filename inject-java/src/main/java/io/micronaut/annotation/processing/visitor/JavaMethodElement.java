@@ -22,7 +22,7 @@ import io.micronaut.core.util.ArrayUtils;
 import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.MethodElement;
-import io.micronaut.inject.ast.MnType;
+import io.micronaut.inject.ast.SourceType;
 import io.micronaut.inject.ast.ParameterElement;
 import io.micronaut.inject.ast.PrimitiveElement;
 
@@ -184,8 +184,8 @@ public class JavaMethodElement extends AbstractJavaElement implements MethodElem
     }
 
     @Override
-    public MnType getMnReturnType() {
-        return typeMirrorToMnType(executableElement.getReturnType());
+    public SourceType getDeclaredReturnSourceType() {
+        return typeMirrorToSourceType(executableElement.getReturnType());
     }
 
     /**

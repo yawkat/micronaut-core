@@ -32,8 +32,12 @@ public interface PropertyElement extends TypedElement, MemberElement {
     @Override
     ClassElement getType();
 
-    default MnType getMnType() {
-        throw new UnsupportedOperationException(getClass().getName() + ".getMnType");
+    /**
+     * @return The {@link SourceType} of this property, as declared in the source code. No substitution of type
+     * variables is performed.
+     */
+    default SourceType getDeclaredSourceType() {
+        throw new UnsupportedOperationException(getClass().getName() + ".getDeclaredSourceType");
     }
 
     /**

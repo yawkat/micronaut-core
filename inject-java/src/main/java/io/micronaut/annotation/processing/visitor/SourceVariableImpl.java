@@ -17,7 +17,7 @@ package io.micronaut.annotation.processing.visitor;
 
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.inject.ast.Element;
-import io.micronaut.inject.ast.MnType;
+import io.micronaut.inject.ast.SourceType;
 
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -26,11 +26,11 @@ import javax.lang.model.element.TypeParameterElement;
 import java.util.List;
 import java.util.stream.Collectors;
 
-class MnVariableImpl extends MnType.Variable {
+class SourceVariableImpl extends SourceType.Variable {
     private final JavaVisitorContext visitorContext;
     private final TypeParameterElement tpe;
 
-    MnVariableImpl(JavaVisitorContext visitorContext, TypeParameterElement tpe) {
+    SourceVariableImpl(JavaVisitorContext visitorContext, TypeParameterElement tpe) {
         this.visitorContext = visitorContext;
         this.tpe = tpe;
     }
@@ -71,7 +71,7 @@ class MnVariableImpl extends MnType.Variable {
 
     @NonNull
     @Override
-    public List<? extends MnType> getBounds() {
-        return tpe.getBounds().stream().map(tm -> AbstractJavaElement.typeMirrorToMnType(visitorContext, tm)).collect(Collectors.toList());
+    public List<? extends SourceType> getBounds() {
+        return tpe.getBounds().stream().map(tm -> AbstractJavaElement.typeMirrorToSourceType(visitorContext, tm)).collect(Collectors.toList());
     }
 }

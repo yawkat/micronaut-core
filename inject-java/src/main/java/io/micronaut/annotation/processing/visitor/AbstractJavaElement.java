@@ -391,13 +391,13 @@ public abstract class AbstractJavaElement implements io.micronaut.inject.ast.Ele
         return element.getModifiers().contains(modifier);
     }
 
-    protected MnType typeMirrorToMnType(TypeMirror mirror) {
-        return typeMirrorToMnType(visitorContext, mirror);
+    protected SourceType typeMirrorToSourceType(TypeMirror mirror) {
+        return typeMirrorToSourceType(visitorContext, mirror);
     }
 
-    static MnType typeMirrorToMnType(final JavaVisitorContext visitorContext, TypeMirror mirror) {
+    static SourceType typeMirrorToSourceType(final JavaVisitorContext visitorContext, TypeMirror mirror) {
         if (mirror instanceof ArrayType) {
-            return typeMirrorToMnType(visitorContext, ((ArrayType) mirror).getComponentType()).getArrayType();
+            return typeMirrorToSourceType(visitorContext, ((ArrayType) mirror).getComponentType()).createArrayType();
         } else if (mirror instanceof DeclaredType) {
             TypeElement typeElement = (TypeElement) ((DeclaredType) mirror).asElement();
             JavaClassElement classElement;
@@ -414,18 +414,18 @@ public abstract class AbstractJavaElement implements io.micronaut.inject.ast.Ele
                         visitorContext
                 );
             }
-            MnType raw = classElement.getRawMnType();
+            SourceType raw = classElement.getRawSourceType();
             List<? extends TypeMirror> typeArguments = ((DeclaredType) mirror).getTypeArguments();
             if (!typeArguments.isEmpty()) {
-                return new MnType.Parameterized() {
+                return new SourceType.Parameterized() {
                     @Nullable
                     @Override
-                    public MnType getOuter() {
+                    public SourceType getOuter() {
                         TypeMirror enclosingType = ((DeclaredType) mirror).getEnclosingType();
                         if (enclosingType instanceof NoType) {
                             return null;
                         } else {
-                            return typeMirrorToMnType(visitorContext, enclosingType);
+                            return typeMirrorToSourceType(visitorContext, enclosingType);
                         }
                     }
 
@@ -438,9 +438,9 @@ public abstract class AbstractJavaElement implements io.micronaut.inject.ast.Ele
 
                     @NonNull
                     @Override
-                    public List<? extends MnType> getParameters() {
+                    public List<? extends SourceType> getParameters() {
                         return typeArguments.stream()
-                                .map(t -> typeMirrorToMnType(visitorContext, t))
+                                .map(t -> typeMirrorToSourceType(visitorContext, t))
                                 .collect(Collectors.toList());
                     }
                 };
@@ -448,33 +448,33 @@ public abstract class AbstractJavaElement implements io.micronaut.inject.ast.Ele
                 return raw;
             }
         } else if (mirror instanceof PrimitiveType) {
-            return PrimitiveElement.valueOf(mirror.getKind().name()).getRawMnType();
+            return PrimitiveElement.valueOf(mirror.getKind().name()).getRawSourceType();
         } else if (mirror instanceof TypeVariable) {
-            return new MnVariableImpl(visitorContext, (TypeParameterElement) ((TypeVariable) mirror).asElement());
+            return new SourceVariableImpl(visitorContext, (TypeParameterElement) ((TypeVariable) mirror).asElement());
         } else if (mirror instanceof WildcardType) {
             WildcardType wildcard = (WildcardType) mirror;
-            return new MnType.Wildcard() {
-                private Stream<MnType> flattenTypes(TypeMirror m) {
+            return new SourceType.Wildcard() {
+                private Stream<SourceType> flattenTypes(TypeMirror m) {
                     if (m instanceof UnionType) {
                         return ((UnionType) m).getAlternatives().stream().flatMap(this::flattenTypes);
                     } else if (m instanceof IntersectionType) {
                         return ((IntersectionType) m).getBounds().stream().flatMap(this::flattenTypes);
                     } else {
-                        return Stream.of(typeMirrorToMnType(visitorContext, m));
+                        return Stream.of(typeMirrorToSourceType(visitorContext, m));
                     }
                 }
 
                 @Override
-                public List<? extends MnType> getUpperBounds() {
+                public List<? extends SourceType> getUpperBounds() {
                     TypeMirror extendsBound = wildcard.getExtendsBound();
                     //noinspection OptionalGetWithoutIsPresent
                     return extendsBound == null ?
-                            Collections.singletonList(visitorContext.getClassElement(Object.class).get().getRawMnType()) :
+                            Collections.singletonList(visitorContext.getClassElement(Object.class).get().getRawSourceType()) :
                             flattenTypes(extendsBound).collect(Collectors.toList());
                 }
 
                 @Override
-                public List<? extends MnType> getLowerBounds() {
+                public List<? extends SourceType> getLowerBounds() {
                     TypeMirror extendsBound = wildcard.getSuperBound();
                     return extendsBound == null ?
                             Collections.emptyList() :

@@ -91,7 +91,7 @@ class BeanDefinition {
             this.creatorParameter = creatorParameter;
         }
 
-        public GeneratorType getType(Function<MnType, MnType> fold) {
+        public GeneratorType getType(Function<SourceType, SourceType> fold) {
             if (getter != null) {
                 return GeneratorType.methodReturnType(getter, fold);
             } else if (setter != null) {

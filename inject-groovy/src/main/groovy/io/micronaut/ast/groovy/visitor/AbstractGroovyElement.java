@@ -32,7 +32,7 @@ import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
 import io.micronaut.inject.ast.ElementModifier;
 import io.micronaut.inject.ast.MemberElement;
-import io.micronaut.inject.ast.MnType;
+import io.micronaut.inject.ast.SourceType;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.MethodNode;
@@ -418,37 +418,37 @@ public abstract class AbstractGroovyElement implements AnnotationMetadataDelegat
         return modifiers;
     }
 
-    static MnType toMnType(GroovyVisitorContext visitorContext, GenericsType type) {
+    static SourceType toSourceType(GroovyVisitorContext visitorContext, GenericsType type) {
         if (type.isWildcard()) {
-            return new MnType.Wildcard() {
+            return new SourceType.Wildcard() {
                 @Override
-                public List<? extends MnType> getUpperBounds() {
+                public List<? extends SourceType> getUpperBounds() {
                     return (type.getUpperBounds() == null ? Stream.of(type.getType().redirect()) : Arrays.stream(type.getUpperBounds()))
-                            .map(cn -> toMnType(visitorContext, cn))
+                            .map(cn -> toSourceType(visitorContext, cn))
                             .collect(Collectors.toList());
                 }
 
                 @Override
-                public List<? extends MnType> getLowerBounds() {
+                public List<? extends SourceType> getLowerBounds() {
                     if (type.getLowerBound() == null) {
                         return Collections.emptyList();
                     } else {
-                        return Collections.singletonList(toMnType(visitorContext, type.getLowerBound()));
+                        return Collections.singletonList(toSourceType(visitorContext, type.getLowerBound()));
                     }
                 }
             };
         } else {
-            return toMnType(visitorContext, type.getType());
+            return toSourceType(visitorContext, type.getType());
         }
     }
 
-    static MnType toMnType(GroovyVisitorContext visitorContext, ClassNode cn) {
+    static SourceType toSourceType(GroovyVisitorContext visitorContext, ClassNode cn) {
         if (cn.getComponentType() != null) {
             // array
-            return toMnType(visitorContext, cn.getComponentType()).getArrayType();
+            return toSourceType(visitorContext, cn.getComponentType()).createArrayType();
         } else if (cn.isGenericsPlaceHolder()) {
             // type variable
-            return new MnType.Variable() {
+            return new SourceType.Variable() {
                 @NonNull
                 @Override
                 public Element getDeclaringElement() {
@@ -463,18 +463,18 @@ public abstract class AbstractGroovyElement implements AnnotationMetadataDelegat
 
                 @NonNull
                 @Override
-                public List<? extends MnType> getBounds() {
+                public List<? extends SourceType> getBounds() {
                     throw new UnsupportedOperationException();
                 }
             };
         } else {
             ClassElement rawClassElement = visitorContext.getElementFactory().newClassElement(cn, AstAnnotationUtils.getAnnotationMetadata(visitorContext.getSourceUnit(), visitorContext.getCompilationUnit(), cn));
-            MnType raw = rawClassElement.getRawMnType();
+            SourceType raw = rawClassElement.getRawSourceType();
             if (cn.getGenericsTypes() != null && cn.getGenericsTypes().length != 0) {
-                return new MnType.Parameterized() {
+                return new SourceType.Parameterized() {
                     @Nullable
                     @Override
-                    public MnType getOuter() {
+                    public SourceType getOuter() {
                         // parameterized outer classes are apparently not valid in groovy.
                         return null;
                     }
@@ -488,9 +488,9 @@ public abstract class AbstractGroovyElement implements AnnotationMetadataDelegat
 
                     @NonNull
                     @Override
-                    public List<? extends MnType> getParameters() {
+                    public List<? extends SourceType> getParameters() {
                         return Arrays.stream(cn.getGenericsTypes())
-                                .map(gt -> toMnType(visitorContext, gt))
+                                .map(gt -> toSourceType(visitorContext, gt))
                                 .collect(Collectors.toList());
                     }
                 };

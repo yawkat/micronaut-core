@@ -126,13 +126,14 @@ public class GroovyClassElement extends AbstractGroovyElement implements Arrayab
     }
 
     @Override
-    public MnType getRawMnType() {
-        MnType type = new MnType.RawClass() {
+    public SourceType getRawSourceType() {
+        SourceType type = new SourceType.RawClass() {
             @Override
             public ClassElement getClassElement() {
                 return GroovyClassElement.this;
             }
 
+            @NonNull
             @Override
             public List<? extends Variable> getTypeVariables() {
                 GenericsType[] genericsTypes = classNode.redirect().getGenericsTypes();
@@ -155,9 +156,9 @@ public class GroovyClassElement extends AbstractGroovyElement implements Arrayab
 
                             @NonNull
                             @Override
-                            public List<? extends MnType> getBounds() {
+                            public List<? extends SourceType> getBounds() {
                                 return (gt.getUpperBounds() == null ? Stream.of(gt.getType().redirect()) : Arrays.stream(gt.getUpperBounds()))
-                                        .map(cn -> toMnType(visitorContext, cn))
+                                        .map(cn -> toSourceType(visitorContext, cn))
                                         .collect(Collectors.toList());
                             }
                         })
@@ -166,17 +167,18 @@ public class GroovyClassElement extends AbstractGroovyElement implements Arrayab
 
             @Nullable
             @Override
-            public MnType getSupertype() {
-                return toMnType(visitorContext, classNode.getUnresolvedSuperClass(false));
+            public SourceType getSupertype() {
+                return toSourceType(visitorContext, classNode.getUnresolvedSuperClass(false));
             }
 
+            @NonNull
             @Override
-            public List<? extends MnType> getInterfaces() {
-                return Arrays.stream(classNode.getUnresolvedInterfaces(false)).map(cn -> toMnType(visitorContext, cn)).collect(Collectors.toList());
+            public List<? extends SourceType> getInterfaces() {
+                return Arrays.stream(classNode.getUnresolvedInterfaces(false)).map(cn -> toSourceType(visitorContext, cn)).collect(Collectors.toList());
             }
         };
         for (int i = 0; i < arrayDimensions; i++) {
-            type = type.getArrayType();
+            type = type.createArrayType();
         }
         return type;
     }
@@ -750,8 +752,8 @@ public class GroovyClassElement extends AbstractGroovyElement implements Arrayab
                     }
 
                     @Override
-                    public MnType getMnType() {
-                        return GroovyClassElement.toMnType(visitorContext, propertyNode.getType());
+                    public SourceType getDeclaredSourceType() {
+                        return GroovyClassElement.toSourceType(visitorContext, propertyNode.getType());
                     }
 
                     @Override
@@ -762,9 +764,9 @@ public class GroovyClassElement extends AbstractGroovyElement implements Arrayab
                                     annotationMetadata,
                                     PrimitiveElement.VOID,
                                     PrimitiveElement.VOID,
-                                    PrimitiveElement.VOID.getRawMnType(),
+                                    PrimitiveElement.VOID.getRawSourceType(),
                                     NameUtils.setterNameFor(propertyName),
-                                    ParameterElement.of(getType(), getMnType(), propertyName)
+                                    ParameterElement.of(getType(), getDeclaredSourceType(), propertyName)
 
                             ));
                         }
@@ -778,7 +780,7 @@ public class GroovyClassElement extends AbstractGroovyElement implements Arrayab
                                 annotationMetadata,
                                 getType(),
                                 getGenericType(),
-                                getMnType(),
+                                getDeclaredSourceType(),
                                 getGetterName(propertyName, getType())
                         ));
                     }
@@ -843,7 +845,7 @@ public class GroovyClassElement extends AbstractGroovyElement implements Arrayab
                                 GetterAndSetter getterAndSetter = props.computeIfAbsent(propertyName, GetterAndSetter::new);
                                 configureDeclaringType(declaringTypeElement, getterAndSetter);
                                 getterAndSetter.type = getterReturnType;
-                                getterAndSetter.mnType = toMnType(visitorContext, returnTypeNode);
+                                getterAndSetter.sourceType = toSourceType(visitorContext, returnTypeNode);
                                 getterAndSetter.getter = node;
                                 if (getterAndSetter.setter != null) {
                                     ClassNode typeMirror = getterAndSetter.setter.getParameters()[0].getType();
@@ -928,8 +930,8 @@ public class GroovyClassElement extends AbstractGroovyElement implements Arrayab
                         }
 
                         @Override
-                        public MnType getMnType() {
-                            return value.mnType;
+                        public SourceType getDeclaredSourceType() {
+                            return value.sourceType;
                         }
 
                         @Override
@@ -1171,7 +1173,7 @@ public class GroovyClassElement extends AbstractGroovyElement implements Arrayab
      */
     private class GetterAndSetter {
         ClassElement type;
-        MnType mnType;
+        SourceType sourceType;
         GroovyClassElement declaringType;
         MethodNode getter;
         MethodNode setter;

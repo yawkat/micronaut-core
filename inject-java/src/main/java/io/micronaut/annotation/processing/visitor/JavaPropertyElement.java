@@ -18,7 +18,7 @@ package io.micronaut.annotation.processing.visitor;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.ast.ClassElement;
-import io.micronaut.inject.ast.MnType;
+import io.micronaut.inject.ast.SourceType;
 import io.micronaut.inject.ast.PropertyElement;
 
 import io.micronaut.core.annotation.NonNull;
@@ -41,7 +41,7 @@ class JavaPropertyElement extends AbstractJavaElement implements PropertyElement
 
     private final String name;
     private final ClassElement type;
-    private final MnType mnType;
+    private final SourceType sourceType;
     private final boolean readOnly;
     private final ClassElement declaringElement;
     private final JavaVisitorContext visitorContext;
@@ -63,13 +63,13 @@ class JavaPropertyElement extends AbstractJavaElement implements PropertyElement
             AnnotationMetadata annotationMetadata,
             String name,
             ClassElement type,
-            MnType mnType,
+            SourceType sourceType,
             boolean readOnly,
             JavaVisitorContext visitorContext) {
         super(rootElement, annotationMetadata, visitorContext);
         this.name = name;
         this.type = type;
-        this.mnType = mnType;
+        this.sourceType = sourceType;
         this.readOnly = readOnly;
         this.declaringElement = declaringElement;
         this.visitorContext = visitorContext;
@@ -140,11 +140,6 @@ class JavaPropertyElement extends AbstractJavaElement implements PropertyElement
     @Override
     public ClassElement getType() {
         return type;
-    }
-
-    @Override
-    public MnType getMnType() {
-        return PropertyElement.super.getMnType();
     }
 
     @Override

@@ -35,8 +35,12 @@ public interface ParameterElement extends TypedElement {
     @NonNull
     ClassElement getType();
 
-    default MnType getMnType() {
-        throw new UnsupportedOperationException(getClass().getName() + ".getMnType");
+    /**
+     * @return The {@link SourceType} of this parameter, as declared in the source code. No substitution of type
+     * variables is performed.
+     */
+    default SourceType getDeclaredSourceType() {
+        throw new UnsupportedOperationException(getClass().getName() + ".getDeclaredSourceType");
     }
 
     @NonNull
@@ -76,10 +80,10 @@ public interface ParameterElement extends TypedElement {
 
     static @NonNull ParameterElement of(
             @NonNull ClassElement type,
-            @Nullable MnType mnType,
+            @Nullable SourceType sourceType,
             @NonNull String name) {
         Objects.requireNonNull(name, "Name cannot be null");
         Objects.requireNonNull(type, "Type cannot be null");
-        return new ReflectParameterElement(type, mnType, name);
+        return new ReflectParameterElement(type, sourceType, name);
     }
 }

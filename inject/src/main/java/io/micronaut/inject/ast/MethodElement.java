@@ -111,8 +111,12 @@ public interface MethodElement extends MemberElement {
         return getReturnType();
     }
 
-    default MnType getMnReturnType() {
-        throw new UnsupportedOperationException(getClass().getName() + ".getMnReturnType");
+    /**
+     * @return The return {@link SourceType} of this method, as declared in the source code. No substitution of type
+     * variables is performed.
+     */
+    default SourceType getDeclaredReturnSourceType() {
+        throw new UnsupportedOperationException(getClass().getName() + ".getDeclaredReturnSourceType");
     }
 
     /**
@@ -152,7 +156,7 @@ public interface MethodElement extends MemberElement {
             @NonNull AnnotationMetadata annotationMetadata,
             @NonNull ClassElement returnType,
             @NonNull ClassElement genericReturnType,
-            @Nullable MnType mnReturnType,
+            @Nullable SourceType mnReturnType,
             @NonNull String name,
             ParameterElement...parameterElements) {
         return new MethodElement() {
@@ -169,7 +173,7 @@ public interface MethodElement extends MemberElement {
             }
 
             @Override
-            public MnType getMnReturnType() {
+            public SourceType getDeclaredReturnSourceType() {
                 if (mnReturnType == null) {
                     throw new UnsupportedOperationException();
                 }
