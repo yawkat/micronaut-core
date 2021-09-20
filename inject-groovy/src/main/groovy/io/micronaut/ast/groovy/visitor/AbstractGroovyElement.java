@@ -464,7 +464,8 @@ public abstract class AbstractGroovyElement implements AnnotationMetadataDelegat
                 @NonNull
                 @Override
                 public List<? extends SourceType> getBounds() {
-                    throw new UnsupportedOperationException();
+                    // we can only find one bound in this context :(
+                    return Collections.singletonList(toSourceType(visitorContext, cn.redirect()));
                 }
             };
         } else {
