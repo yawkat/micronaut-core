@@ -117,15 +117,7 @@ class BeanIntrospector {
             completeProps.put(prop, built);
         }
         beanDefinition.props = new ArrayList<>(completeProps.values());
-        if (scanner.creator == null) {
-            if (scanner.defaultConstructor == null && !forSerialization) {
-                problemReporter.fail("Missing default constructor or @JsonCreator on " + clazz.getName(), clazz);
-            }
-
-            // use the default constructor as an "empty creator"
-            beanDefinition.creator = scanner.defaultConstructor;
-            beanDefinition.creatorProps = Collections.emptyList();
-        } else {
+        if (!forSerialization) {
             beanDefinition.creator = scanner.creator;
             if (scanner.creatorDelegatingProperty == null) {
                 beanDefinition.creatorProps = scanner.creatorProps.stream().map(completeProps::get).collect(Collectors.toList());
@@ -233,7 +225,6 @@ class BeanIntrospector {
         final Map<String, PropBuilder> byImplicitName = new LinkedHashMap<>();
         Map<String, PropBuilder> byName;
 
-        MethodElement defaultConstructor;
         MethodElement anySetter;
 
         MethodElement creator = null;
@@ -380,9 +371,6 @@ class BeanIntrospector {
 
             // todo: check we don't have another candidate when replacing properties of the definition
 
-            // note: clazz may be a superclass of our original class. in that case, the defaultConstructor will be overwritten.
-            defaultConstructor = clazz.getDefaultConstructor().orElse(null);
-
             for (FieldElement field : clazz.getEnclosedElements(ElementQuery.ALL_FIELDS.onlyInstance())) {
                 if (hasPropertyAnnotation(field) || isVisibleForAutoDetect(field, fieldVisibility)) {
                     PropBuilder prop = getByImplicitName(field.getName());
@@ -444,11 +432,28 @@ class BeanIntrospector {
                 byName.put(prop.name, prop);
             }
 
-            for (MethodElement method : clazz.getEnclosedElements(ElementQuery.ALL_METHODS.annotated(m -> m.hasAnnotation(JsonCreator.class)))) {
-                handleCreator(method);
-            }
-            for (ConstructorElement constructor : clazz.getEnclosedElements(ElementQuery.of(ConstructorElement.class).annotated(m -> m.hasAnnotation(JsonCreator.class)))) {
-                handleCreator(constructor);
+            if (!forSerialization) {
+                for (MethodElement method : clazz.getEnclosedElements(ElementQuery.ALL_METHODS.annotated(m -> m.hasAnnotation(JsonCreator.class)))) {
+                    handleCreator(method, true);
+                }
+                for (ConstructorElement constructor : clazz.getEnclosedElements(ElementQuery.of(ConstructorElement.class).annotated(m -> m.hasAnnotation(JsonCreator.class)))) {
+                    handleCreator(constructor, true);
+                }
+
+                if (creator == null) {
+                    MethodElement defaultConstructor = clazz.getDefaultConstructor().orElse(null);
+                    if (defaultConstructor != null) {
+                        // use the default constructor as an "empty creator"
+                        handleCreator(defaultConstructor, false);
+                    } else {
+                        MethodElement primaryConstructor = clazz.getPrimaryConstructor().orElse(null);
+                        if (primaryConstructor != null) {
+                            handleCreator(primaryConstructor, false);
+                        } else {
+                            problemReporter.fail("Missing constructor for deserialization " + clazz.getName(), clazz);
+                        }
+                    }
+                }
             }
 
             List<MethodElement> anySetters = clazz.getEnclosedElements(ElementQuery.ALL_METHODS.annotated(m -> m.hasAnnotation(JsonAnySetter.class)));
@@ -547,16 +552,30 @@ class BeanIntrospector {
             }
         }
 
-        private void handleCreator(MethodElement method) {
-            AnnotationValue<JsonCreator> creatorAnnotation = method.getAnnotation(JsonCreator.class);
-            assert creatorAnnotation != null;
-            JsonCreator.Mode mode = creatorAnnotation.get("mode", JsonCreator.Mode.class).orElse(JsonCreator.Mode.DEFAULT);
+        private void handleCreator(MethodElement method, boolean explicit) {
+            JsonCreator.Mode mode;
+            if (explicit) {
+                AnnotationValue<JsonCreator> creatorAnnotation = method.getAnnotation(JsonCreator.class);
+                assert creatorAnnotation != null;
+                mode = creatorAnnotation.get("mode", JsonCreator.Mode.class).orElse(JsonCreator.Mode.DEFAULT);
+            } else {
+                mode = JsonCreator.Mode.PROPERTIES;
+            }
 
             ParameterElement[] parameters = method.getParameters();
             boolean delegating;
             switch (mode) {
                 case DEFAULT:
-                    delegating = parameters.length == 1 && parameters[0].getAnnotation(JsonProperty.class) == null;
+                    delegating = false;
+                    if (parameters.length == 1) {
+                        ParameterElement singleParameter = parameters[0];
+                        if (singleParameter.getAnnotation(JsonProperty.class) == null) {
+                            String implicitParameterName = singleParameter.getName();
+                            if (!byName.containsKey(implicitParameterName)) {
+                                delegating = true;
+                            }
+                        }
+                    }
                     break;
                 case DELEGATING:
                     delegating = true;
@@ -593,17 +612,17 @@ class BeanIntrospector {
                 creatorProps = new ArrayList<>();
                 for (ParameterElement parameter : parameters) {
                     AnnotationValue<JsonProperty> propertyAnnotation = parameter.getAnnotation(JsonProperty.class);
-                    if (propertyAnnotation == null) {
-                        problemReporter.fail("All parameters of a @JsonCreator must be annotated with a @JsonProperty", parameter);
-                        continue;
-                    }
-                    Optional<String> propName = propertyAnnotation.getValue(String.class);
                     // we allow empty property names here, as long as they're explicitly defined.
-                    if (!propName.isPresent()) {
-                        problemReporter.fail("@JsonProperty name cannot be missing on a creator", parameter);
-                        continue;
+                    Optional<String> explicitPropName = Optional.ofNullable(propertyAnnotation)
+                            .flatMap(annotation -> annotation.getValue(String.class));
+                    if (!explicitPropName.isPresent()) {
+                        String implicitName = parameter.getName();
+                        if (!explicit && !byName.containsKey(implicitName)) {
+                            problemReporter.fail("Refusing an implicit bean creator where parameter names do not match bean properties. If this is intentional, annotate this method with @JsonCreator.", method);
+                        }
+                        explicitPropName = Optional.of(implicitName);
                     }
-                    PropBuilder prop = getByName(propName.get());
+                    PropBuilder prop = getByName(explicitPropName.get());
                     prop.creatorParameter = parameter;
                     creatorProps.add(prop);
                 }

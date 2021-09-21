@@ -177,6 +177,95 @@ class Test {
         serialized == '{"foo":"42"}'
     }
 
+    void "JsonCreator with parameter names"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+class Test {
+    public final String foo;
+    public final String bar;
+    
+    @JsonCreator
+    public Test(String foo, String bar) {
+        this.foo = foo;
+        this.bar = bar;
+    }
+}
+''')
+        def deserialized = deserializeFromString(compiled.serializer, '{"foo": "42", "bar": "56"}')
+
+        expect:
+        deserialized.foo == "42"
+        deserialized.bar == "56"
+    }
+
+    void "implicit creator with parameter names"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+class Test {
+    public final String foo;
+    public final String bar;
+    
+    public Test(String foo, String bar) {
+        this.foo = foo;
+        this.bar = bar;
+    }
+}
+''')
+        def deserialized = deserializeFromString(compiled.serializer, '{"foo": "42", "bar": "56"}')
+
+        expect:
+        deserialized.foo == "42"
+        deserialized.bar == "56"
+    }
+
+    void "JsonCreator with single parameter of same name"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+class Test {
+    public final String foo;
+    
+    @JsonCreator
+    public Test(String foo) {
+        this.foo = foo;
+    }
+}
+''')
+        def deserialized = deserializeFromString(compiled.serializer, '{"foo": "42"}')
+
+        expect:
+        deserialized.foo == "42"
+    }
+
+    void "JsonCreator with single parameter of different name"() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+class Test {
+    public final String foo;
+    
+    @JsonCreator
+    public Test(String bar) {
+        this.foo = bar;
+    }
+}
+''')
+        def deserialized = deserializeFromString(compiled.serializer, '"42"')
+
+        expect:
+        deserialized.foo == "42"
+    }
+
     void "JsonCreator constructor with properties mode set"() {
         given:
         def compiled = buildSerializer('''
@@ -537,7 +626,7 @@ class Test {
     @JsonValue
     public final String foo;
     
-    @JsonCreator
+    @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
     public Test(String foo) {
         this.foo = foo;
     }
