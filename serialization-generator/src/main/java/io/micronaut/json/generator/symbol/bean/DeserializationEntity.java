@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.squareup.javapoet.CodeBlock;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.ConstructorElement;
 import io.micronaut.inject.ast.SourceType;
 import io.micronaut.json.Decoder;
@@ -243,8 +244,9 @@ abstract class DeserializationEntity {
             AnySetterAsMap anySetterAsMap;
             if (def.anySetter != null) {
                 SourceType context = def.anySetter.getDeclaringType().getRawSourceType();
-                GeneratorType keyType = GeneratorType.parameterType(def.anySetter.getParameters()[0], type.typeParametersAsFoldFunction(context));
-                GeneratorType valueType = GeneratorType.parameterType(def.anySetter.getParameters()[1], type.typeParametersAsFoldFunction(context));
+                ClassElement context2 = def.anySetter.getDeclaringType().getRawClass();
+                GeneratorType keyType = GeneratorType.parameterType(def.anySetter.getParameters()[0], type.typeParametersAsFoldFunction(context), type.typeParametersAsFoldFunction(context2));
+                GeneratorType valueType = GeneratorType.parameterType(def.anySetter.getParameters()[1], type.typeParametersAsFoldFunction(context), type.typeParametersAsFoldFunction(context2));
                 if (!keyType.isRawTypeEquals(String.class)) {
                     generatorContext.getProblemReporter().fail("First parameter of JsonAnySetter must be string", def.anySetter);
                 }

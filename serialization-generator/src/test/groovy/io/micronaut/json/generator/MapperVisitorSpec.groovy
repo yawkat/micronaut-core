@@ -260,7 +260,8 @@ class B {
         def compiled = buildClassLoader('example.Test', '''
 package example;
 
-import io.micronaut.json.annotation.SerializableBean;@io.micronaut.json.annotation.SerializableBean
+import io.micronaut.json.annotation.SerializableBean;
+@io.micronaut.json.annotation.SerializableBean
 class A {
     public B<C> b;
 }
@@ -390,7 +391,7 @@ class A {
 ''')
 
         def b = compiled.loadClass('example.A$B').newInstance()
-        def serializerB = (Serializer<?>) compiled.loadClass('example.$A$B$Serializer').newInstance()
+        def serializerB = (Serializer<?>) compiled.loadClass('example.$A_B$Serializer').newInstance()
 
         expect:
         serializeToString(serializerB, b) == '{}'

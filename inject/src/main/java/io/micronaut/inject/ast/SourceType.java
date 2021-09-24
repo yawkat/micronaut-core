@@ -402,7 +402,7 @@ public abstract class SourceType {
             SourceType parentComponent = ((Array) parent).getComponent();
             if (component instanceof Variable) {
                 if (parentComponent.isAssignableFrom(component)) {
-                    return component;
+                    return this;
                 } else {
                     return null;
                 }

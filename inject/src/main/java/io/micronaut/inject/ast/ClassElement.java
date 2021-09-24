@@ -16,6 +16,7 @@
 package io.micronaut.inject.ast;
 
 import io.micronaut.core.annotation.AnnotationMetadata;
+import io.micronaut.core.annotation.Experimental;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.naming.NameUtils;
@@ -23,8 +24,15 @@ import io.micronaut.core.util.ArgumentUtils;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.inject.ast.beans.BeanElementBuilder;
 
+import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static io.micronaut.inject.writer.BeanDefinitionVisitor.PROXY_SUFFIX;
 
@@ -61,6 +69,14 @@ public interface ClassElement extends TypedElement {
      */
     default boolean isTypeVariable() {
         return false;
+    }
+
+    default boolean isFreeTypeVariable() {
+        return this instanceof FreeTypeVariableElement;
+    }
+
+    default boolean isWildcard() {
+        return this instanceof WildcardElement;
     }
 
     /**
@@ -285,6 +301,31 @@ public interface ClassElement extends TypedElement {
         return isArray() || isAssignable(Iterable.class);
     }
 
+    @Experimental
+    default List<? extends ClassElement> getBoundTypeArguments() {
+        return new ArrayList<>(getTypeArguments().values());
+    }
+
+    @Experimental
+    default List<? extends FreeTypeVariableElement> getDeclaredTypeVariables() {
+        return Collections.emptyList();
+    }
+
+    @Experimental
+    default ClassElement getRawClass() {
+        return this;
+    }
+
+    @Experimental
+    default ClassElement bindTypeArguments(List<? extends ClassElement> typeArguments) {
+        return this;
+    }
+
+    @Experimental
+    default ClassElement foldTypes(Function<ClassElement, ClassElement> fold) {
+        return fold.apply(this);
+    }
+
     /**
      * Get the type arguments for the given type name.
      *
@@ -383,6 +424,41 @@ public interface ClassElement extends TypedElement {
     }
 
     /**
+     * Create a class element for the given complex type.
+     *
+     * @param type The type
+     * @return The class element
+     */
+    @Experimental
+    @NonNull
+    static ClassElement of(@NonNull Type type) {
+        Objects.requireNonNull(type, "Type cannot be null");
+        if (type instanceof Class) {
+            return new ReflectClassElement((Class<?>) type);
+        } else if (type instanceof TypeVariable<?>) {
+            return new ReflectFreeTypeVariableElement((TypeVariable<?>) type, 0);
+        } else if (type instanceof WildcardType) {
+            return new ReflectWildcardElement((WildcardType) type);
+        } else if (type instanceof ParameterizedType) {
+            if (((ParameterizedType) type).getOwnerType() != null) {
+                throw new UnsupportedOperationException("Owner types are not supported");
+            }
+            return new ReflectClassElement(ReflectTypeElement.getErasure(type)) {
+                @Override
+                public List<? extends ClassElement> getBoundTypeArguments() {
+                    return Arrays.stream(type.getTypeParameters())
+                            .map(ClassElement::of)
+                            .collect(Collectors.toList());
+                }
+            };
+        } else if (type instanceof GenericArrayType) {
+            return of(((GenericArrayType) type).getGenericComponentType()).toArray();
+        } else {
+            throw new IllegalArgumentException("Bad type: " + type.getClass().getName());
+        }
+    }
+
+    /**
      * Create a class element for the given simple type.
      * @param type The type
      * @param annotationMetadata The annotation metadata
@@ -407,6 +483,13 @@ public interface ClassElement extends TypedElement {
             @Override
             public Map<String, ClassElement> getTypeArguments() {
                 return Collections.unmodifiableMap(typeArguments);
+            }
+
+            @Override
+            public List<? extends ClassElement> getBoundTypeArguments() {
+                return getDeclaredTypeVariables().stream()
+                        .map(tv -> typeArguments.get(tv.getVariableName()))
+                        .collect(Collectors.toList());
             }
         };
     }

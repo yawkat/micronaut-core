@@ -18,6 +18,7 @@ package io.micronaut.json.generator.symbol.bean;
 import com.fasterxml.jackson.annotation.*;
 import io.micronaut.core.annotation.AnnotatedElement;
 import io.micronaut.core.annotation.AnnotationClassValue;
+import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
@@ -53,22 +54,22 @@ import java.util.stream.Stream;
 
 class BeanIntrospector {
     /**
-     * @param problemReporter            Where to output problems
-     * @param clazz                      Class to introspect
-     * @param additionalAnnotationSource Additional elements that should be scanned for class-level annotations
-     * @param forSerialization           Whether this introspection is intended for serialization or deserialization
+     * @param problemReporter    Where to output problems
+     * @param clazz              Class to introspect
+     * @param annotationMetadata Annotation metadata for the class
+     * @param forSerialization   Whether this introspection is intended for serialization or deserialization
      * @return The introspection result
      */
-    public static BeanDefinition introspect(ProblemReporter problemReporter, VisitorContext context, ClassElement clazz, Collection<AnnotatedElement> additionalAnnotationSource, boolean forSerialization) {
+    public static BeanDefinition introspect(ProblemReporter problemReporter, VisitorContext context, ClassElement clazz, AnnotationMetadata annotationMetadata, boolean forSerialization) {
         BeanDefinition beanDefinition = new BeanDefinition();
-        AnnotationValue<JsonTypeInfo> jsonTypeInfo = ElementUtil.getAnnotation(JsonTypeInfo.class, clazz, additionalAnnotationSource);
+        AnnotationValue<JsonTypeInfo> jsonTypeInfo = annotationMetadata.getAnnotation(JsonTypeInfo.class);
         if (jsonTypeInfo != null) {
-            beanDefinition.subtyping = parseSubtyping(problemReporter, context, clazz, jsonTypeInfo, ElementUtil.getAnnotation(JsonSubTypes.class, clazz, additionalAnnotationSource));
+            beanDefinition.subtyping = parseSubtyping(problemReporter, context, clazz, jsonTypeInfo, annotationMetadata.getAnnotation(JsonSubTypes.class));
             return beanDefinition;
         }
 
         Scanner scanner = new Scanner(problemReporter, forSerialization);
-        scanner.scan(clazz, additionalAnnotationSource);
+        scanner.scan(clazz, annotationMetadata);
         Map<PropBuilder, BeanDefinition.Property> completeProps = new LinkedHashMap<>();
         for (PropBuilder prop : scanner.byName.values()) {
             // remove accessors marked as @JsonIgnore
@@ -97,8 +98,8 @@ class BeanIntrospector {
                     built = BeanDefinition.Property.field(prop.name, prop.field.accessor);
                 }
             }
-            GeneratorType type = built.getType(Function.identity());
-            if (type.getRawClass().getAnnotation(JsonIgnoreType.class) != null) {
+            GeneratorType type = built.getType(Function.identity(), Function.identity());
+            if (type.getClassLevelAnnotations().getAnnotation(JsonIgnoreType.class) != null) {
                 continue;
             }
 
@@ -350,20 +351,20 @@ class BeanIntrospector {
             }
         }
 
-        void scan(ClassElement clazz, Collection<AnnotatedElement> additionalAnnotationSource) {
-            AnnotationValue<JsonIgnoreProperties> jsonIgnoreProperties = ElementUtil.getAnnotation(JsonIgnoreProperties.class, clazz, additionalAnnotationSource);
+        void scan(ClassElement clazz, AnnotationMetadata annotationMetadata) {
+            AnnotationValue<JsonIgnoreProperties> jsonIgnoreProperties = annotationMetadata.getAnnotation(JsonIgnoreProperties.class);
             ignoreUnknownProperties = true;
             if (jsonIgnoreProperties != null) {
                 ignoreUnknownProperties = jsonIgnoreProperties.get("ignoreUnknown", Boolean.class, ignoreUnknownProperties);
             }
 
-            AnnotationValue<JsonInclude> jsonInclude = ElementUtil.getAnnotation(JsonInclude.class, clazz, additionalAnnotationSource);
+            AnnotationValue<JsonInclude> jsonInclude = annotationMetadata.getAnnotation(JsonInclude.class);
             defaultInclusionPolicy = JsonInclude.Include.NON_EMPTY; // match JacksonConfiguration default behavior
             if (jsonInclude != null) {
                 defaultInclusionPolicy = jsonInclude.get("value", JsonInclude.Include.class, defaultInclusionPolicy);
             }
 
-            AnnotationValue<JsonAutoDetect> jsonAutoDetect = ElementUtil.getAnnotation(JsonAutoDetect.class, clazz, additionalAnnotationSource);
+            AnnotationValue<JsonAutoDetect> jsonAutoDetect = annotationMetadata.getAnnotation(JsonAutoDetect.class);
             fieldVisibility = getVisibility(jsonAutoDetect, "fieldVisibility", JsonAutoDetect.Visibility.PUBLIC_ONLY);
             getterVisibility = getVisibility(jsonAutoDetect, "getterVisibility", JsonAutoDetect.Visibility.PUBLIC_ONLY);
             isGetterVisibility = getVisibility(jsonAutoDetect, "isGetterVisibility", JsonAutoDetect.Visibility.PUBLIC_ONLY);

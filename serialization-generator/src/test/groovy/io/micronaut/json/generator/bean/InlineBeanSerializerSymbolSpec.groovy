@@ -940,6 +940,26 @@ class Sup<T> {
         deserializeFromString(compiled.serializer, '{"value":"bar"}').value == 'bar'
     }
 
+    void 'generic supertype mixed'() {
+        given:
+        def compiled = buildSerializer('''
+package example;
+
+class Subsub extends Sub<java.util.List<String>> {
+}
+class Sub<T> extends Sup<String> {
+    public java.util.List<T> value2;
+}
+class Sup<T> {
+    public T value;
+}
+''')
+
+        expect:
+        deserializeFromString(compiled.serializer, '{"value":"bar","value2":[["foo","bar"]]}').value == 'bar'
+        deserializeFromString(compiled.serializer, '{"value":"bar","value2":[["foo","bar"]]}').value2 == [["foo", "bar"]]
+    }
+
     void 'auto-detect visibility homogenous'() {
         given:
         def compiled = buildSerializer("""

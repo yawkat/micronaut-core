@@ -18,6 +18,7 @@ package io.micronaut.json.generator.symbol.bean;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterizedTypeName;
+import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
@@ -55,7 +56,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
     }
 
     BeanDefinition introspect(ProblemReporter problemReporter, GeneratorType type, boolean forSerialization) {
-        return BeanIntrospector.introspect(problemReporter, linker.typeResolutionContext, type.getRawClass(), Collections.emptyList(), forSerialization);
+        return BeanIntrospector.introspect(problemReporter, linker.typeResolutionContext, type.getClassElement(), type.getClassLevelAnnotations(), forSerialization);
     }
 
     @Override
@@ -81,7 +82,7 @@ public class InlineBeanSerializerSymbol implements SerializerSymbol {
         if (fixedAnnotation != null) {
             return fixedAnnotation;
         }
-        return ElementUtil.getAnnotation(SerializableBean.class, type.getRawClass(), Collections.emptyList());
+        return type.getClassLevelAnnotations().getAnnotation(SerializableBean.class);
     }
 
     /**

@@ -216,16 +216,8 @@ class TypeInference {
                 return null;
             }
             Type componentType = ((GenericArrayType) child).getGenericComponentType();
-            if (componentType instanceof TypeVariable) {
-                if (isAssignableFrom(parent.getComponentType(), componentType)) {
-                    return child;
-                } else {
-                    return null;
-                }
-            } else {
-                Type componentParameterization = findParameterization(componentType, parent.getComponentType());
-                return componentParameterization == null ? null : GenericTypeFactory.makeArrayType(componentParameterization);
-            }
+            Type componentParameterization = findParameterization(componentType, parent.getComponentType());
+            return componentParameterization == null ? null : GenericTypeFactory.makeArrayType(componentParameterization);
         } else if (child instanceof ParameterizedType) {
             ParameterizedType onT = (ParameterizedType) child;
             Class<?> rawType = (Class<?>) onT.getRawType();

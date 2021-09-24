@@ -51,7 +51,6 @@ class PrimitiveSymbolSpec extends AbstractSymbolSpec {
 
         expect:
         deserializeFromString(serializer, "512") == (char) 512
-        deserializeFromString(serializer, '"512"') == (char) 512
         serializeToString(serializer, (char) 512) == "512"
     }
 

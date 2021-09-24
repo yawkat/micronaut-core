@@ -56,7 +56,7 @@ class Test {
     }
 }
 ''')
-        def serializer = cl.loadClass('example.$Test$Bean$Serializer')
+        def serializer = cl.loadClass('example.$Test_Bean$Serializer')
 
         then:
         Serializer.class.isAssignableFrom(serializer)

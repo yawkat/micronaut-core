@@ -21,6 +21,7 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.util.ArrayUtils;
 import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.inject.ast.ClassElement;
+import io.micronaut.inject.ast.FreeTypeVariableElement;
 import io.micronaut.inject.ast.MethodElement;
 import io.micronaut.inject.ast.SourceType;
 import io.micronaut.inject.ast.ParameterElement;
@@ -35,6 +36,7 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.WildcardType;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * A method element returning data from a {@link ExecutableElement}.
@@ -92,6 +94,13 @@ public class JavaMethodElement extends AbstractJavaElement implements MethodElem
             this.returnType = returnType(Collections.emptyMap());
         }
         return this.returnType;
+    }
+
+    @Override
+    public List<? extends FreeTypeVariableElement> getDeclaredTypeVariables() {
+        return executableElement.getTypeParameters().stream()
+                .map(tpe -> (FreeTypeVariableElement) mirrorToClassElement(tpe.asType(), visitorContext))
+                .collect(Collectors.toList());
     }
 
     @Override

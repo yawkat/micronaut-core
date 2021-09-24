@@ -342,6 +342,7 @@ public abstract class AbstractJavaElement implements io.micronaut.inject.ast.Ele
                                 typeElement,
                                 newAnnotationMetadata,
                                 visitorContext,
+                                typeArguments,
                                 genericsInfo,
                                 isTypeVariable
                         );
@@ -359,7 +360,15 @@ public abstract class AbstractJavaElement implements io.micronaut.inject.ast.Ele
             if (bound != null && bound != tv) {
                 return mirrorToClassElement(bound, visitorContext, genericsInfo, includeTypeAnnotations, true);
             } else {
-                return mirrorToClassElement(upperBound, visitorContext, genericsInfo, includeTypeAnnotations, true);
+                // type variable is still free.
+                List<? extends TypeMirror> boundsUnresolved = upperBound instanceof IntersectionType ?
+                        ((IntersectionType) upperBound).getBounds() :
+                        Collections.singletonList(upperBound);
+                Map<String, Map<String, TypeMirror>> finalGenericsInfo = genericsInfo;
+                List<JavaClassElement> bounds = boundsUnresolved.stream()
+                        .map(tm -> (JavaClassElement) mirrorToClassElement(tm, visitorContext, finalGenericsInfo, includeTypeAnnotations))
+                        .collect(Collectors.toList());
+                return new JavaFreeTypeVariableElement(tv, bounds, 0);
             }
 
         } else if (returnType instanceof ArrayType) {
@@ -370,6 +379,35 @@ public abstract class AbstractJavaElement implements io.micronaut.inject.ast.Ele
         } else if (returnType instanceof PrimitiveType) {
             PrimitiveType pt = (PrimitiveType) returnType;
             return PrimitiveElement.valueOf(pt.getKind().name());
+        } else if (returnType instanceof WildcardType) {
+            WildcardType wt = (WildcardType) returnType;
+            Map<String, Map<String, TypeMirror>> finalGenericsInfo = genericsInfo;
+            TypeMirror superBound = wt.getSuperBound();
+            Stream<? extends TypeMirror> lowerBounds;
+            if (superBound instanceof UnionType) {
+                lowerBounds = ((UnionType) superBound).getAlternatives().stream();
+            } else if (superBound == null) {
+                lowerBounds = Stream.empty();
+            } else {
+                lowerBounds = Stream.of(superBound);
+            }
+            TypeMirror extendsBound = wt.getExtendsBound();
+            Stream<? extends TypeMirror> upperBounds;
+            if (extendsBound instanceof IntersectionType) {
+                upperBounds = ((IntersectionType) extendsBound).getBounds().stream();
+            } else if (extendsBound == null) {
+                upperBounds = Stream.of(visitorContext.getElements().getTypeElement("java.lang.Object").asType());
+            } else {
+                upperBounds = Stream.of(extendsBound);
+            }
+            return new JavaWildcardElement(
+                    upperBounds
+                            .map(tm -> (JavaClassElement) mirrorToClassElement(tm, visitorContext, finalGenericsInfo, includeTypeAnnotations))
+                            .collect(Collectors.toList()),
+                    lowerBounds
+                            .map(tm -> (JavaClassElement) mirrorToClassElement(tm, visitorContext, finalGenericsInfo, includeTypeAnnotations))
+                            .collect(Collectors.toList())
+            );
         }
         return PrimitiveElement.VOID;
     }

@@ -23,6 +23,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
+import io.micronaut.inject.ast.FreeTypeVariableElement;
 import io.micronaut.inject.ast.SourceType;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
@@ -37,6 +38,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Internal
 public final class SingletonSerializerGenerator {
@@ -218,24 +220,25 @@ public final class SingletonSerializerGenerator {
         }
 
         // add type parameters if necessary
-        List<SourceType.Variable> freeVariables = new ArrayList<>(valueType.getFreeVariables());
-        for (SourceType.Variable typeVariable : freeVariables) {
+        List<FreeTypeVariableElement> freeVariables = new ArrayList<>(valueType.getFreeVariables());
+        for (FreeTypeVariableElement typeVariable : freeVariables) {
             builder.addTypeVariable(TypeVariableName.get(
-                    typeVariable.getName(),
+                    typeVariable.getVariableName(),
                     typeVariable.getBounds().stream().map(PoetUtil::toTypeName).toArray(TypeName[]::new)
             ));
         }
+        List<String> freeVariableNames = freeVariables.stream().map(FreeTypeVariableElement::getVariableName).collect(Collectors.toList());
 
         TypeSpec.Builder factoryType = TypeSpec.classBuilder("FactoryImpl")
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
                 .addAnnotation(Singleton.class)
                 .addAnnotation(BootstrapContextCompatible.class)
                 .addAnnotation(AnnotationSpec.builder(Requires.class)
-                        .addMember("classes", "$T.class", PoetUtil.toTypeNameRaw(valueType.getRawClass()))
+                        .addMember("classes", "$T.class", PoetUtil.toTypeName(valueType.getRawClass()))
                         .addMember("beans", "$T.class", SerializerLocator.class)
                         .build())
                 .addField(FieldSpec.builder(Type.class, "TYPE", Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
-                        .initializer(valueType.toRuntimeFactory(v -> CodeBlock.of("$T.class.getTypeParameters()[$L]", generatedName, freeVariables.indexOf(v))))
+                        .initializer(valueType.toRuntimeFactory(v -> CodeBlock.of("$T.class.getTypeParameters()[$L]", generatedName, freeVariableNames.indexOf(v))))
                         .build())
                 .addMethod(MethodSpec.methodBuilder("getGenericType")
                         .addAnnotation(Override.class)
@@ -276,7 +279,7 @@ public final class SingletonSerializerGenerator {
                 constructorCallCode.add(", ");
             }
             firstInjected = false;
-            constructorCallCode.add("locator.$N($L)", methodName, injectable.type.toRuntimeFactory(v -> CodeBlock.of("getTypeParameter.apply($S)", v.getName())));
+            constructorCallCode.add("locator.$N($L)", methodName, injectable.type.toRuntimeFactory(v -> CodeBlock.of("getTypeParameter.apply($S)", v)));
         }
         // other injected beans (e.g. user-specified custom serializers)
         for (Map.Entry<TypeName, GeneratorContext.Injected> entry : classContext.getInjectedBeans().entrySet()) {
