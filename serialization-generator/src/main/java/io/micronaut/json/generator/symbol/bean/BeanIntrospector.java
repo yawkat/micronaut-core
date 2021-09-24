@@ -98,7 +98,7 @@ class BeanIntrospector {
                     built = BeanDefinition.Property.field(prop.name, prop.field.accessor);
                 }
             }
-            GeneratorType type = built.getType(Function.identity(), Function.identity());
+            GeneratorType type = built.getType(Function.identity());
             if (type.getClassLevelAnnotations().getAnnotation(JsonIgnoreType.class) != null) {
                 continue;
             }

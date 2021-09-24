@@ -38,29 +38,7 @@ public class GeneratorType {
      * the type T[]
      */
     @Internal
-    public static final GeneratorType GENERIC_ARRAY = new GeneratorType(
-            ClassElement.of(GenericArrayHolder.class.getFields()[0].getGenericType()),
-            new SourceType.Variable() {
-                @NonNull
-                @Override
-                public Element getDeclaringElement() {
-                    // well...
-                    return GENERIC_ARRAY.classElement;
-                }
-
-                @NonNull
-                @Override
-                public String getName() {
-                    return "T";
-                }
-
-                @NonNull
-                @Override
-                public List<? extends SourceType> getBounds() {
-                    return Collections.singletonList(ClassElement.of(Object.class).getRawSourceType());
-                }
-            }.createArrayType()
-    );
+    public static final GeneratorType GENERIC_ARRAY = new GeneratorType(ClassElement.of(GenericArrayHolder.class.getFields()[0].getGenericType()));
 
     @SuppressWarnings("unused")
     private static class GenericArrayHolder<T> {
@@ -68,27 +46,16 @@ public class GeneratorType {
     }
 
     private final ClassElement classElement;
-    private final SourceType fullType;
 
-    private GeneratorType(ClassElement classElement, SourceType fullType) {
+    private GeneratorType(ClassElement classElement) {
         this.classElement = classElement;
-        this.fullType = fullType;
     }
 
     public static GeneratorType ofClass(ClassElement raw) {
-        SourceType rawMn = raw.getRawSourceType();
         if (raw.getBoundTypeArguments().isEmpty()) {
             raw = raw.bindTypeArguments(raw.getDeclaredTypeVariables());
         }
-        if (rawMn instanceof SourceType.RawClass) {
-            // if the class has type parameters, instead return a parameterized type with those parameters as free variables.
-            // List -> List<E>
-            List<? extends SourceType.Variable> typeVariables = ((SourceType.RawClass) rawMn).getTypeVariables();
-            if (!typeVariables.isEmpty()) {
-                return new GeneratorType(raw, new ParameterizedImpl((SourceType.RawClass) rawMn, typeVariables));
-            }
-        }
-        return new GeneratorType(raw, rawMn);
+        return new GeneratorType(raw);
     }
 
     public static GeneratorType ofParameterized(Class<?> raw, Class<?>... params) {
@@ -96,78 +63,36 @@ public class GeneratorType {
 
         if (params.length == 0) {
             ClassElement ele = ClassElement.of(raw);
-            return new GeneratorType(ele, ele.getRawSourceType());
+            return new GeneratorType(ele);
         }
 
-        SourceType.RawClass mnRaw = (SourceType.RawClass) ClassElement.of(raw).getRawSourceType();
-
-        List<SourceType> mnArgs = new ArrayList<>();
         Map<String, ClassElement> argMap = new LinkedHashMap<>();
-        List<? extends SourceType.Variable> typeVariables = mnRaw.getTypeVariables();
+        List<? extends FreeTypeVariableElement> typeVariables = ClassElement.of(raw).getDeclaredTypeVariables();
         for (int i = 0; i < typeVariables.size(); i++) {
-            SourceType.Variable variable = typeVariables.get(i);
+            FreeTypeVariableElement variable = typeVariables.get(i);
             if (params[i] != null) {
                 // concrete type
                 ClassElement element = ClassElement.of(params[i]);
-                argMap.put(variable.getName(), element);
-                mnArgs.add(element.getRawSourceType());
+                argMap.put(variable.getVariableName(), element);
             } else {
                 // type variable
-                argMap.put(variable.getName(), variable.getBounds().get(0).getErasureElement());
-                mnArgs.add(variable);
+                argMap.put(variable.getVariableName(), variable.getBounds().get(0));
             }
         }
         ClassElement classElement = ClassElement.of(raw, AnnotationMetadata.EMPTY_METADATA, argMap);
-        return new GeneratorType(classElement, new ParameterizedImpl((SourceType.RawClass) classElement.getRawSourceType(), mnArgs));
+        return new GeneratorType(classElement);
     }
 
-    private static class ParameterizedImpl extends SourceType.Parameterized {
-        private final RawClass raw;
-        private final List<? extends SourceType> parameters;
-
-        ParameterizedImpl(RawClass raw, List<? extends SourceType> parameters) {
-            this.raw = raw;
-            this.parameters = parameters;
-        }
-
-        @Nullable
-        @Override
-        public SourceType getOuter() {
-            return null;
-        }
-
-        @NonNull
-        @Override
-        public RawClass getRaw() {
-            return raw;
-        }
-
-        @NonNull
-        @Override
-        public List<? extends SourceType> getParameters() {
-            return parameters;
-        }
+    public static GeneratorType fieldType(FieldElement element, Function<ClassElement, ClassElement> fold) {
+        return new GeneratorType(element.getType().foldTypes(fold));
     }
 
-    public static GeneratorType fieldType(FieldElement element, Function<SourceType, SourceType> fold, Function<ClassElement, ClassElement> fold2) {
-        return new GeneratorType(
-                element.getType().foldTypes(fold2),
-                element.getDeclaredSourceType().foldTypes(fold)
-        );
+    public static GeneratorType methodReturnType(MethodElement element, Function<ClassElement, ClassElement> fold) {
+        return new GeneratorType(element.getGenericReturnType().foldTypes(fold));
     }
 
-    public static GeneratorType methodReturnType(MethodElement element, Function<SourceType, SourceType> fold, Function<ClassElement, ClassElement> fold2) {
-        return new GeneratorType(
-                element.getGenericReturnType().foldTypes(fold2),
-                element.getDeclaredReturnSourceType().foldTypes(fold)
-        );
-    }
-
-    public static GeneratorType parameterType(ParameterElement element, Function<SourceType, SourceType> fold, Function<ClassElement, ClassElement> fold2) {
-        return new GeneratorType(
-                element.getGenericType().foldTypes(fold2),
-                element.getDeclaredSourceType().foldTypes(fold)
-        );
+    public static GeneratorType parameterType(ParameterElement element, Function<ClassElement, ClassElement> fold) {
+        return new GeneratorType(element.getGenericType().foldTypes(fold));
     }
 
     public ClassElement getClassElement() {
@@ -213,13 +138,10 @@ public class GeneratorType {
     }
 
     public GeneratorType fromArray() {
-        if (!(fullType instanceof SourceType.Array)) {
+        if (!classElement.isArray()) {
             throw new IllegalStateException("not an array");
         }
-        if (!classElement.isArray()) {
-            throw new IllegalStateException("not an array (but only on ClassElement? BUG)");
-        }
-        return new GeneratorType(classElement.fromArray(), ((SourceType.Array) fullType).getComponent());
+        return new GeneratorType(classElement.fromArray());
     }
 
     public boolean isPrimitive() {
@@ -232,11 +154,9 @@ public class GeneratorType {
 
     public Map<String, GeneratorType> getTypeArgumentsExact() {
         Map<String, ClassElement> args = classElement.getTypeArguments();
-        List<? extends SourceType> parameterizedArgs = ((SourceType.Parameterized) this.fullType).getParameters();
-        int i = 0;
         Map<String, GeneratorType> mappedArgs = new LinkedHashMap<>();
         for (Map.Entry<String, ClassElement> entry : args.entrySet()) {
-            mappedArgs.put(entry.getKey(), new GeneratorType(entry.getValue(), parameterizedArgs.get(i++)));
+            mappedArgs.put(entry.getKey(), new GeneratorType(entry.getValue()));
         }
         return mappedArgs;
     }
@@ -255,40 +175,6 @@ public class GeneratorType {
             return isArray() && fromArray().isRawTypeEquals(forType.getComponentType());
         } else {
             return !isArray() && classElement.getName().equals(forType.getName());
-        }
-    }
-
-    public Function<SourceType, SourceType> typeParametersAsFoldFunction(SourceType context) {
-        return typeParametersAsFoldFunction0(fullType.findParameterization(context));
-    }
-
-    private static Function<SourceType, SourceType> typeParametersAsFoldFunction0(SourceType t) {
-        if (t instanceof SourceType.RawClass) {
-            // raw class, replace type variables by their bound
-            List<? extends SourceType.Variable> variables = ((SourceType.RawClass) t).getTypeVariables();
-            return type -> {
-                if (type instanceof SourceType.Variable) {
-                    if (variables.contains(type)) {
-                        return type.getErasure();
-                    }
-                }
-                return type;
-            };
-        } else {
-            assert t instanceof SourceType.Parameterized;
-            List<? extends SourceType.Variable> variables = ((SourceType.Parameterized) t).getRaw().getTypeVariables();
-            List<? extends SourceType> arguments = ((SourceType.Parameterized) t).getParameters();
-            return type -> {
-                if (type instanceof SourceType.Variable) {
-                    // note: for groovy, MnType.Variable.equals breaks, so we just compare names
-                    for (int i = 0; i < variables.size(); i++) {
-                        if (variables.get(i).getName().equals(((SourceType.Variable) type).getName())) {
-                            return arguments.get(i);
-                        }
-                    }
-                }
-                return type;
-            };
         }
     }
 

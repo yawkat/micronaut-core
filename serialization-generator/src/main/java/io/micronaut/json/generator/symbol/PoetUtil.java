@@ -19,13 +19,11 @@ import com.squareup.javapoet.*;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.FreeTypeVariableElement;
-import io.micronaut.inject.ast.SourceType;
 import io.micronaut.inject.ast.PrimitiveElement;
 import io.micronaut.inject.ast.WildcardElement;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Internal
@@ -134,45 +132,6 @@ public final class PoetUtil {
             throw new IllegalArgumentException("Type resolution error?");
         }
         return className;
-    }
-
-    static TypeName toTypeName(SourceType type) {
-        if (type instanceof SourceType.Array) {
-            return ArrayTypeName.of(toTypeName(((SourceType.Array) type).getComponent()));
-        } else if (type instanceof SourceType.RawClass) {
-            return toTypeNameRaw(((SourceType.RawClass) type).getClassElement());
-        } else if (type instanceof SourceType.Parameterized) {
-            ClassName raw = (ClassName) toTypeName(((SourceType.Parameterized) type).getRaw());
-            TypeName[] params = ((SourceType.Parameterized) type).getParameters().stream().map(PoetUtil::toTypeName).toArray(TypeName[]::new);
-            if (((SourceType.Parameterized) type).getOuter() != null) {
-                TypeName outer = toTypeName(((SourceType.Parameterized) type).getOuter());
-                if (outer instanceof ParameterizedTypeName) {
-                    return ((ParameterizedTypeName) outer).nestedClass(raw.simpleName(), Arrays.asList(params));
-                }
-            }
-            return ParameterizedTypeName.get(raw, params);
-        } else if (type instanceof SourceType.Variable) {
-            return TypeVariableName.get(((SourceType.Variable) type).getName());
-        } else if (type instanceof SourceType.Wildcard) {
-            List<TypeName> lower = ((SourceType.Wildcard) type).getLowerBounds().stream().map(PoetUtil::toTypeName).collect(Collectors.toList());
-            List<TypeName> upper = ((SourceType.Wildcard) type).getUpperBounds().stream().map(PoetUtil::toTypeName).collect(Collectors.toList());
-            if (!lower.isEmpty()) {
-                if (lower.size() != 1) {
-                    throw new UnsupportedOperationException("Cannot emit lower wildcard bound with multiple types");
-                }
-                if (upper.size() != 1 || !upper.get(0).equals(ClassName.OBJECT)) {
-                    throw new UnsupportedOperationException("Cannot emit lower and upper wildcard bound at the same time");
-                }
-                return WildcardTypeName.supertypeOf(lower.get(0));
-            } else {
-                if (upper.size() != 1) {
-                    throw new UnsupportedOperationException("Cannot emit upper wildcard bound with multiple types");
-                }
-                return WildcardTypeName.subtypeOf(upper.get(0));
-            }
-        } else {
-            throw new AssertionError("Exhaustive instanceof, this should not happen");
-        }
     }
 
     static String toStringRelative(TypeName typeName, String pkg) {

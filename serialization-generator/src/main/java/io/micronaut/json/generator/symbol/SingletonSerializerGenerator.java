@@ -24,7 +24,6 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
 import io.micronaut.inject.ast.FreeTypeVariableElement;
-import io.micronaut.inject.ast.SourceType;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Encoder;

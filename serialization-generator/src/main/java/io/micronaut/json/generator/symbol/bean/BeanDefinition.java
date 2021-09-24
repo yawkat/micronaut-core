@@ -91,15 +91,15 @@ class BeanDefinition {
             this.creatorParameter = creatorParameter;
         }
 
-        public GeneratorType getType(Function<SourceType, SourceType> fold, Function<ClassElement, ClassElement> fold2) {
+        public GeneratorType getType(Function<ClassElement, ClassElement> fold2) {
             if (getter != null) {
-                return GeneratorType.methodReturnType(getter, fold, fold2);
+                return GeneratorType.methodReturnType(getter, fold2);
             } else if (setter != null) {
-                return GeneratorType.parameterType(setter.getParameters()[0], fold, fold2);
+                return GeneratorType.parameterType(setter.getParameters()[0], fold2);
             } else if (field != null) {
-                return GeneratorType.fieldType(field, fold, fold2);
+                return GeneratorType.fieldType(field, fold2);
             } else if (creatorParameter != null) {
-                return GeneratorType.parameterType(creatorParameter, fold, fold2);
+                return GeneratorType.parameterType(creatorParameter, fold2);
             } else {
                 throw new AssertionError();
             }
