@@ -45,14 +45,6 @@ import static io.micronaut.inject.writer.BeanDefinitionVisitor.PROXY_SUFFIX;
  */
 public interface ClassElement extends TypedElement {
     /**
-     * @return The raw {@link SourceType} for this type, without any parameterization. Must be either a
-     * {@link SourceType.RawClass} or {@link SourceType.Array}.
-     */
-    default SourceType getRawSourceType() {
-        throw new UnsupportedOperationException(getClass().getName() + ".getRawSourceType");
-    }
-
-    /**
      * Tests whether one type is assignable to another.
      *
      * @param type The type to check
@@ -440,13 +432,14 @@ public interface ClassElement extends TypedElement {
         } else if (type instanceof WildcardType) {
             return new ReflectWildcardElement((WildcardType) type);
         } else if (type instanceof ParameterizedType) {
-            if (((ParameterizedType) type).getOwnerType() != null) {
+            ParameterizedType pType = (ParameterizedType) type;
+            if (pType.getOwnerType() != null) {
                 throw new UnsupportedOperationException("Owner types are not supported");
             }
             return new ReflectClassElement(ReflectTypeElement.getErasure(type)) {
                 @Override
                 public List<? extends ClassElement> getBoundTypeArguments() {
-                    return Arrays.stream(type.getTypeParameters())
+                    return Arrays.stream(pType.getActualTypeArguments())
                             .map(ClassElement::of)
                             .collect(Collectors.toList());
                 }

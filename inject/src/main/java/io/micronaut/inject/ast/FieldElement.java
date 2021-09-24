@@ -32,14 +32,6 @@ public interface FieldElement extends TypedElement, MemberElement {
         return getGenericType();
     }
 
-    /**
-     * @return The {@link SourceType} of this field, as declared in the source code. No substitution of type variables
-     * is performed.
-     */
-    default SourceType getDeclaredSourceType() {
-        throw new UnsupportedOperationException(getClass().getName() + ".getDeclaredSourceType");
-    }
-
     @NonNull
     @Override
     default String getDescription(boolean simple) {

@@ -1,58 +1,83 @@
 package io.micronaut.json.generated
 
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonValue
-import com.fasterxml.jackson.annotation.JsonView
+
 import com.fasterxml.jackson.core.JsonFactory
+import io.micronaut.annotation.processing.test.AbstractTypeElementSpec
 import io.micronaut.context.ApplicationContext
-import io.micronaut.context.annotation.Bean
 import io.micronaut.core.type.Argument
-import io.micronaut.json.Encoder
-import io.micronaut.json.Serializer
-import io.micronaut.json.annotation.CustomSerializer
-import io.micronaut.json.annotation.SerializableBean
-import jakarta.inject.Singleton
-import spock.lang.Specification
 
 import java.nio.charset.StandardCharsets
 
-class GeneratedObjectCodecSpec extends Specification {
+class GeneratedObjectCodecSpec extends AbstractTypeElementSpec {
     def readValue() {
         when:
-        def ctx = ApplicationContext.run()
+        def ctx = buildContext('example.TestCls', '''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+import io.micronaut.json.annotation.*;
+
+@SerializableBean
+public class TestCls {
+    public final String foo;
+
+    @JsonCreator
+    TestCls(@JsonProperty("foo") String foo) {
+        this.foo = foo;
+    }
+}
+''', true)
         def codec = ctx.getBean(GeneratedObjectMapper)
         def factory = new JsonFactory()
 
         then:
-        codec.readValue('{"foo":"bar"}', Argument.of(TestCls.class)).foo == 'bar'
+        codec.readValue('{"foo":"bar"}', Argument.of(ctx.classLoader.loadClass('example.TestCls'))).foo == 'bar'
     }
 
     def writeValueAsBytes() {
         when:
-        def ctx = ApplicationContext.run()
+        def ctx = buildContext('example.TestCls', '''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+import io.micronaut.json.annotation.*;
+
+@SerializableBean
+public class TestCls {
+    public final String foo;
+
+    @JsonCreator
+    TestCls(@JsonProperty("foo") String foo) {
+        this.foo = foo;
+    }
+}
+''', true)
         def codec = ctx.getBean(GeneratedObjectMapper)
 
         then:
-        new String(codec.writeValueAsBytes(new TestCls("bar")), StandardCharsets.UTF_8) == '{"foo":"bar"}'
-    }
-
-    @SerializableBean
-    static class TestCls {
-        public final String foo
-
-        @JsonCreator
-        TestCls(@JsonProperty("foo") String foo) {
-            this.foo = foo
-        }
+        new String(codec.writeValueAsBytes(ctx.classLoader.loadClass('example.TestCls').newInstance("bar")), StandardCharsets.UTF_8) == '{"foo":"bar"}'
     }
 
     def "super type serializable"() {
         given:
-        def ctx = ApplicationContext.run()
+        def ctx = buildContext('example.Base', '''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+import io.micronaut.json.annotation.*;
+
+@SerializableBean
+public class Base {
+    public String foo;
+}
+
+class Subclass extends Base {
+    public String bar;
+}
+''', true)
         def codec = ctx.getBean(GeneratedObjectMapper)
 
-        def value = new Subclass()
+        def value = ctx.classLoader.loadClass('example.Subclass').newInstance()
         value.foo = "42"
         value.bar = "24"
 
@@ -66,22 +91,25 @@ class GeneratedObjectCodecSpec extends Specification {
         //thrown Exception
     }
 
-    @SerializableBean
-    static class Base {
-        public String foo
-    }
-
-    static class Subclass extends Base {
-        public String bar
-    }
-
     def "generic bean deser"() {
         given:
-        def ctx = ApplicationContext.run()
+        def ctx = buildContext('example.GenericBean', '''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+import io.micronaut.json.annotation.*;
+import java.util.*;
+
+@SerializableBean
+public class GenericBean<T> {
+    public T naked;
+    public List<T> list;
+}
+''', true)
         def codec = ctx.getBean(GeneratedObjectMapper)
 
         when:
-        def parsed = codec.readValue('{"naked":"foo","list":["bar"]}', Argument.of(GenericBean.class, String.class))
+        def parsed = codec.readValue('{"naked":"foo","list":["bar"]}', Argument.of(ctx.classLoader.loadClass('example.GenericBean'), String.class))
 
         then:
         parsed.naked == 'foo'
@@ -90,13 +118,30 @@ class GeneratedObjectCodecSpec extends Specification {
 
     def "generic bean ser"() {
         given:
-        def ctx = ApplicationContext.run()
+        def ctx = buildContext('example.GenericBean', '''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+import io.micronaut.json.annotation.*;
+import java.util.*;
+
+@SerializableBean
+public class GenericBean<T> {
+    public T naked;
+    public List<T> list;
+}
+
+@SerializableBean
+class GenericBeanWrapper {
+    @JsonValue public GenericBean<String> bean;
+}
+''', true)
         def codec = ctx.getBean(GeneratedObjectMapper)
 
-        def bean = new GenericBean<String>()
+        def bean = ctx.classLoader.loadClass('example.GenericBean').newInstance()
         bean.naked = "foo"
         bean.list = ["bar"]
-        def wrapper = new GenericBeanWrapper()
+        def wrapper = ctx.classLoader.loadClass('example.GenericBeanWrapper').newInstance()
         wrapper.bean = bean
 
         when:
@@ -108,16 +153,6 @@ class GeneratedObjectCodecSpec extends Specification {
         json == '{"naked":"foo","list":["bar"]}'
     }
 
-    @SerializableBean
-    static class GenericBean<T> {
-        public T naked
-        public List<T> list
-    }
-
-    @SerializableBean
-    static class GenericBeanWrapper {
-        @JsonValue public GenericBean<String> bean;
-    }
 
     def "raw map"() {
         given:
@@ -166,60 +201,74 @@ class GeneratedObjectCodecSpec extends Specification {
 
     def 'views'() {
         given:
-        def ctx = ApplicationContext.run()
+        def ctx = buildContext('example.WithViews', '''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+import io.micronaut.json.annotation.*;
+
+@SerializableBean
+@JsonView(Views.Public.class)
+public class WithViews {
+    public String firstName;
+    public String lastName;
+    @JsonView(Views.Internal.class)
+    public String birthdate;
+    @JsonView(Views.Admin.class)
+    public String password; // don't do plaintext passwords at home please
+}
+
+class Views {
+    static class Public {}
+
+    static class Internal extends Public {}
+
+    static class Admin extends Internal {}
+}
+''', true)
         def codec = ctx.getBean(GeneratedObjectMapper)
 
-        def withViews = new WithViews(firstName: "Bob", lastName: "Jones", birthdate: "08/01/1980", password: "secret")
+        def WithViews = ctx.classLoader.loadClass('example.WithViews')
+        def withViews = WithViews.newInstance()
+        withViews.firstName = 'Bob'
+        withViews.lastName = 'Jones'
+        withViews.birthdate = '08/01/1980'
+        withViews.password = 'secret'
+
+        def Public = ctx.classLoader.loadClass('example.Views$Public')
+        def Internal = ctx.classLoader.loadClass('example.Views$Internal')
+        def Admin = ctx.classLoader.loadClass('example.Views$Admin')
 
         expect:
-        new String(codec.cloneWithViewClass(Views.Admin).writeValueAsBytes(withViews), StandardCharsets.UTF_8) ==
+        new String(codec.cloneWithViewClass(Admin).writeValueAsBytes(withViews), StandardCharsets.UTF_8) ==
                 '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}'
-        new String(codec.cloneWithViewClass(Views.Internal).writeValueAsBytes(withViews), StandardCharsets.UTF_8) ==
+        new String(codec.cloneWithViewClass(Internal).writeValueAsBytes(withViews), StandardCharsets.UTF_8) ==
                 '{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980"}'
-        new String(codec.cloneWithViewClass(Views.Public).writeValueAsBytes(withViews), StandardCharsets.UTF_8) ==
+        new String(codec.cloneWithViewClass(Public).writeValueAsBytes(withViews), StandardCharsets.UTF_8) ==
                 '{"firstName":"Bob","lastName":"Jones"}'
         new String(codec.writeValueAsBytes(withViews), StandardCharsets.UTF_8) == '{}'
 
         codec.readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
                 .firstName == null
 
-        codec.cloneWithViewClass(Views.Public).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+        codec.cloneWithViewClass(Public).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
                 .firstName == 'Bob'
-        codec.cloneWithViewClass(Views.Public).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+        codec.cloneWithViewClass(Public).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
                 .birthdate == null
 
-        codec.cloneWithViewClass(Views.Internal).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+        codec.cloneWithViewClass(Internal).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
                 .firstName == 'Bob'
-        codec.cloneWithViewClass(Views.Internal).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+        codec.cloneWithViewClass(Internal).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
                 .birthdate == '08/01/1980'
-        codec.cloneWithViewClass(Views.Internal).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+        codec.cloneWithViewClass(Internal).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
                 .password == null
 
-        codec.cloneWithViewClass(Views.Admin).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+        codec.cloneWithViewClass(Admin).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
                 .firstName == 'Bob'
-        codec.cloneWithViewClass(Views.Admin).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+        codec.cloneWithViewClass(Admin).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
                 .birthdate == '08/01/1980'
-        codec.cloneWithViewClass(Views.Admin).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
+        codec.cloneWithViewClass(Admin).readValue('{"firstName":"Bob","lastName":"Jones","birthdate":"08/01/1980","password":"secret"}', Argument.of(WithViews))
                 .password == 'secret'
-    }
-
-    @SerializableBean
-    @JsonView(Views.Public)
-    static class WithViews {
-        public String firstName
-        public String lastName
-        @JsonView(Views.Internal)
-        public String birthdate
-        @JsonView(Views.Admin)
-        public String password // don't do plaintext passwords at home please
-    }
-
-    static class Views {
-        static class Public {}
-
-        static class Internal extends Public {}
-
-        static class Admin extends Internal {}
     }
 
     def 'custom serializer does not collide with native serializers'() {
@@ -227,33 +276,45 @@ class GeneratedObjectCodecSpec extends Specification {
         // when UpperCaseSer would be eligible.
 
         given:
-        def ctx = ApplicationContext.run()
+        def ctx = buildContext('example.CustomSerializerBean', '''
+package example;
+
+import com.fasterxml.jackson.annotation.*;
+import io.micronaut.json.annotation.*;
+import io.micronaut.json.*;
+import io.micronaut.context.annotation.*;
+import jakarta.inject.*;
+import java.io.*;
+import java.util.*;
+
+@SerializableBean
+public class CustomSerializerBean {
+    public String foo;
+    @CustomSerializer(serializer = UpperCaseSer.class)
+    public String bar;
+}
+
+@Singleton
+@Bean(typed = UpperCaseSer.class)
+class UpperCaseSer implements Serializer<String> {
+    @Override
+    public void serialize(Encoder encoder, String value) throws IOException {
+        encoder.encodeString(value.toUpperCase(Locale.ROOT));
+    }
+
+    @Override
+    public boolean isEmpty(String value) {
+        return value.isEmpty();
+    }
+}
+''', true)
         def codec = ctx.getBean(GeneratedObjectMapper)
 
-        def bean = new CustomSerializerBean(foo: 'boo', bar: 'Baz')
+        def bean = ctx.classLoader.loadClass('example.CustomSerializerBean').newInstance()
+        bean.foo = 'boo'
+        bean.bar = 'Baz'
         expect:
         new String(codec.writeValueAsBytes(bean), StandardCharsets.UTF_8) == '{"foo":"boo","bar":"BAZ"}'
         new String(codec.writeValueAsBytes('Baz'), StandardCharsets.UTF_8) == '"Baz"'
-    }
-
-    @SerializableBean
-    static class CustomSerializerBean {
-        public String foo
-        @CustomSerializer(serializer = UpperCaseSer.class)
-        public String bar
-    }
-
-    @Singleton
-    @Bean(typed = UpperCaseSer.class)
-    static class UpperCaseSer implements Serializer<String> {
-        @Override
-        void serialize(Encoder encoder, String value) throws IOException {
-            encoder.encodeString(value.toUpperCase(Locale.ROOT))
-        }
-
-        @Override
-        boolean isEmpty(String value) {
-            return value.isEmpty()
-        }
     }
 }

@@ -16,7 +16,6 @@
 package io.micronaut.inject.ast;
 
 import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
 
 import java.util.Objects;
 
@@ -34,14 +33,6 @@ public interface ParameterElement extends TypedElement {
     @Override
     @NonNull
     ClassElement getType();
-
-    /**
-     * @return The {@link SourceType} of this parameter, as declared in the source code. No substitution of type
-     * variables is performed.
-     */
-    default SourceType getDeclaredSourceType() {
-        throw new UnsupportedOperationException(getClass().getName() + ".getDeclaredSourceType");
-    }
 
     @NonNull
     @Override
@@ -75,15 +66,8 @@ public interface ParameterElement extends TypedElement {
     static @NonNull ParameterElement of(
             @NonNull ClassElement type,
             @NonNull String name) {
-        return of(type, null, name);
-    }
-
-    static @NonNull ParameterElement of(
-            @NonNull ClassElement type,
-            @Nullable SourceType sourceType,
-            @NonNull String name) {
         Objects.requireNonNull(name, "Name cannot be null");
         Objects.requireNonNull(type, "Type cannot be null");
-        return new ReflectParameterElement(type, sourceType, name);
+        return new ReflectParameterElement(type, name);
     }
 }

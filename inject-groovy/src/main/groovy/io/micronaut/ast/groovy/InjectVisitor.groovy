@@ -1217,7 +1217,6 @@ final class InjectVisitor extends ClassCodeVisitorSupport {
                         fieldElement,
                         PrimitiveElement.VOID,
                         PrimitiveElement.VOID,
-                        PrimitiveElement.VOID.rawSourceType,
                         getSetterName(propertyName),
                         parameterElement
                 )
@@ -1271,7 +1270,6 @@ final class InjectVisitor extends ClassCodeVisitorSupport {
                             fieldAnnotationMetadata,
                             PrimitiveElement.VOID,
                             PrimitiveElement.VOID,
-                            PrimitiveElement.VOID.rawSourceType,
                             setterName,
                             parameterElement
                     )
@@ -1301,7 +1299,6 @@ final class InjectVisitor extends ClassCodeVisitorSupport {
                         methodAnnotationMetadata,
                         PrimitiveElement.VOID,
                         PrimitiveElement.VOID,
-                        PrimitiveElement.VOID.rawSourceType,
                         getSetterName(propertyName),
                         parameterElement
                 )
@@ -1315,8 +1312,8 @@ final class InjectVisitor extends ClassCodeVisitorSupport {
                         fieldElement.declaringType,
                         methodAnnotationMetadata,
                         fieldElement.type,
-                        fieldElement.genericType,
-                        fieldElement.declaredSourceType,
+                        fieldElement.genericType
+                        ,
                         getGetterName(propertyNode)
                 )
                 aopWriter.visitAroundMethod(

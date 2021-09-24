@@ -23,7 +23,6 @@ import io.micronaut.annotation.processing.PublicMethodVisitor;
 import io.micronaut.annotation.processing.SuperclassAwareTypeVisitor;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.naming.NameUtils;
 import io.micronaut.core.reflect.ClassUtils;
 import io.micronaut.core.util.StringUtils;
@@ -34,7 +33,6 @@ import io.micronaut.inject.processing.JavaModelUtils;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.*;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.NoType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.util.Elements;
@@ -148,41 +146,6 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
         this.genericTypeInfo = genericsInfo;
         this.arrayDimensions = arrayDimensions;
         this.isTypeVariable = isTypeVariable;
-    }
-
-    @Override
-    public SourceType getRawSourceType() {
-        SourceType type = new SourceType.RawClass() {
-            @Override
-            public ClassElement getClassElement() {
-                return JavaClassElement.this;
-            }
-
-            @NonNull
-            @Override
-            public List<? extends Variable> getTypeVariables() {
-                return classElement.getTypeParameters().stream()
-                        .map(tpe -> new SourceVariableImpl(visitorContext, tpe))
-                        .collect(Collectors.toList());
-            }
-
-            @Nullable
-            @Override
-            public SourceType getSupertype() {
-                TypeMirror superclass = classElement.getSuperclass();
-                return superclass instanceof NoType ? null : typeMirrorToSourceType(superclass);
-            }
-
-            @NonNull
-            @Override
-            public List<? extends SourceType> getInterfaces() {
-                return classElement.getInterfaces().stream().map(JavaClassElement.this::typeMirrorToSourceType).collect(Collectors.toList());
-            }
-        };
-        for (int i = 0; i < getArrayDimensions(); i++) {
-            type = type.createArrayType();
-        }
-        return type;
     }
 
     @Override
@@ -328,7 +291,6 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
                                 BeanPropertyData beanPropertyData = new BeanPropertyData(propertyName);
                                 beanPropertyData.declaringType = JavaClassElement.this;
                                 beanPropertyData.type = mirrorToClassElement(element.asType(), visitorContext, genericTypeInfo, true);
-                                beanPropertyData.sourceType = typeMirrorToSourceType(element.asType());
                                 return beanPropertyData;
                             });
                         }
@@ -396,7 +358,6 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
                             BeanPropertyData beanPropertyData = props.computeIfAbsent(propertyName, BeanPropertyData::new);
                             configureDeclaringType(declaringTypeElement, beanPropertyData);
                             beanPropertyData.type = getterReturnType;
-                            beanPropertyData.sourceType = typeMirrorToSourceType(returnType);
                             beanPropertyData.getter = executableElement;
                             if (beanPropertyData.setter != null) {
                                 TypeMirror typeMirror = beanPropertyData.setter.getParameters().get(0).asType();
@@ -458,7 +419,6 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
                                 annotationMetadata,
                                 propertyName,
                                 value.type,
-                                value.sourceType,
                                 value.setter == null,
                                 visitorContext) {
 
@@ -1144,7 +1104,6 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
      */
     private static class BeanPropertyData {
         ClassElement type;
-        SourceType sourceType;
         ClassElement declaringType;
         ExecutableElement getter;
         ExecutableElement setter;

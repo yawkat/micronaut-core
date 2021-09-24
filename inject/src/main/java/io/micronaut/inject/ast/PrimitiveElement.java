@@ -56,37 +56,6 @@ public final class PrimitiveElement implements ArrayableClassElement {
     }
 
     @Override
-    public SourceType getRawSourceType() {
-        SourceType t = new SourceType.RawClass() {
-            @Override
-            public ClassElement getClassElement() {
-                return PrimitiveElement.this;
-            }
-
-            @NonNull
-            @Override
-            public List<? extends Variable> getTypeVariables() {
-                return Collections.emptyList();
-            }
-
-            @Override
-            public SourceType getSupertype() {
-                return null;
-            }
-
-            @NonNull
-            @Override
-            public List<? extends SourceType> getInterfaces() {
-                return Collections.emptyList();
-            }
-        };
-        for (int i = 0; i < arrayDimensions; i++) {
-            t = t.createArrayType();
-        }
-        return t;
-    }
-
-    @Override
     public boolean isAssignable(String type) {
         return typeName.equals(type);
     }

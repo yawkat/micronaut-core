@@ -32,7 +32,6 @@ import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
 import io.micronaut.inject.ast.ElementModifier;
 import io.micronaut.inject.ast.MemberElement;
-import io.micronaut.inject.ast.SourceType;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.MethodNode;
@@ -416,89 +415,6 @@ public abstract class AbstractGroovyElement implements AnnotationMetadataDelegat
             modifiers.add(ElementModifier.FINAL);
         }
         return modifiers;
-    }
-
-    static SourceType toSourceType(GroovyVisitorContext visitorContext, GenericsType type) {
-        if (type.isWildcard()) {
-            return new SourceType.Wildcard() {
-                @Override
-                public List<? extends SourceType> getUpperBounds() {
-                    return (type.getUpperBounds() == null ? Stream.of(type.getType().redirect()) : Arrays.stream(type.getUpperBounds()))
-                            .map(cn -> toSourceType(visitorContext, cn))
-                            .collect(Collectors.toList());
-                }
-
-                @Override
-                public List<? extends SourceType> getLowerBounds() {
-                    if (type.getLowerBound() == null) {
-                        return Collections.emptyList();
-                    } else {
-                        return Collections.singletonList(toSourceType(visitorContext, type.getLowerBound()));
-                    }
-                }
-            };
-        } else {
-            return toSourceType(visitorContext, type.getType());
-        }
-    }
-
-    static SourceType toSourceType(GroovyVisitorContext visitorContext, ClassNode cn) {
-        if (cn.getComponentType() != null) {
-            // array
-            return toSourceType(visitorContext, cn.getComponentType()).createArrayType();
-        } else if (cn.isGenericsPlaceHolder()) {
-            // type variable
-            return new SourceType.Variable() {
-                @NonNull
-                @Override
-                public Element getDeclaringElement() {
-                    throw new UnsupportedOperationException();
-                }
-
-                @NonNull
-                @Override
-                public String getName() {
-                    return cn.getUnresolvedName();
-                }
-
-                @NonNull
-                @Override
-                public List<? extends SourceType> getBounds() {
-                    // we can only find one bound in this context :(
-                    return Collections.singletonList(toSourceType(visitorContext, cn.redirect()));
-                }
-            };
-        } else {
-            ClassElement rawClassElement = visitorContext.getElementFactory().newClassElement(cn, AstAnnotationUtils.getAnnotationMetadata(visitorContext.getSourceUnit(), visitorContext.getCompilationUnit(), cn));
-            SourceType raw = rawClassElement.getRawSourceType();
-            if (cn.getGenericsTypes() != null && cn.getGenericsTypes().length != 0) {
-                return new SourceType.Parameterized() {
-                    @Nullable
-                    @Override
-                    public SourceType getOuter() {
-                        // parameterized outer classes are apparently not valid in groovy.
-                        return null;
-                    }
-
-                    @NonNull
-                    @Override
-                    public RawClass getRaw() {
-                        // can't be an array, this cast is fine
-                        return (RawClass) raw;
-                    }
-
-                    @NonNull
-                    @Override
-                    public List<? extends SourceType> getParameters() {
-                        return Arrays.stream(cn.getGenericsTypes())
-                                .map(gt -> toSourceType(visitorContext, gt))
-                                .collect(Collectors.toList());
-                    }
-                };
-            } else {
-                return raw;
-            }
-        }
     }
 }
 

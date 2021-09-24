@@ -24,7 +24,6 @@ import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.ElementModifier;
 import io.micronaut.inject.ast.MethodElement;
-import io.micronaut.inject.ast.SourceType;
 import io.micronaut.inject.ast.ParameterElement;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.MethodNode;
@@ -62,11 +61,6 @@ public class GroovyMethodElement extends AbstractGroovyElement implements Method
         this.methodNode = methodNode;
         this.sourceUnit = visitorContext.getSourceUnit();
         this.declaringClass = declaringClass;
-    }
-
-    @Override
-    public SourceType getDeclaredReturnSourceType() {
-        return toSourceType(visitorContext, methodNode.getReturnType());
     }
 
     @Override

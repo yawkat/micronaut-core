@@ -64,23 +64,17 @@ public class GeneratorType {
         if (params.length == 0) {
             ClassElement ele = ClassElement.of(raw);
             return new GeneratorType(ele);
-        }
-
-        Map<String, ClassElement> argMap = new LinkedHashMap<>();
-        List<? extends FreeTypeVariableElement> typeVariables = ClassElement.of(raw).getDeclaredTypeVariables();
-        for (int i = 0; i < typeVariables.size(); i++) {
-            FreeTypeVariableElement variable = typeVariables.get(i);
-            if (params[i] != null) {
-                // concrete type
-                ClassElement element = ClassElement.of(params[i]);
-                argMap.put(variable.getVariableName(), element);
-            } else {
-                // type variable
-                argMap.put(variable.getVariableName(), variable.getBounds().get(0));
+        } else {
+            Type[] paramsMapped = new Type[params.length];
+            for (int i = 0; i < params.length; i++) {
+                if (params[i] != null) {
+                    paramsMapped[i] = params[i];
+                } else {
+                    paramsMapped[i] = raw.getTypeParameters()[i];
+                }
             }
+            return new GeneratorType(ClassElement.of(GenericTypeFactory.makeParameterizedTypeWithOwner(null, raw, paramsMapped)));
         }
-        ClassElement classElement = ClassElement.of(raw, AnnotationMetadata.EMPTY_METADATA, argMap);
-        return new GeneratorType(classElement);
     }
 
     public static GeneratorType fieldType(FieldElement element, Function<ClassElement, ClassElement> fold) {
@@ -153,12 +147,16 @@ public class GeneratorType {
     }
 
     public Map<String, GeneratorType> getTypeArgumentsExact() {
-        Map<String, ClassElement> args = classElement.getTypeArguments();
-        Map<String, GeneratorType> mappedArgs = new LinkedHashMap<>();
-        for (Map.Entry<String, ClassElement> entry : args.entrySet()) {
-            mappedArgs.put(entry.getKey(), new GeneratorType(entry.getValue()));
+        List<? extends ClassElement> boundTypeArguments = classElement.getBoundTypeArguments();
+        List<? extends FreeTypeVariableElement> typeVariables = classElement.getDeclaredTypeVariables();
+        Map<String, GeneratorType> args = new HashMap<>();
+        for (int i = 0; i < typeVariables.size(); i++) {
+            FreeTypeVariableElement typeVariable = typeVariables.get(i);
+            if (i < boundTypeArguments.size()) {
+                args.put(typeVariable.getVariableName(), new GeneratorType(boundTypeArguments.get(i)));
+            }
         }
-        return mappedArgs;
+        return args;
     }
 
     public Optional<Map<String, GeneratorType>> getTypeArgumentsExact(Class<?> forType) {

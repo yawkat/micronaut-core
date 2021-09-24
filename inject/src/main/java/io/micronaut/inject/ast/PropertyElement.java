@@ -33,14 +33,6 @@ public interface PropertyElement extends TypedElement, MemberElement {
     ClassElement getType();
 
     /**
-     * @return The {@link SourceType} of this property, as declared in the source code. No substitution of type
-     * variables is performed.
-     */
-    default SourceType getDeclaredSourceType() {
-        throw new UnsupportedOperationException(getClass().getName() + ".getDeclaredSourceType");
-    }
-
-    /**
      * Return true only if the property has a getter but no setter.
      *
      * @return True if the property is read only.
