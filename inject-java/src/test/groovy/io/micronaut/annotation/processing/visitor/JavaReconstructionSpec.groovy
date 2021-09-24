@@ -305,39 +305,4 @@ interface Sup<$decl> {
         'T'  | 'List<? extends U>' | 'Sup<List<? extends String>>'
         'T'  | 'List<? super U>'   | 'Sup<List<? super String>>'
     }
-
-    def 'getRawClass'() {
-        given:
-        def superElement = buildClassElement("""
-package example;
-
-import java.util.*;
-
-class Sub<U> extends Sup<$params> {
-}
-class Sup<$decl> {
-}
-""").bindTypeArguments([ClassElement.of(String)])
-        def interfaceElement = buildClassElement("""
-package example;
-
-import java.util.*;
-
-class Sub<U> implements Sup<$params> {
-}
-interface Sup<$decl> {
-}
-""").bindTypeArguments([ClassElement.of(String)])
-
-        expect:
-        reconstruct(superElement.getSuperType().get()) == expected
-        reconstruct(interfaceElement.getInterfaces()[0]) == expected
-
-        where:
-        decl | params              | expected
-        'T'  | 'String'            | 'Sup<String>'
-        'T'  | 'List<U>'           | 'Sup<List<String>>'
-        'T'  | 'List<? extends U>' | 'Sup<List<? extends String>>'
-        'T'  | 'List<? super U>'   | 'Sup<List<? super String>>'
-    }
 }
