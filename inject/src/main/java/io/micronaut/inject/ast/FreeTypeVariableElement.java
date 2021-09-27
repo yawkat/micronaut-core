@@ -23,10 +23,12 @@ public interface FreeTypeVariableElement extends ClassElement {
     /**
      * @return The name of this variable.
      */
+    @NonNull
     String getVariableName();
 
     /**
      * @return The element declaring this variable, if it can be determined. Must be either a method or a class.
      */
+    @NonNull
     Optional<Element> getDeclaringElement();
 }

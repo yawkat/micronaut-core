@@ -18,9 +18,6 @@ package io.micronaut.inject.ast;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.AnnotationMetadata;
 
-import java.util.Collections;
-import java.util.List;
-
 public final class PrimitiveElement implements ArrayableClassElement {
 
     public static final PrimitiveElement VOID = new PrimitiveElement("void");
