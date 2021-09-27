@@ -54,9 +54,9 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
 
     protected final TypeElement classElement;
     protected final JavaVisitorContext visitorContext;
+    final List<? extends TypeMirror> typeArguments;
     private final int arrayDimensions;
     private final boolean isTypeVariable;
-    final List<? extends TypeMirror> typeArguments;
     private List<PropertyElement> beanProperties;
     private Map<String, Map<String, TypeMirror>> genericTypeInfo;
     private List<? extends Element> enclosedElements;
@@ -78,6 +78,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
      * @param classElement       The {@link TypeElement}
      * @param annotationMetadata The annotation metadata
      * @param visitorContext     The visitor context
+     * @param typeArguments      The declared type arguments
      * @param genericsInfo       The generic type info
      */
     JavaClassElement(
@@ -93,6 +94,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
      * @param classElement       The {@link TypeElement}
      * @param annotationMetadata The annotation metadata
      * @param visitorContext     The visitor context
+     * @param typeArguments      The declared type arguments
      * @param genericsInfo       The generic type info
      * @param arrayDimensions    The number of array dimensions
      */
@@ -110,6 +112,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
      * @param classElement       The {@link TypeElement}
      * @param annotationMetadata The annotation metadata
      * @param visitorContext     The visitor context
+     * @param typeArguments      The declared type arguments
      * @param genericsInfo       The generic type info
      * @param isTypeVariable     Is the class element a type variable
      */
@@ -127,6 +130,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
      * @param classElement       The {@link TypeElement}
      * @param annotationMetadata The annotation metadata
      * @param visitorContext     The visitor context
+     * @param typeArguments      The declared type arguments
      * @param genericsInfo       The generic type info
      * @param arrayDimensions    The number of array dimensions
      * @param isTypeVariable     Is the type a type variable
