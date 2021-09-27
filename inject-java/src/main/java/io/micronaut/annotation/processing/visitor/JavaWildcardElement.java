@@ -1,5 +1,7 @@
 package io.micronaut.annotation.processing.visitor;
 
+import io.micronaut.core.annotation.NonNull;
+import io.micronaut.inject.ast.ArrayableClassElement;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.WildcardElement;
 
@@ -23,11 +25,13 @@ class JavaWildcardElement extends JavaClassElement implements WildcardElement {
         this.lowerBounds = lowerBounds;
     }
 
+    @NonNull
     @Override
     public List<? extends ClassElement> getUpperBounds() {
         return upperBounds;
     }
 
+    @NonNull
     @Override
     public List<? extends ClassElement> getLowerBounds() {
         return lowerBounds;
@@ -42,10 +46,24 @@ class JavaWildcardElement extends JavaClassElement implements WildcardElement {
     }
 
     @Override
-    public ClassElement foldTypes(Function<ClassElement, ClassElement> fold) {
-        List<JavaClassElement> upperBounds = this.upperBounds.stream().map(ele -> (JavaClassElement) ele.foldTypes(fold)).collect(Collectors.toList());
-        List<JavaClassElement> lowerBounds = this.lowerBounds.stream().map(ele -> (JavaClassElement) ele.foldTypes(fold)).collect(Collectors.toList());
+    public ClassElement foldTypes(@NonNull Function<ClassElement, ClassElement> fold) {
+        List<JavaClassElement> upperBounds = this.upperBounds.stream().map(ele -> toJavaClassElement(ele.foldTypes(fold))).collect(Collectors.toList());
+        List<JavaClassElement> lowerBounds = this.lowerBounds.stream().map(ele -> toJavaClassElement(ele.foldTypes(fold))).collect(Collectors.toList());
         return fold.apply(upperBounds.contains(null) || lowerBounds.contains(null) ? null : new JavaWildcardElement(upperBounds, lowerBounds));
     }
 
+    private JavaClassElement toJavaClassElement(ClassElement element) {
+        if (element instanceof JavaClassElement) {
+            return (JavaClassElement) element;
+        } else {
+            if (element.isWildcard() || element.isFreeTypeVariable()) {
+                throw new UnsupportedOperationException("Cannot convert wildcard / free type variable to JavaClassElement");
+            } else {
+                return (JavaClassElement) ((ArrayableClassElement) visitorContext.getClassElement(element.getName())
+                        .orElseThrow(() -> new UnsupportedOperationException("Cannot convert ClassElement to JavaClassElement, class was not found on the visitor context")))
+                        .withArrayDimensions(element.getArrayDimensions())
+                        .withBoundTypeArguments(element.getBoundTypeArguments());
+            }
+        }
+    }
 }

@@ -63,10 +63,20 @@ public interface ClassElement extends TypedElement {
         return false;
     }
 
+    /**
+     * @see FreeTypeVariableElement
+     * @return Whether this is a free type variable.
+     */
+    @Experimental
     default boolean isFreeTypeVariable() {
         return this instanceof FreeTypeVariableElement;
     }
 
+    /**
+     * @see WildcardElement
+     * @return Whether this is a wildcard.
+     */
+    @Experimental
     default boolean isWildcard() {
         return this instanceof WildcardElement;
     }
@@ -293,28 +303,78 @@ public interface ClassElement extends TypedElement {
         return isArray() || isAssignable(Iterable.class);
     }
 
+    /**
+     * The list of type arguments bound to this type, or an empty list if there are no type arguments or this is a raw
+     * type.
+     * <p>
+     * Note that for compatibility reasons, this method is inconsistent with {@link #getTypeArguments()}. In particular,
+     * this method reflects the <i>declaration</i> type: If there is a {@code class Test<T> { T field; }}, this method
+     * will return {@code T} as the field type, even if the field type was obtained through a {@code Test<String>}.
+     *
+     * @return The list of type arguments, in the same order as {@link #getDeclaredTypeVariables()}. Must be empty or
+     * of the same length as {@link #getDeclaredTypeVariables()}.
+     */
+    @NonNull
     @Experimental
     default List<? extends ClassElement> getBoundTypeArguments() {
         return new ArrayList<>(getTypeArguments().values());
     }
 
+    /**
+     * The type arguments declared on the raw class. Independent of the actual
+     * {@link #getBoundTypeArguments() bound type arguments}.
+     *
+     * @return The type arguments declared on this class.
+     */
+    @NonNull
     @Experimental
     default List<? extends FreeTypeVariableElement> getDeclaredTypeVariables() {
         return Collections.emptyList();
     }
 
+    /**
+     * Get a {@link ClassElement} instance corresponding to this type, but without any type arguments bound. For
+     * {@code List<String>}, this returns {@code List}.
+     *
+     * @return The raw class of this potentially parameterized type.
+     */
+    @NonNull
     @Experimental
     default ClassElement getRawClass() {
+        return withBoundTypeArguments(Collections.emptyList());
+    }
+
+    /**
+     * Get a {@link ClassElement} instance corresponding to this type, but with the given type arguments. This is best
+     * effort – implementations may only support {@link ClassElement}s that come from the same visitor context, and
+     * other {@link ClassElement}s only to a limited degree.
+     *
+     * @param typeArguments The new type arguments.
+     * @return A {@link ClassElement} of the same raw class with the new type arguments.
+     * @throws UnsupportedOperationException If any of the given type arguments are unsupported.
+     */
+    @NonNull
+    @Experimental
+    default ClassElement withBoundTypeArguments(@NonNull List<? extends ClassElement> typeArguments) {
         return this;
     }
 
+    /**
+     * Perform a fold operation on all this type's component types (type arguments, wildcard bounds), and then on this
+     * type. For {@code List<? extends String>}, this returns {@code f(List<f(? extends f(String))>)}. The bounds of
+     * type variables are not folded.
+     * <p>
+     * {@code null} has special meaning here. Returning {@code null} from a fold operation will try to make the
+     * surrounding type a raw type. For example, for {@code Map<String, Object>}, returning {@code null} for the fold
+     * on {@code Object} will lead to the parameterized {@code Map<String, null>} type being replaced by {@code Map}.
+     * <p>
+     * This also means that this method may return {@code null} if the top-level fold operation returned {@code null}.
+     *
+     * @param fold The fold operation to apply recursively to all component types.
+     * @return The folded type.
+     */
     @Experimental
-    default ClassElement bindTypeArguments(List<? extends ClassElement> typeArguments) {
-        return this;
-    }
-
-    @Experimental
-    default ClassElement foldTypes(Function<ClassElement, ClassElement> fold) {
+    default ClassElement foldTypes(@NonNull Function<ClassElement, ClassElement> fold) {
         return fold.apply(this);
     }
 
@@ -437,6 +497,7 @@ public interface ClassElement extends TypedElement {
                 throw new UnsupportedOperationException("Owner types are not supported");
             }
             return new ReflectClassElement(ReflectTypeElement.getErasure(type)) {
+                @NonNull
                 @Override
                 public List<? extends ClassElement> getBoundTypeArguments() {
                     return Arrays.stream(pType.getActualTypeArguments())
@@ -478,6 +539,7 @@ public interface ClassElement extends TypedElement {
                 return Collections.unmodifiableMap(typeArguments);
             }
 
+            @NonNull
             @Override
             public List<? extends ClassElement> getBoundTypeArguments() {
                 return getDeclaredTypeVariables().stream()

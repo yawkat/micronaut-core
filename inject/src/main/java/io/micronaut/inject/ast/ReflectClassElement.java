@@ -78,6 +78,7 @@ class ReflectClassElement extends ReflectTypeElement<Class<?>> {
         return new ReflectClassElement(type.getComponentType());
     }
 
+    @NonNull
     @Override
     public List<? extends FreeTypeVariableElement> getDeclaredTypeVariables() {
         return Arrays.stream(type.getTypeParameters())

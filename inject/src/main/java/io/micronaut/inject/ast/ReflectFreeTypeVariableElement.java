@@ -1,5 +1,7 @@
 package io.micronaut.inject.ast;
 
+import io.micronaut.core.annotation.NonNull;
+
 import java.lang.reflect.GenericDeclaration;
 import java.lang.reflect.TypeVariable;
 import java.util.Arrays;
@@ -25,6 +27,7 @@ class ReflectFreeTypeVariableElement extends ReflectTypeElement<TypeVariable<?>>
         return arrayDimensions;
     }
 
+    @NonNull
     @Override
     public List<? extends ClassElement> getBounds() {
         return Arrays.stream(type.getBounds()).map(ClassElement::of).collect(Collectors.toList());

@@ -1,5 +1,6 @@
 package io.micronaut.annotation.processing.visitor;
 
+import io.micronaut.core.annotation.NonNull;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
 import io.micronaut.inject.ast.FreeTypeVariableElement;
@@ -28,6 +29,7 @@ final class JavaFreeTypeVariableElement extends JavaClassElement implements Free
         this.bounds = bounds;
     }
 
+    @NonNull
     @Override
     public List<? extends ClassElement> getBounds() {
         return bounds;
@@ -53,7 +55,7 @@ final class JavaFreeTypeVariableElement extends JavaClassElement implements Free
     }
 
     @Override
-    public ClassElement foldTypes(Function<ClassElement, ClassElement> fold) {
+    public ClassElement foldTypes(@NonNull Function<ClassElement, ClassElement> fold) {
         return fold.apply(this);
     }
 

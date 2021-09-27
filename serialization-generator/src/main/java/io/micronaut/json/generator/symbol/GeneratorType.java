@@ -18,8 +18,6 @@ package io.micronaut.json.generator.symbol;
 import com.squareup.javapoet.*;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
 import io.micronaut.json.GenericTypeFactory;
 import io.micronaut.inject.ast.*;
 
@@ -53,7 +51,7 @@ public class GeneratorType {
 
     public static GeneratorType ofClass(ClassElement raw) {
         if (raw.getBoundTypeArguments().isEmpty()) {
-            raw = raw.bindTypeArguments(raw.getDeclaredTypeVariables());
+            raw = raw.withBoundTypeArguments(raw.getDeclaredTypeVariables());
         }
         return new GeneratorType(raw);
     }

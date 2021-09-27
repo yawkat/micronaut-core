@@ -22,8 +22,8 @@ class Supsup<T extends Iterable<?>> {
 
         expect:
         reconstruct(ClassElementUtil.findParameterization(element, baseRawClass).get()) == 'Supsup<List<List>>'
-        reconstruct(ClassElementUtil.findParameterization(element.bindTypeArguments(element.declaredTypeVariables), baseRawClass).get()) == 'Supsup<List<List<U>>>'
-        reconstruct(ClassElementUtil.findParameterization(element.bindTypeArguments([ClassElement.of(String)]), baseRawClass).get()) == 'Supsup<List<List<String>>>'
+        reconstruct(ClassElementUtil.findParameterization(element.withBoundTypeArguments(element.declaredTypeVariables), baseRawClass).get()) == 'Supsup<List<List<U>>>'
+        reconstruct(ClassElementUtil.findParameterization(element.withBoundTypeArguments([ClassElement.of(String)]), baseRawClass).get()) == 'Supsup<List<List<String>>>'
     }
 
     def 'findParameterization wildcard'() {
@@ -44,7 +44,7 @@ class Supsup<T extends Iterable<?>> {
 
         expect:
         reconstruct(ClassElementUtil.findParameterization(element, baseRawClass).get()) == 'Supsup<List<? extends List>>'
-        reconstruct(ClassElementUtil.findParameterization(element.bindTypeArguments(element.declaredTypeVariables), baseRawClass).get()) == 'Supsup<List<? extends List<? super U>>>'
-        reconstruct(ClassElementUtil.findParameterization(element.bindTypeArguments([ClassElement.of(String)]), baseRawClass).get()) == 'Supsup<List<? extends List<? super String>>>'
+        reconstruct(ClassElementUtil.findParameterization(element.withBoundTypeArguments(element.declaredTypeVariables), baseRawClass).get()) == 'Supsup<List<? extends List<? super U>>>'
+        reconstruct(ClassElementUtil.findParameterization(element.withBoundTypeArguments([ClassElement.of(String)]), baseRawClass).get()) == 'Supsup<List<? extends List<? super String>>>'
     }
 }

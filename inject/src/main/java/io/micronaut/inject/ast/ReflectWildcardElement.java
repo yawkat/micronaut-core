@@ -24,11 +24,13 @@ class ReflectWildcardElement extends ReflectTypeElement<WildcardType> implements
         throw new UnsupportedOperationException();
     }
 
+    @NonNull
     @Override
     public List<? extends ClassElement> getUpperBounds() {
         return Arrays.stream(type.getUpperBounds()).map(ClassElement::of).collect(Collectors.toList());
     }
 
+    @NonNull
     @Override
     public List<? extends ClassElement> getLowerBounds() {
         return Arrays.stream(type.getLowerBounds()).map(ClassElement::of).collect(Collectors.toList());

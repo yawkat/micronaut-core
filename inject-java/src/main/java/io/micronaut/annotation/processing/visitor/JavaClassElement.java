@@ -927,6 +927,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
         });
     }
 
+    @NonNull
     @Override
     public List<ClassElement> getBoundTypeArguments() {
         return typeArguments.stream()
@@ -935,6 +936,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
                 .collect(Collectors.toList());
     }
 
+    @NonNull
     @Override
     public List<? extends FreeTypeVariableElement> getDeclaredTypeVariables() {
         return classElement.getTypeParameters().stream()
@@ -943,6 +945,7 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
                 .collect(Collectors.toList());
     }
 
+    @NonNull
     @Override
     public ClassElement getRawClass() {
         return visitorContext.getElementFactory().newClassElement(classElement, visitorContext.getAnnotationUtils().getAnnotationMetadata(classElement))
@@ -986,8 +989,9 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
         }
     }
 
+    @NonNull
     @Override
-    public ClassElement bindTypeArguments(List<? extends ClassElement> typeArguments) {
+    public ClassElement withBoundTypeArguments(@NonNull List<? extends ClassElement> typeArguments) {
         if (typeArguments.isEmpty() && this.typeArguments.isEmpty()) {
             return this;
         }
@@ -1011,12 +1015,12 @@ public class JavaClassElement extends AbstractJavaElement implements ArrayableCl
     }
 
     @Override
-    public ClassElement foldTypes(Function<ClassElement, ClassElement> fold) {
+    public ClassElement foldTypes(@NonNull Function<ClassElement, ClassElement> fold) {
         List<ClassElement> typeArgs = getBoundTypeArguments().stream().map(arg -> arg.foldTypes(fold)).collect(Collectors.toList());
         if (typeArgs.contains(null)) {
             typeArgs = Collections.emptyList();
         }
-        return fold.apply(bindTypeArguments(typeArgs));
+        return fold.apply(withBoundTypeArguments(typeArgs));
     }
 
     @Override
