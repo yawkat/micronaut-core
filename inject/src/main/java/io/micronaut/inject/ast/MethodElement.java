@@ -44,6 +44,13 @@ public interface MethodElement extends MemberElement {
     }
 
     /**
+     * @return The type arguments declared on this method.
+     */
+    default List<? extends GenericPlaceholderElement> getDeclaredTypeVariables() {
+        return Collections.emptyList();
+    }
+
+    /**
      * @return The method parameters
      */
     @NonNull ParameterElement[] getParameters();
