@@ -1,7 +1,7 @@
 package io.micronaut.json.generator.symbol;
 
 import io.micronaut.inject.ast.ClassElement;
-import io.micronaut.inject.ast.FreeTypeVariableElement;
+import io.micronaut.inject.ast.GenericPlaceholderElement;
 
 import java.io.Serializable;
 import java.util.List;
@@ -37,15 +37,15 @@ class ClassElementUtil {
                 if (parent.isInterface()) {
                     superCandidates = Stream.concat(superCandidates, element.getInterfaces().stream());
                 }
-                List<? extends FreeTypeVariableElement> declaredTypeVariables = element.getDeclaredTypeVariables();
+                List<? extends GenericPlaceholderElement> declaredTypeVariables = element.getDeclaredGenericPlaceholders();
                 if (!declaredTypeVariables.isEmpty()) {
-                    List<? extends ClassElement> boundTypeArguments = element.getBoundTypeArguments();
+                    List<? extends ClassElement> boundTypeArguments = element.getBoundGenericTypes();
                     // replace any free variables in the supertypes with our bound variables
-                    superCandidates = superCandidates.map(sup -> sup.foldTypes(type -> {
-                        if (type == null || !type.isFreeTypeVariable()) {
+                    superCandidates = superCandidates.map(sup -> sup.foldBoundGenericTypes(type -> {
+                        if (type == null || !type.isGenericPlaceholder()) {
                             return type;
                         }
-                        FreeTypeVariableElement variable = (FreeTypeVariableElement) type;
+                        GenericPlaceholderElement variable = (GenericPlaceholderElement) type;
                         // is the variable actually declared on our class?
                         Optional<io.micronaut.inject.ast.Element> declaringElement = variable.getDeclaringElement();
                         if (!declaringElement.isPresent() || !(declaringElement.get() instanceof ClassElement) || !declaringElement.get().getName().equals(element.getName())) {
@@ -53,7 +53,7 @@ class ClassElementUtil {
                         }
                         // find a declared variable of that name
                         for (int i = 0; i < declaredTypeVariables.size(); i++) {
-                            FreeTypeVariableElement candidate = declaredTypeVariables.get(i);
+                            GenericPlaceholderElement candidate = declaredTypeVariables.get(i);
                             if (candidate.getVariableName().equals(variable.getVariableName())) {
                                 // found, replace it with our bound value
                                 if (i < boundTypeArguments.size()) {

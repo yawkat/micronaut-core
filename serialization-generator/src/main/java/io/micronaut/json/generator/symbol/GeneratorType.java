@@ -50,8 +50,8 @@ public class GeneratorType {
     }
 
     public static GeneratorType ofClass(ClassElement raw) {
-        if (raw.getBoundTypeArguments().isEmpty()) {
-            raw = raw.withBoundTypeArguments(raw.getDeclaredTypeVariables());
+        if (raw.getBoundGenericTypes().isEmpty()) {
+            raw = raw.withBoundGenericTypes(raw.getDeclaredGenericPlaceholders());
         }
         return new GeneratorType(raw);
     }
@@ -76,15 +76,15 @@ public class GeneratorType {
     }
 
     public static GeneratorType fieldType(FieldElement element, Function<ClassElement, ClassElement> fold) {
-        return new GeneratorType(element.getType().foldTypes(fold));
+        return new GeneratorType(element.getType().foldBoundGenericTypes(fold));
     }
 
     public static GeneratorType methodReturnType(MethodElement element, Function<ClassElement, ClassElement> fold) {
-        return new GeneratorType(element.getGenericReturnType().foldTypes(fold));
+        return new GeneratorType(element.getGenericReturnType().foldBoundGenericTypes(fold));
     }
 
     public static GeneratorType parameterType(ParameterElement element, Function<ClassElement, ClassElement> fold) {
-        return new GeneratorType(element.getGenericType().foldTypes(fold));
+        return new GeneratorType(element.getGenericType().foldBoundGenericTypes(fold));
     }
 
     public ClassElement getClassElement() {
@@ -92,21 +92,21 @@ public class GeneratorType {
     }
 
     public AnnotationMetadata getClassLevelAnnotations() {
-        return classElement.getRawClass();
+        return classElement.getRawClassElement();
     }
 
-    public Collection<FreeTypeVariableElement> getFreeVariables() {
-        Map<String, FreeTypeVariableElement> freeVariables = new HashMap<>();
+    public Collection<GenericPlaceholderElement> getFreeVariables() {
+        Map<String, GenericPlaceholderElement> freeVariables = new HashMap<>();
         getFreeVariables(freeVariables, classElement);
         return freeVariables.values();
     }
 
-    private static void getFreeVariables(Map<String, FreeTypeVariableElement> freeVariables, ClassElement type) {
+    private static void getFreeVariables(Map<String, GenericPlaceholderElement> freeVariables, ClassElement type) {
         while (type.isArray()) {
             type = type.fromArray();
         }
-        if (type.isFreeTypeVariable()) {
-            freeVariables.put(((FreeTypeVariableElement) type).getVariableName(), (FreeTypeVariableElement) type);
+        if (type.isGenericPlaceholder()) {
+            freeVariables.put(((GenericPlaceholderElement) type).getVariableName(), (GenericPlaceholderElement) type);
         } else if (type.isWildcard()) {
             for (ClassElement bound : ((WildcardElement) type).getUpperBounds()) {
                 getFreeVariables(freeVariables, bound);
@@ -115,14 +115,14 @@ public class GeneratorType {
                 getFreeVariables(freeVariables, bound);
             }
         } else {
-            for (ClassElement arg : type.getBoundTypeArguments()) {
+            for (ClassElement arg : type.getBoundGenericTypes()) {
                 getFreeVariables(freeVariables, arg);
             }
         }
     }
 
     public ClassElement getRawClass() {
-        return classElement.getRawClass();
+        return classElement.getRawClassElement();
     }
 
     public boolean isArray() {
@@ -145,11 +145,11 @@ public class GeneratorType {
     }
 
     public Map<String, GeneratorType> getTypeArgumentsExact() {
-        List<? extends ClassElement> boundTypeArguments = classElement.getBoundTypeArguments();
-        List<? extends FreeTypeVariableElement> typeVariables = classElement.getDeclaredTypeVariables();
+        List<? extends ClassElement> boundTypeArguments = classElement.getBoundGenericTypes();
+        List<? extends GenericPlaceholderElement> typeVariables = classElement.getDeclaredGenericPlaceholders();
         Map<String, GeneratorType> args = new HashMap<>();
         for (int i = 0; i < typeVariables.size(); i++) {
-            FreeTypeVariableElement typeVariable = typeVariables.get(i);
+            GenericPlaceholderElement typeVariable = typeVariables.get(i);
             if (i < boundTypeArguments.size()) {
                 args.put(typeVariable.getVariableName(), new GeneratorType(boundTypeArguments.get(i)));
             }
@@ -179,13 +179,13 @@ public class GeneratorType {
     }
 
     private static Function<ClassElement, ClassElement> typeParametersAsFoldFunction0(ClassElement t) {
-        List<? extends ClassElement> boundTypeArguments = t.getBoundTypeArguments();
-        List<? extends FreeTypeVariableElement> variables = t.getDeclaredTypeVariables();
+        List<? extends ClassElement> boundTypeArguments = t.getBoundGenericTypes();
+        List<? extends GenericPlaceholderElement> variables = t.getDeclaredGenericPlaceholders();
         return type -> {
-            if (type.isFreeTypeVariable()) {
+            if (type.isGenericPlaceholder()) {
                 // note: for groovy, MnType.Variable.equals breaks, so we just compare names
                 for (int i = 0; i < variables.size(); i++) {
-                    if (variables.get(i).getVariableName().equals(((FreeTypeVariableElement) type).getVariableName())) {
+                    if (variables.get(i).getVariableName().equals(((GenericPlaceholderElement) type).getVariableName())) {
                         if (boundTypeArguments.size() <= i) {
                             return null;
                         } else {
@@ -217,10 +217,10 @@ public class GeneratorType {
     private static boolean typesEqual(ClassElement a, ClassElement b) {
         if (a.isArray()) {
             return b.isArray() && typesEqual(a.fromArray(), b.fromArray());
-        } else if (a.isFreeTypeVariable()) {
-            if (b.isFreeTypeVariable()) {
-                FreeTypeVariableElement ftva = (FreeTypeVariableElement) a;
-                FreeTypeVariableElement ftvb = (FreeTypeVariableElement) b;
+        } else if (a.isGenericPlaceholder()) {
+            if (b.isGenericPlaceholder()) {
+                GenericPlaceholderElement ftva = (GenericPlaceholderElement) a;
+                GenericPlaceholderElement ftvb = (GenericPlaceholderElement) b;
                 if (ftva.getVariableName().equals(ftvb.getVariableName())) {
                     Optional<Element> declaringA = ftva.getDeclaringElement();
                     Optional<Element> declaringB = ftvb.getDeclaringElement();
@@ -240,7 +240,7 @@ public class GeneratorType {
                     typesEqual(((WildcardElement) a).getLowerBounds(), ((WildcardElement) b).getLowerBounds());
         } else {
             return a.getName().equals(b.getName()) &&
-                    typesEqual(a.getBoundTypeArguments(), b.getBoundTypeArguments());
+                    typesEqual(a.getBoundGenericTypes(), b.getBoundGenericTypes());
         }
     }
 
@@ -277,14 +277,14 @@ public class GeneratorType {
                     GenericTypeFactory.class,
                     Type.class, toRuntimeFactoryVarargs(((WildcardElement) type).getUpperBounds(), false, variableResolve),
                     Type.class, toRuntimeFactoryVarargs(((WildcardElement) type).getLowerBounds(), false, variableResolve));
-        } else if (type.isFreeTypeVariable()) {
-            return variableResolve.apply(((FreeTypeVariableElement) type).getVariableName());
+        } else if (type.isGenericPlaceholder()) {
+            return variableResolve.apply(((GenericPlaceholderElement) type).getVariableName());
         } else {
-            CodeBlock block = CodeBlock.of("$T.class", PoetUtil.toTypeName(type.getRawClass()));
-            if (!type.getBoundTypeArguments().isEmpty()) {
+            CodeBlock block = CodeBlock.of("$T.class", PoetUtil.toTypeName(type.getRawClassElement()));
+            if (!type.getBoundGenericTypes().isEmpty()) {
                 block = CodeBlock.of("$T.makeParameterizedTypeWithOwner(null, $L$L)",
                         GenericTypeFactory.class, block,
-                        toRuntimeFactoryVarargs(type.getBoundTypeArguments(), true, variableResolve));
+                        toRuntimeFactoryVarargs(type.getBoundGenericTypes(), true, variableResolve));
             }
             return block;
         }

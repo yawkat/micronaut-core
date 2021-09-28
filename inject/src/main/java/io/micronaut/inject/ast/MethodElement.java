@@ -39,10 +39,6 @@ public interface MethodElement extends MemberElement {
     @NonNull
     ClassElement getReturnType();
 
-    default List<? extends FreeTypeVariableElement> getDeclaredTypeVariables() {
-        return Collections.emptyList();
-    }
-
     /**
      * @return The type arguments declared on this method.
      */

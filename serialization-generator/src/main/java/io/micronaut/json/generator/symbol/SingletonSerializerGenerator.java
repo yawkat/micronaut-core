@@ -23,7 +23,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
-import io.micronaut.inject.ast.FreeTypeVariableElement;
+import io.micronaut.inject.ast.GenericPlaceholderElement;
 import io.micronaut.json.Decoder;
 import io.micronaut.json.Deserializer;
 import io.micronaut.json.Encoder;
@@ -219,14 +219,14 @@ public final class SingletonSerializerGenerator {
         }
 
         // add type parameters if necessary
-        List<FreeTypeVariableElement> freeVariables = new ArrayList<>(valueType.getFreeVariables());
-        for (FreeTypeVariableElement typeVariable : freeVariables) {
+        List<GenericPlaceholderElement> freeVariables = new ArrayList<>(valueType.getFreeVariables());
+        for (GenericPlaceholderElement typeVariable : freeVariables) {
             builder.addTypeVariable(TypeVariableName.get(
                     typeVariable.getVariableName(),
                     typeVariable.getBounds().stream().map(PoetUtil::toTypeName).toArray(TypeName[]::new)
             ));
         }
-        List<String> freeVariableNames = freeVariables.stream().map(FreeTypeVariableElement::getVariableName).collect(Collectors.toList());
+        List<String> freeVariableNames = freeVariables.stream().map(GenericPlaceholderElement::getVariableName).collect(Collectors.toList());
 
         TypeSpec.Builder factoryType = TypeSpec.classBuilder("FactoryImpl")
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)

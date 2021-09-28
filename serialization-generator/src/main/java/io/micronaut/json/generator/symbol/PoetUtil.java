@@ -18,7 +18,7 @@ package io.micronaut.json.generator.symbol;
 import com.squareup.javapoet.*;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.inject.ast.ClassElement;
-import io.micronaut.inject.ast.FreeTypeVariableElement;
+import io.micronaut.inject.ast.GenericPlaceholderElement;
 import io.micronaut.inject.ast.PrimitiveElement;
 import io.micronaut.inject.ast.WildcardElement;
 
@@ -37,8 +37,8 @@ public final class PoetUtil {
 
     public static TypeName toTypeName(ClassElement clazz) {
         TypeName className;
-        if (clazz.isFreeTypeVariable()) {
-            className = TypeVariableName.get(((FreeTypeVariableElement) clazz).getVariableName());
+        if (clazz.isGenericPlaceholder()) {
+            className = TypeVariableName.get(((GenericPlaceholderElement) clazz).getVariableName());
         } else if (clazz.isWildcard()) {
             List<TypeName> lower = ((WildcardElement) clazz).getLowerBounds().stream().map(PoetUtil::toTypeName).collect(Collectors.toList());
             List<TypeName> upper = ((WildcardElement) clazz).getUpperBounds().stream().map(PoetUtil::toTypeName).collect(Collectors.toList());
@@ -85,7 +85,7 @@ public final class PoetUtil {
             if (clazz.getName().equals("<any>")) {
                 throw new IllegalArgumentException("Type resolution error?");
             }
-            List<? extends ClassElement> typeArguments = clazz.getBoundTypeArguments();
+            List<? extends ClassElement> typeArguments = clazz.getBoundGenericTypes();
             if (!typeArguments.isEmpty() && !clazz.isArray() && !clazz.isPrimitive()) {
                 className = ParameterizedTypeName.get(
                         (ClassName) className,

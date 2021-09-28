@@ -242,7 +242,7 @@ abstract class DeserializationEntity {
             }
             AnySetterAsMap anySetterAsMap;
             if (def.anySetter != null) {
-                ClassElement context = def.anySetter.getDeclaringType().getRawClass();
+                ClassElement context = def.anySetter.getDeclaringType().getRawClassElement();
                 GeneratorType keyType = GeneratorType.parameterType(def.anySetter.getParameters()[0], type.typeParametersAsFoldFunction(context));
                 GeneratorType valueType = GeneratorType.parameterType(def.anySetter.getParameters()[1], type.typeParametersAsFoldFunction(context));
                 if (!keyType.isRawTypeEquals(String.class)) {

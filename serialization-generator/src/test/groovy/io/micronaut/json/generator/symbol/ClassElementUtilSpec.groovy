@@ -18,12 +18,12 @@ class Sup<U> extends Supsup<List<U>> {
 class Supsup<T extends Iterable<?>> {
 }
 """)
-        def baseRawClass = element.superType.get().superType.get().rawClass
+        def baseRawClass = element.superType.get().superType.get().rawClassElement
 
         expect:
-        reconstruct(ClassElementUtil.findParameterization(element, baseRawClass).get()) == 'Supsup<List<List>>'
-        reconstruct(ClassElementUtil.findParameterization(element.withBoundTypeArguments(element.declaredTypeVariables), baseRawClass).get()) == 'Supsup<List<List<U>>>'
-        reconstruct(ClassElementUtil.findParameterization(element.withBoundTypeArguments([ClassElement.of(String)]), baseRawClass).get()) == 'Supsup<List<List<String>>>'
+        reconstructTypeSignature(ClassElementUtil.findParameterization(element, baseRawClass).get()) == 'Supsup<List<List>>'
+        reconstructTypeSignature(ClassElementUtil.findParameterization(element.withBoundGenericTypes(element.declaredGenericPlaceholders), baseRawClass).get()) == 'Supsup<List<List<U>>>'
+        reconstructTypeSignature(ClassElementUtil.findParameterization(element.withBoundGenericTypes([ClassElement.of(String)]), baseRawClass).get()) == 'Supsup<List<List<String>>>'
     }
 
     def 'findParameterization wildcard'() {
@@ -40,11 +40,11 @@ class Sup<U> extends Supsup<List<? extends U>> {
 class Supsup<T extends Iterable<?>> {
 }
 """)
-        def baseRawClass = element.superType.get().superType.get().rawClass
+        def baseRawClass = element.superType.get().superType.get().rawClassElement
 
         expect:
-        reconstruct(ClassElementUtil.findParameterization(element, baseRawClass).get()) == 'Supsup<List<? extends List>>'
-        reconstruct(ClassElementUtil.findParameterization(element.withBoundTypeArguments(element.declaredTypeVariables), baseRawClass).get()) == 'Supsup<List<? extends List<? super U>>>'
-        reconstruct(ClassElementUtil.findParameterization(element.withBoundTypeArguments([ClassElement.of(String)]), baseRawClass).get()) == 'Supsup<List<? extends List<? super String>>>'
+        reconstructTypeSignature(ClassElementUtil.findParameterization(element, baseRawClass).get()) == 'Supsup<List<? extends List>>'
+        reconstructTypeSignature(ClassElementUtil.findParameterization(element.withBoundGenericTypes(element.declaredGenericPlaceholders), baseRawClass).get()) == 'Supsup<List<? extends List<? super U>>>'
+        reconstructTypeSignature(ClassElementUtil.findParameterization(element.withBoundGenericTypes([ClassElement.of(String)]), baseRawClass).get()) == 'Supsup<List<? extends List<? super String>>>'
     }
 }
