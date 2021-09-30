@@ -1312,8 +1312,7 @@ final class InjectVisitor extends ClassCodeVisitorSupport {
                         fieldElement.declaringType,
                         methodAnnotationMetadata,
                         fieldElement.type,
-                        fieldElement.genericType
-                        ,
+                        fieldElement.genericType,
                         getGetterName(propertyNode)
                 )
                 aopWriter.visitAroundMethod(

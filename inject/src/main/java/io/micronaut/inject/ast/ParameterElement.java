@@ -16,7 +16,6 @@
 package io.micronaut.inject.ast;
 
 import io.micronaut.core.annotation.NonNull;
-
 import java.util.Objects;
 
 /**
