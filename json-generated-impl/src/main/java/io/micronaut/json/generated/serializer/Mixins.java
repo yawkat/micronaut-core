@@ -2,6 +2,7 @@ package io.micronaut.json.generated.serializer;
 
 import io.micronaut.health.HealthStatus;
 import io.micronaut.http.MediaType;
+import io.micronaut.http.cookie.SameSite;
 import io.micronaut.http.hateoas.DefaultLink;
 import io.micronaut.http.hateoas.JsonError;
 import io.micronaut.http.hateoas.Link;
@@ -21,6 +22,7 @@ import java.lang.management.ThreadInfo;
 @SerializationMixin(forClass = MonitorInfo.class, config = @SerializableBean(allowDeserialization = false))
 @SerializationMixin(forClass = LockInfo.class, config = @SerializableBean(allowDeserialization = false))
 @SerializationMixin(forClass = LogLevel.class)
+@SerializationMixin(forClass = SameSite.class)
 @SerializationMixin(forClass = MediaType.class, config = @SerializableBean(allowDeserialization = false))
 class Mixins {
 }
