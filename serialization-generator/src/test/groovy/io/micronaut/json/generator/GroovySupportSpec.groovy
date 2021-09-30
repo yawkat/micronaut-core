@@ -1,12 +1,10 @@
 package io.micronaut.json.generator
 
 import io.micronaut.ast.transform.test.AbstractBeanDefinitionSpec
-import io.micronaut.context.ApplicationContext
-import io.micronaut.core.type.Argument
+import io.micronaut.json.Deserializer
 import io.micronaut.json.Serializer
-import spock.lang.Specification
 
-class GroovySupportSpec extends AbstractBeanDefinitionSpec {
+class GroovySupportSpec extends AbstractBeanDefinitionSpec implements SerializerUtils {
     def test() {
         when:
         def cl = buildClassLoader('''
@@ -84,5 +82,23 @@ class Bean {
 
         then:
         context.getBeansOfType(Serializer.Factory).any { it.genericType == context.classLoader.loadClass("example.Bean") }
+    }
+
+    def 'unmarked field is considered'() {
+        given:
+        def cl = buildClassLoader('''
+package example
+
+import io.micronaut.json.annotation.SerializableBean
+
+@SerializableBean
+class Bean {
+    String foo
+}
+''')
+        def deserializer = (Deserializer) cl.loadClass('example.$Bean$Deserializer').newInstance()
+
+        expect:
+        deserializeFromString(deserializer, '{"foo":"bar"}').foo == 'bar'
     }
 }

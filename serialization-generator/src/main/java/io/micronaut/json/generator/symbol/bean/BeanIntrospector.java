@@ -16,6 +16,7 @@
 package io.micronaut.json.generator.symbol.bean;
 
 import com.fasterxml.jackson.annotation.*;
+import io.micronaut.ast.groovy.visitor.GroovyVisitorContext;
 import io.micronaut.core.annotation.AnnotatedElement;
 import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
@@ -30,6 +31,7 @@ import io.micronaut.inject.ast.FieldElement;
 import io.micronaut.inject.ast.MemberElement;
 import io.micronaut.inject.ast.MethodElement;
 import io.micronaut.inject.ast.ParameterElement;
+import io.micronaut.inject.ast.PropertyElement;
 import io.micronaut.inject.visitor.VisitorContext;
 import io.micronaut.json.annotation.CustomSerializer;
 import io.micronaut.json.annotation.RecursiveSerialization;
@@ -69,6 +71,11 @@ class BeanIntrospector {
         }
 
         Scanner scanner = new Scanner(problemReporter, forSerialization);
+        try {
+            scanner.groovyContext = context instanceof GroovyVisitorContext;
+        } catch (NoClassDefFoundError e) {
+            scanner.groovyContext = false;
+        }
         scanner.scan(clazz, annotationMetadata);
         Map<PropBuilder, BeanDefinition.Property> completeProps = new LinkedHashMap<>();
         for (PropBuilder prop : scanner.byName.values()) {
@@ -222,6 +229,8 @@ class BeanIntrospector {
     private static class Scanner {
         final ProblemReporter problemReporter;
         final boolean forSerialization;
+
+        boolean groovyContext;
 
         final Map<String, PropBuilder> byImplicitName = new LinkedHashMap<>();
         Map<String, PropBuilder> byName;
@@ -418,6 +427,25 @@ class BeanIntrospector {
                         PropBuilder prop = getByImplicitName(implicitName);
                         prop.setter = makeAccessor(method, implicitName);
                     }
+                }
+            }
+
+            // in java, properties are handled through method scanning. Groovy properties are different.
+            if (groovyContext) {
+                for (PropertyElement beanProperty : clazz.getBeanProperties()) {
+                    String implicitName = beanProperty.getName();
+                    beanProperty.getReadMethod().ifPresent(getter -> {
+                        if (hasPropertyAnnotation(getter) || hasPropertyAnnotation(beanProperty) ||
+                                isVisibleForAutoDetect(getter, getterVisibility)) {
+                            getByImplicitName(implicitName).getter = makeAccessor(getter, implicitName);
+                        }
+                    });
+                    beanProperty.getWriteMethod().ifPresent(setter -> {
+                        if (hasPropertyAnnotation(setter) || hasPropertyAnnotation(beanProperty) ||
+                                isVisibleForAutoDetect(setter, getterVisibility)) {
+                            getByImplicitName(implicitName).setter = makeAccessor(setter, implicitName);
+                        }
+                    });
                 }
             }
 
