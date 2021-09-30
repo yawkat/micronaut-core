@@ -1,19 +1,67 @@
-package io.micronaut.annotation.processing.visitor
+package io.micronaut.ast.groovy.visitor
 
-import io.micronaut.annotation.processing.test.AbstractTypeElementSpec
+import io.micronaut.ast.transform.test.AbstractBeanDefinitionSpec
+import io.micronaut.core.annotation.Experimental
 import io.micronaut.inject.ast.ClassElement
 import io.micronaut.inject.ast.ElementQuery
 import io.micronaut.inject.ast.GenericPlaceholderElement
 import io.micronaut.inject.ast.MethodElement
+import io.micronaut.inject.ast.WildcardElement
 import spock.lang.PendingFeature
 import spock.lang.Unroll
+
+import java.util.stream.Collectors
 
 /**
  * These tests are based on a {@link #reconstructTypeSignature} method that looks at {@link ClassElement#getBoundGenericTypes()}
  * to transform a {@link ClassElement} back to its string representation. This way, we can easily check what
  * {@link ClassElement}s returned by various methods look like.
  */
-class JavaReconstructionSpec extends AbstractTypeElementSpec {
+class GroovyReconstructionSpec extends AbstractBeanDefinitionSpec {
+
+    /**
+     * Create a rough source signature of the given ClassElement, using {@link ClassElement#getBoundGenericTypes()}.
+     * Can be used to test that {@link ClassElement#getBoundGenericTypes()} returns the right types in the right
+     * context.
+     *
+     * @param classElement The class element to reconstruct
+     * @param typeVarsAsDeclarations Whether type variables should be represented as declarations
+     * @return a String representing the type signature.
+     */
+    @Experimental
+    protected static String reconstructTypeSignature(ClassElement classElement, boolean typeVarsAsDeclarations = false) {
+        if (classElement.isArray()) {
+            return reconstructTypeSignature(classElement.fromArray()) + "[]"
+        } else if (classElement.isGenericPlaceholder()) {
+            def freeVar = (GenericPlaceholderElement) classElement
+            def name = freeVar.variableName
+            if (typeVarsAsDeclarations) {
+                def bounds = freeVar.bounds
+                if (reconstructTypeSignature(bounds[0]) != 'Object') {
+                    name += bounds.stream().map(GroovyReconstructionSpec::reconstructTypeSignature).collect(Collectors.joining(" & ", " extends ", ""))
+                }
+            }
+            return name
+        } else if (classElement.isWildcard()) {
+            def we = (WildcardElement) classElement
+            if (!we.lowerBounds.isEmpty()) {
+                return we.lowerBounds.stream().map(GroovyReconstructionSpec::reconstructTypeSignature).collect(Collectors.joining(" | ", "? super ", ""))
+            } else if (we.upperBounds.size() == 1 && reconstructTypeSignature(we.upperBounds.get(0)) == "Object") {
+                return "?"
+            } else {
+                return we.upperBounds.stream().map(GroovyReconstructionSpec::reconstructTypeSignature).collect(Collectors.joining(" & ", "? extends ", ""))
+            }
+        } else {
+            def boundTypeArguments = classElement.getBoundGenericTypes()
+            if (boundTypeArguments.isEmpty()) {
+                return classElement.getSimpleName()
+            } else {
+                return classElement.getSimpleName() +
+                        boundTypeArguments.stream().map(GroovyReconstructionSpec::reconstructTypeSignature).collect(Collectors.joining(", ", "<", ">"))
+            }
+        }
+    }
+
     @Unroll("field type is #fieldType")
     def 'field type'() {
         given:
@@ -209,14 +257,15 @@ package example;
 
 import java.util.*;
 
-class Wrapper {
-    Test<String> test;
-}
 class Test<T> {
     $fieldType field;
 }
+class Wrapper {
+    Test<String> test;
+}
 """)
-        def field = element.getFields()[0].genericType.getFields()[0]
+        def field = element.getEnclosedElement(ElementQuery.ALL_FIELDS.named(s -> s == 'test')).get()
+                .genericType.getEnclosedElement(ElementQuery.ALL_FIELDS.named(s -> s == 'field')).get()
 
         expect:
         reconstructTypeSignature(field.genericType) == expectedType
@@ -244,14 +293,14 @@ package example;
 
 import java.util.*;
 
-class Wrapper<U> {
-    Test<U> test;
-}
 class Test<T> {
     $fieldType field;
 }
+class Wrapper<U> {
+    Test<U> test;
+}
 """)
-        def field = element.getFields()[0].genericType.getFields()[0]
+        def field = element.getFields()[0].genericType.getEnclosedElement(ElementQuery.ALL_FIELDS.named(s -> s == 'field')).get()
 
         expect:
         reconstructTypeSignature(field.genericType) == expectedType
@@ -278,14 +327,15 @@ package example;
 
 import java.util.*;
 
-class Wrapper<U> {
-    Test<U> test;
-}
 class Test<T> {
     $fieldType field;
 }
+class Wrapper<U> {
+    Test<U> test;
+}
 """)
-        def field = element.getFields()[0].genericType.getFields()[0]
+        def field = element.getEnclosedElement(ElementQuery.ALL_FIELDS.named(s -> s == 'test')).get()
+                .genericType.getEnclosedElement(ElementQuery.ALL_FIELDS.named(s -> s == 'field')).get()
 
         expect:
         reconstructTypeSignature(field.genericType) == expectedType
@@ -311,9 +361,9 @@ package example;
 
 import java.util.*;
 
-class Sub<U> extends Sup<$params> {
-}
 class Sup<$decl> {
+}
+class Sub<U> extends Sup<$params> {
 }
 """)
         def interfaceElement = buildClassElement("""
@@ -321,9 +371,9 @@ package example;
 
 import java.util.*;
 
-class Sub<U> implements Sup<$params> {
-}
 interface Sup<$decl> {
+}
+class Sub<U> implements Sup<$params> {
 }
 """)
 
@@ -347,9 +397,9 @@ package example;
 
 import java.util.*;
 
-class Sub<U> extends Sup<$params> {
-}
 class Sup<$decl> {
+}
+class Sub<U> extends Sup<$params> {
 }
 """).withBoundGenericTypes([ClassElement.of(String)])
         def interfaceElement = buildClassElement("""
@@ -357,9 +407,9 @@ package example;
 
 import java.util.*;
 
-class Sub<U> implements Sup<$params> {
-}
 interface Sup<$decl> {
+}
+class Sub<U> implements Sup<$params> {
 }
 """).withBoundGenericTypes([ClassElement.of(String)])
 
@@ -382,9 +432,9 @@ package example;
 
 import java.util.*;
 
-class Sub<U> extends Sup<$params> {
-}
 class Sup<$decl> {
+}
+class Sub<U> extends Sup<$params> {
 }
 """).withBoundGenericTypes([ClassElement.of(String)])
         def interfaceElement = buildClassElement("""
@@ -392,9 +442,9 @@ package example;
 
 import java.util.*;
 
-class Sub<U> implements Sup<$params> {
-}
 interface Sup<$decl> {
+}
+class Sub<U> implements Sup<$params> {
 }
 """).withBoundGenericTypes([ClassElement.of(String)])
 
@@ -473,32 +523,5 @@ class Test<T> {
         'Map<Object, T>'    | 'Map'
         'List<? extends T>' | 'List'
         'List<? super T>'   | 'List'
-    }
-
-    def 'distinguish list types'() {
-        given:
-        def classElement = buildClassElement("""
-package example;
-
-import java.util.*;
-
-class Test {
-    List field1;
-    List<?> field2;
-    List<Object> field3;
-}
-""")
-        def rawType = classElement.fields[0].genericType
-        def wildcardType = classElement.fields[1].genericType
-        def objectType = classElement.fields[2].genericType
-
-        expect:
-        rawType.boundGenericTypes.isEmpty()
-
-        wildcardType.boundGenericTypes.size() == 1
-        wildcardType.boundGenericTypes[0].isWildcard()
-
-        objectType.boundGenericTypes.size() == 1
-        !objectType.boundGenericTypes[0].isWildcard()
     }
 }
