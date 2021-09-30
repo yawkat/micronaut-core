@@ -17,6 +17,7 @@ package io.micronaut.json;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.io.NumberInput;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
@@ -269,6 +270,20 @@ public class JacksonDecoder implements Decoder {
                     char c = parser.getTextCharacters()[parser.getTextOffset()];
                     parser.nextToken();
                     return c;
+                } else {
+                    long value;
+                    // adapted from databind StdDeserializer
+                    try {
+                        if (parser.getTextLength() > 9) {
+                            value = NumberInput.parseLong(parser.getText());
+                        } else {
+                            value = NumberInput.parseInt(parser.getText());
+                        }
+                    } catch (IllegalArgumentException e) {
+                        throw createDeserializationException("Unable to coerce string to integer");
+                    }
+                    parser.nextToken();
+                    return value;
                 }
             case VALUE_NUMBER_INT:
             case VALUE_NUMBER_FLOAT:
@@ -284,11 +299,11 @@ public class JacksonDecoder implements Decoder {
                     if (endUnwrapArray()) {
                         return unwrapped;
                     } else {
-                        throw ((Decoder) this).createDeserializationException("Expected one integer, but got array of multiple values");
+                        throw createDeserializationException("Expected one integer, but got array of multiple values");
                     }
                 }
             default:
-                throw ((Decoder) this).createDeserializationException("Unexpected token " + parser.currentToken() + ", expected integer");
+                throw createDeserializationException("Unexpected token " + parser.currentToken() + ", expected integer");
         }
     }
 
